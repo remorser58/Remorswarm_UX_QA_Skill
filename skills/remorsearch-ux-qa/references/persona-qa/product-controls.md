@@ -89,6 +89,24 @@ the existing `import-research` route and its current gated sources. Never infer 
 grip, vision, motor ability or preference from age, province, occupation or nationality.
 Observe/calibrate those separately, or leave them unknown.
 
+For a provenance-only link to existing ergonomic profiles, run
+`python3 scripts/ergo_qa.py bind-seeds --profiles profiles.json --bindings reviewed.json --out receipt.json`.
+The `ergo-seed-bindings.v1` document declares `dataset` (`nvidia/Nemotron-Personas-Korea`),
+`dataset_revision`, `seed_pack_sha256`, and 1..32 explicit `bindings` objects with
+`seed_id` and `profile_id`. Use the installed pack's revision
+`ada0f5b53a38bb5a30cce09358adde883c1ab63a` and canonical JSON digest
+`677aba0ac8324b2006aad33a079b37c054a1fbabe905b83305917e6d00df31c1` (also returned
+by `seed-input`), not the raw file or original API response hash. Each ID may appear
+once; a conflicting existing `persona_ref` is rejected. The new receipt sorts
+by seed ID and records a canonical digest of each profile; it does not change profiles,
+bind historical sessions, or feed the reach model.
+
+Reach evidence for this link remains unknown, even if the input profile already has a
+number. Any future physical input must cite a compatible functional thumb tip-to-base
+landmark and unit, resolve conflicts in the evidence, and keep measured/provided
+values separate from any explicitly sourced synthetic reference. Without that evidence
+there is no nearest match; do not fill by demographics or an average.
+
 ## 4. Improvement report and rollback selection
 
 `uxloop.engine.report` includes per-improvement finding IDs, reason, expected effect,

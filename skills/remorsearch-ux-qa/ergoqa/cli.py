@@ -93,6 +93,18 @@ def cmd_profiles(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def cmd_bind_seeds(args: argparse.Namespace) -> int:
+    from .seed_bindings import bind
+
+    receipt = bind(load_json(args.bindings), _load_profiles(args.profiles))
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with out.open("x", encoding="utf-8") as stream:
+        stream.write(json.dumps(receipt, ensure_ascii=False, indent=2) + "\n")
+    print(f"{len(receipt['bindings'])} authored binding(s); reach inputs not evaluated -> {out}")
+    return EXIT_OK
+
+
 def cmd_audience_check(args: argparse.Namespace) -> int:
     doc = load_json(args.audience)
     if args.draft or args.gate or args.bundle or args.run:
@@ -384,6 +396,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--personas", help="optional JSON list of persona records (dataset, revision, record_id, age_band)")
     p.add_argument("--out", required=True)
     p.set_defaults(func=cmd_profiles)
+
+    p = sub.add_parser("bind-seeds", help="validate authored NVIDIA seed IDs against existing profiles (provenance only)")
+    p.add_argument("--profiles", required=True, help="existing ergo-profile.v1 list or profiles document")
+    p.add_argument("--bindings", required=True, help="ergo-seed-bindings.v1 manifest")
+    p.add_argument("--out", required=True, help="new receipt file, not an input profile set")
+    p.set_defaults(func=cmd_bind_seeds)
 
     p = sub.add_parser("audience-check", help="validate an ergo-audience.v1 file (Stage 0 target-user research)")
     p.add_argument("audience")
