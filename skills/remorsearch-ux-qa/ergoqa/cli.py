@@ -240,21 +240,48 @@ def cmd_swarm(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def _reach_overlay_image(snapshot: dict[str, Any], root: Path):
+    """Read only the referenced viewport-only raster, not an arbitrary panel crop."""
+    import hashlib
+    from . import png
+    from .snapshot import resolve_within, valid_raster_reference
+
+    shot = snapshot["screenshot"]
+    if not valid_raster_reference(shot.get("viewport_raster_reference")):
+        raise ValueError("reach heatmap needs viewport_raster_reference for the full CSS viewport PNG")
+    with resolve_within(root, shot["path"]).open("rb") as stream:
+        raw = stream.read(png.MAX_FILE_BYTES + 1)
+    if len(raw) > png.MAX_FILE_BYTES or hashlib.sha256(raw).hexdigest() != shot.get("sha256"):
+        raise ValueError("reach heatmap PNG exceeds the size limit or does not match its recorded SHA-256")
+    header = png.read_header(raw)
+    dims = header.width, header.height
+    device = snapshot["device"]
+    if dims != (shot.get("width_px"), shot.get("height_px")) or not any(
+        all(abs(px - css * scale) <= 1 for px, css in zip(dims, device["viewport_css"]))
+        for scale in (1, device["dpr"])
+    ):
+        raise ValueError("reach heatmap PNG does not match the declared full viewport at CSS or device scale")
+    return png.to_rgb(png.decode(raw))
+
+
 def cmd_heatmap(args: argparse.Namespace) -> int:
     from . import png
-    from .devices import css_px_to_mm, device_for_snapshot
+    from .devices import css_to_display_mm_point, device_for_snapshot, display_mapping
     from .hf import gaze, reach
 
     snapshot = load_json(args.snapshot)
     profiles = {p["profile_id"]: p for p in _load_profiles(args.profiles)}
     profile = profiles[args.profile]
     shot = Path(args.snapshot).parent / snapshot["screenshot"]["path"]
-    image = png.to_rgb(png.read_png(shot))
     device = device_for_snapshot(snapshot["device"])
     vw, vh = snapshot["device"]["viewport_css"]
     cols, rows = max(1, int(vw // 8)), max(1, int(vh // 8))
     values: list[list[float | None]] = []
     if args.kind == "reach":
+        mapped, alignment = display_mapping(snapshot, device)
+        if mapped is None:
+            raise ValueError(f"reach heatmap needs verified display alignment: {alignment['reason']}")
+        image = _reach_overlay_image(snapshot, Path(args.snapshot).parent)
         geom = reach.geometry_for_device(device)
         grip = profile["attributes"]["grip"]
         thumb_input = resolve_thumb_input(profile)
@@ -262,11 +289,11 @@ def cmd_heatmap(args: argparse.Namespace) -> int:
         for r in range(rows):
             row = []
             for c in range(cols):
-                x_mm = css_px_to_mm(device, (c + 0.5) * vw / cols, "x")
-                y_mm = css_px_to_mm(device, (r + 0.5) * vh / rows, "y")
+                x_mm, y_mm = css_to_display_mm_point(mapped, (c + 0.5) * vw / cols, (r + 0.5) * vh / rows)
                 row.append(reach.reach_score(x_mm, y_mm, geom, grip, thumb)["difficulty"] if grip in reach.SUPPORTED_GRIPS else None)
             values.append(row)
     else:
+        image = png.to_rgb(png.read_png(shot))
         snapshot["screenshot"]["resolved_path"] = str(shot)
         grid = analyze.conspicuity_for_snapshot(snapshot) or []
         form = getattr(device, "form_factor", "phone")

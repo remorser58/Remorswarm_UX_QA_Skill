@@ -2213,6 +2213,14 @@ export class WebSession {
     const ew = Math.round(this.vw * this.dev.base.dpr);
     const eh = Math.round(this.vh * this.dev.base.dpr);
     if (Math.abs(width - ew) > 1 || Math.abs(height - eh) > 1) allNotes.push(`screenshot is ${width}x${height}, expected about ${ew}x${eh}`);
+    // The driver configured the virtual screen and viewport to the same bounds.
+    // Check the captured visual viewport too: dimensions alone cannot locate a
+    // real window on a panel and do not exclude a zoomed/panned virtual viewport.
+    const visual = ex.visual;
+    const aligned = ex.noVisualTransform && visual
+      && Math.abs(visual.width - this.vw) <= 1 && Math.abs(visual.height - this.vh) <= 1
+      && ex.viewport.w === this.vw && ex.viewport.h === this.vh
+      && Math.abs(width - ew) <= 1 && Math.abs(height - eh) <= 1;
     if (ex.viewport.w !== this.vw || ex.viewport.h !== this.vh) {
       allNotes.push(`page reports viewport ${ex.viewport.w}x${ex.viewport.h} (layout zoom or meta viewport); boxes are in page CSS px`);
     }
@@ -2238,8 +2246,10 @@ export class WebSession {
       surface: { kind: this.scenario.surface_kind === 'game' ? 'game' : 'web', url: this.page.url(), title, app_id: null, scroll: ex.scroll, visual: ex.visual || null,
         ...(this.opts.buildId ? { build_id: this.opts.buildId, build_id_basis: 'operator_supplied', build_id_source: this.opts.buildIdSource } : {}) },
       device: this.dev.snapshotDevice,
+      viewport_alignment: aligned ? { basis: 'emulated-full-viewport', origin_css: [0, 0] } : { basis: 'unknown' },
       screenshot: {
         path: `${id}.png`, sha256: sha256(png), width_px: width, height_px: height,
+        ...(aligned ? { viewport_raster_reference: 'Playwright viewport-only device-scale capture; verified untransformed viewport and PNG bounds' } : {}),
         ...(cssCopy ? { css: { path: `${id}.css.png`, sha256: sha256(cssCopy.png), width_px: cssCopy.width, height_px: cssCopy.height, factor: cssCopy.factor } } : {}),
       },
       elements: ex.elements,

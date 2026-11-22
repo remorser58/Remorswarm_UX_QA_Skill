@@ -1466,6 +1466,7 @@ export function extractSnapshot(args) {
     candidates: candidates.length + spots.size,
     truncated: candidates.length > cap,
     viewport: { w: vw, h: vh },
+    noVisualTransform: !!vvp && vvp.scale === 1 && vvp.offsetLeft === 0 && vvp.offsetTop === 0,
     scroll: { x: round2(window.scrollX), y: round2(window.scrollY), width: se ? se.scrollWidth : null, height: se ? se.scrollHeight : null },
     visual: vvp ? { offset_x: round2(vvp.offsetLeft), offset_y: round2(vvp.offsetTop), width: round2(vvp.width), height: round2(vvp.height), scale: round2(vvp.scale) } : null,
     active,

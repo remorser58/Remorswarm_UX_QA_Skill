@@ -50,6 +50,21 @@ class ValidationTests(unittest.TestCase):
         errors = validator(doc)
         self.assertTrue(any(fragment in e for e in errors), f"{fragment!r} not in {errors}")
 
+    def test_viewport_alignment_does_not_accept_malformed_origins(self):
+        snap = load("sample_snapshot.json")
+        for value in (
+            None, {"basis": "unknown", "origin_css": [0, 0]},
+            {"basis": "emulated-full-viewport", "origin_css": [0, 24]},
+            {"basis": "observed-landmarks", "origin_css": [0, float("inf")], "reference": "test"},
+            {"basis": "observed-landmarks", "origin_css": [0, -24], "reference": "test"},
+            {"basis": "observed-landmarks", "origin_css": [True, 24], "reference": "test"},
+            {"basis": "observed-landmarks", "origin_css": [0, 24]},
+            {"basis": "observed-landmarks", "origin_css": [0, 24], "reference": " "},
+        ):
+            with self.subTest(value=value):
+                snap["viewport_alignment"] = value
+                self.assertInvalid(validate_snapshot, snap, "viewport_alignment")
+
     def test_malformed_snapshots(self):
         base = load("sample_snapshot.json")
         cases = [
@@ -280,6 +295,7 @@ class AnnotationDriverTests(unittest.TestCase):
         self.assertTrue(any("estimated" in n for n in snap["notes"]))
         self.assertTrue(any("not verified" in n for n in snap["notes"]))
         self.assertEqual(snap["geometry_basis"], "estimated")
+        self.assertEqual(snap["viewport_alignment"], {"basis": "unknown"})
         self.assertEqual(snap["surface"]["kind"], "game")
         self.assertEqual((snap["screenshot"]["width_px"], snap["screenshot"]["height_px"]), (1080, 2340))
         jump = snap["elements"][1]
@@ -303,6 +319,20 @@ class AnnotationDriverTests(unittest.TestCase):
             ann["screenshot"] = "missing.png"
             with self.assertRaisesRegex(SnapshotError, "not found"):
                 annotation_to_snapshot(ann, base_dir=tmp)
+
+    def test_annotation_accepts_already_mapped_css_boxes_not_guessing_a_pixel_transform(self):
+        ann = load("sample_annotation.json")
+        ann["viewport_css"][1] -= 24
+        ann["viewport_alignment"] = {"basis": "observed-landmarks", "origin_css": [0, 24], "reference": "synthetic landmark"}
+        self.assertNotIn("viewport_raster_reference", annotation_to_snapshot(ann)["screenshot"])
+        ann["viewport_raster_reference"] = "separate synthetic crop-edge record"
+        snap = annotation_to_snapshot(ann)
+        self.assertEqual(snap["screenshot"]["viewport_raster_reference"], ann["viewport_raster_reference"])
+        self.assertEqual(snap["viewport_alignment"], ann["viewport_alignment"])
+        self.assertEqual(snap["geometry_basis"], "estimated")
+        ann["box_units"] = "screenshot_px"
+        with self.assertRaisesRegex(SnapshotError, "requires boxes already mapped"):
+            annotation_to_snapshot(ann)
 
     def test_invalid_annotations(self):
         base = load("sample_annotation.json")
