@@ -456,12 +456,19 @@ def parse_args(argv=None):
     parser.add_argument("--publish", action="store_true")
     parser.add_argument("--expected-branch")
     parser.add_argument("--check-only", action="store_true")
+    parser.add_argument("--repo", type=Path,
+                        help="this finalizer's own approved archive checkout; required for report generation")
     parser.add_argument("--poll-seconds", type=int, default=30)
     parser.add_argument("--max-wait-seconds", type=int, default=86400)
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    if args.repo is None and not args.check_only:
+        parser.error("report generation requires --repo with an already-authorized private archive checkout")
+    if args.repo is not None and args.repo.resolve() != ROOT.resolve():
+        parser.error("--repo must name this finalizer's own checkout; run the script from the approved archive")
+    return args
 
 
-def run(args, *, repo=ROOT):
+def run(args, *, repo):
     repo = Path(repo).resolve(strict=True)
     run_root, output = validate_paths(repo, args.run_root, args.output)
     require(1 <= args.poll_seconds <= 30 and 1 <= args.max_wait_seconds <= 172800,
@@ -519,7 +526,7 @@ def run(args, *, repo=ROOT):
 
 if __name__ == "__main__":
     try:
-        print(json.dumps(run(parse_args()), ensure_ascii=False, sort_keys=True), flush=True)
+        print(json.dumps(run(parse_args(), repo=ROOT), ensure_ascii=False, sort_keys=True), flush=True)
     except Exception as exc:
         print(json.dumps(dict(state="failed_preserved", error_type=type(exc).__name__,
                               reason=str(exc)[:600])), file=sys.stderr, flush=True)
