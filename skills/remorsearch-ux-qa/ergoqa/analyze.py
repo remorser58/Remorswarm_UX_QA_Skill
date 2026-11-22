@@ -16,6 +16,7 @@ from . import checks, png
 from .devices import device_for_snapshot, get_device, rotate
 from .hf import gaze
 from .profiles import profile_index
+from .profile_binding import match_status
 from .snapshot import load_run_dir
 
 SEVERITY_RANK = checks.SEVERITY_ORDER
@@ -176,6 +177,7 @@ def analyze_run(
     cross_profile: bool = False,
     verify_screenshots: bool = True,
     gaze_enabled: bool = True,
+    analytical_rescore: bool = False,
 ) -> dict[str, Any]:
     run, snapshots = load_run_dir(run_dir, verify_screenshots=verify_screenshots)
     if scenario is not None and (scenario.get("schema_version") != "ergo-scenario.v1" or scenario.get("scenario_id") != run.get("scenario_id")):
@@ -223,6 +225,12 @@ def analyze_run(
             p for p in profile_list
             if p is not own and p["attributes"]["device_id"] == device_id and p["attributes"].get("orientation", "portrait") == orientation
         ]
+    binding = run.get("profile_binding")
+    profile_status = "no_profile" if no_profile else match_status(binding, own)
+    if binding is not None and profile_status != "matched" and not analytical_rescore:
+        raise ValueError(f"run {run['run_id']}: recorded profile binding {profile_status}; "
+                         "use --analytical-rescore for an analytical comparison")
+    verified_owner = own if profile_status == "matched" else None
     snapshots_by_id = {s["snapshot_id"]: s for s in snapshots}
     live_snapshots = [s for s in snapshots if s.get("device", {}).get("probe") != "adaptation"]
     if not live_snapshots:
@@ -254,7 +262,7 @@ def analyze_run(
                    + checks.check_reflow(run, profile, live_by_id) + checks.check_adaptation(run, profile, snapshots_by_id)
                    + checks.check_clicked_controls(run, profile, live_by_id)
                    + checks.check_task_integrity(run, profile, live_by_id))
-        if profile is not own:
+        if profile is not verified_owner:
             run_obs = [o for o in run_obs if o.check_id != "PJ-01"]
         observations.extend(run_obs)
     observations = _dedupe(observations)
@@ -279,6 +287,9 @@ def analyze_run(
         record["context_selectors"] = sorted({c for eid in obs.element_ids for c in context_of.get((obs.snapshot_id, eid), [])}
                                              | set(obs.extra.get("context_selectors") or []))
         record["scenario_id"] = run.get("scenario_id")
+        record["analysis_kind"] = ("captured_task" if obs.check_id == "TI-01" else
+                                   "owner_execution" if verified_owner and obs.profile_id == verified_owner["profile_id"]
+                                   else "analytical_cross_profile")
         dicts.append(record)
     coverage: dict[str, list[str]] = {}
     for obs in observations:
@@ -291,6 +302,8 @@ def analyze_run(
     ]
     health, health_notes = run_health(run, snapshots, scenario)
     limitations += health_notes
+    if profile_status not in ("matched", "no_profile"):
+        limitations.append(f"{run['run_id']}: profile condition {profile_status}; captured task evidence is separate")
     limitations += sorted({
         f"{obs.run_id} {obs.snapshot_id} {obs.check_id} {obs.element_key.split('|', 1)[0]}: {obs.message_ko}"
         for obs in observations if obs.extra.get("verdict") == "inconclusive"
@@ -312,10 +325,12 @@ def analyze_run(
         "ended_at": run.get("ended_at"),
         "device_id": device_id,
         "orientation": orientation,
-        # The profile that actually operated the run (None for --device captures with
-        # no profile). Consumers must use this instead of profiles_evaluated order:
-        # every other evaluation is analytical (spec: cross-profile evaluation).
+        # Historical recorded ID is not proof of profile content or observed anatomy.
         "owner_profile_id": None if no_profile else run.get("profile_id"),
+        "verified_owner_profile_id": verified_owner["profile_id"] if verified_owner else None,
+        "profile_binding_status": profile_status,
+        "recorded_profile_binding": binding,
+        "recorded_build_id": (run.get("surface") or {}).get("build_id", run.get("build_id")),
         "profiles_evaluated": [p["profile_id"] for p in evaluated],
         "observations": dicts,
         "coverage": coverage,

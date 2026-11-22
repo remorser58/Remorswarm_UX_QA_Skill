@@ -6,7 +6,7 @@ SQLite fencing protects local commits; it cannot cancel a provider request.
 """
 from __future__ import annotations
 
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 import copy
 import json
 import math
@@ -260,24 +260,23 @@ class Queue:
             sidecar = safe_path(str(self.path) + suffix)
             if sidecar.exists() and (not sidecar.is_file() or sidecar.stat().st_mode & 0o077):
                 fail("queue_path", "Queue sidecars must remain private regular files.")
-        db = sqlite3.connect(str(self.path) if write else self.path.as_uri() + "?mode=ro",
-                             timeout=5, isolation_level=None, uri=not write)
-        db.row_factory = sqlite3.Row
-        db.execute("PRAGMA foreign_keys=ON")
-        db.execute("PRAGMA busy_timeout=5000")
-        if write:
-            db.execute("PRAGMA synchronous=FULL")
-            db.execute("BEGIN IMMEDIATE")
-        try:
-            yield db
+        with closing(sqlite3.connect(
+                str(self.path) if write else self.path.as_uri() + "?mode=ro",
+                timeout=5, isolation_level=None, uri=not write)) as db:
+            db.row_factory = sqlite3.Row
+            db.execute("PRAGMA foreign_keys=ON")
+            db.execute("PRAGMA busy_timeout=5000")
             if write:
-                db.commit()
-        except BaseException:
-            if write:
-                db.rollback()
-            raise
-        finally:
-            db.close()
+                db.execute("PRAGMA synchronous=FULL")
+                db.execute("BEGIN IMMEDIATE")
+            try:
+                yield db
+                if write:
+                    db.commit()
+            except BaseException:
+                if write:
+                    db.rollback()
+                raise
 
     @staticmethod
     def _get(db, key):

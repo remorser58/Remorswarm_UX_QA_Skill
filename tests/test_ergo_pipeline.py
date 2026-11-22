@@ -15,6 +15,7 @@ from pathlib import Path
 from _paths import SKILL as ROOT  # noqa: E402,F401  (puts the skill folder on sys.path)
 
 from ergoqa import analyze, bench, bundle, png, report, swarm  # noqa: E402
+from ergoqa.profile_binding import prepare  # noqa: E402
 from ergoqa.profiles import sample_profiles  # noqa: E402
 from ergoqa.snapshot import sha256_file  # noqa: E402
 from validate_bundle import validate_bundle  # noqa: E402
@@ -53,14 +54,13 @@ def base_elements():
     ]
 
 
-def write_png(path: Path) -> str:
-    image = png.new_image(W, H, 3, (255, 255, 255))
+def write_png(path: Path, scale: int = 1) -> str:
+    image = png.new_image(W * scale, H * scale, 3, (255, 255, 255))
     data = bytearray(image.data)
-    for y in range(250, 294):
-        for x in range(10, 100):
-            i = (y * W + x) * 3
-            data[i:i + 3] = bytes((26, 115, 232))
-    png.write_png(path, png.make_image(W, H, 3, bytes(data)))
+    for y in range(250 * scale, 294 * scale):
+        i = (y * image.width + 10 * scale) * 3
+        data[i:i + 90 * scale * 3] = bytes((26, 115, 232)) * (90 * scale)
+    png.write_png(path, png.make_image(image.width, image.height, 3, bytes(data)))
     return sha256_file(path)
 
 
@@ -70,7 +70,7 @@ def make_run(root: Path) -> Path:
     snaps = []
     for index in range(2):
         sid = f"S-R-1-{index:03d}"
-        sha = write_png(run_dir / f"{sid}.png")
+        sha = write_png(run_dir / f"{sid}.png", scale=3)
         elements = base_elements()
         if index == 1:
             elements.append(el("error", "alert", (16, 740, 200, 16), text="카드 정보를 확인해 주세요", size=12,
@@ -79,8 +79,9 @@ def make_run(root: Path) -> Path:
             "schema_version": "ergo-snapshot.v1", "snapshot_id": sid, "run_id": "R-1", "step_index": index,
             "captured_at": "2026-09-28T12:00:00Z",
             "surface": {"kind": "web", "url": "http://127.0.0.1/checkout.html", "title": "checkout", "app_id": None},
-            "device": {"id": "galaxy-s24", "viewport_css": [W, H], "dpr": 1.0, "orientation": "portrait"},
-            "screenshot": {"path": f"{sid}.png", "sha256": sha, "width_px": W, "height_px": H},
+            "device": {"id": "galaxy-s24", "viewport_css": [W, H], "dpr": 3, "orientation": "portrait"},
+            "viewport_alignment": {"basis": "emulated-full-viewport", "origin_css": [0, 0]},
+            "screenshot": {"path": f"{sid}.png", "sha256": sha, "width_px": W * 3, "height_px": H * 3},
             "elements": elements,
             "focus_point": None if index == 0 else {"x": 55, "y": 272},
             "console_errors": [], "notes": [],
@@ -90,7 +91,7 @@ def make_run(root: Path) -> Path:
     run = {
         "schema_version": "ergo-run.v1", "run_id": "R-1", "scenario_id": "SC-checkout", "profile_id": "EP-01",
         "driver": {"name": "test-fixture", "version": "0", "browser": None},
-        "device": {"id": "galaxy-s24", "viewport_css": [W, H], "dpr": 1.0, "orientation": "portrait"},
+        "device": {"id": "galaxy-s24", "viewport_css": [W, H], "dpr": 3, "orientation": "portrait"},
         "mode": "scripted", "started_at": "2026-09-28T12:00:00Z", "ended_at": "2026-09-28T12:00:05Z",
         "status": "completed", "success": True,
         "steps": [{
@@ -106,6 +107,17 @@ def make_run(root: Path) -> Path:
     return run_dir
 
 
+def bind_fixture_profile(run_dir: Path, profile: dict) -> dict:
+    """The synthetic fixture gets explicit provenance just like a new recorder."""
+    binding = prepare(json.dumps(profile, ensure_ascii=False).encode("utf-8"))["binding"]
+    path = run_dir / "run.json"
+    run = json.loads(path.read_text())
+    assert run["profile_id"] == profile["profile_id"]
+    run.update(profile_binding=binding, device=binding["device"])
+    path.write_text(json.dumps(run))
+    return binding
+
+
 class PipelineTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -113,6 +125,7 @@ class PipelineTests(unittest.TestCase):
         cls.root = Path(cls.tmp.name)
         cls.run_dir = make_run(cls.root)
         cls.profiles = sample_profiles(14, 3, ["galaxy-s24"])
+        bind_fixture_profile(cls.run_dir, cls.profiles[0])
         cls.analysis = analyze.analyze_run(cls.run_dir, cls.profiles, None, cross_profile=True)
         cls.findings = swarm.aggregate([cls.analysis], cls.profiles)
         cls.by_check = {}
@@ -223,6 +236,7 @@ class AttachBridgeTests(unittest.TestCase):
         cls.root = Path(cls.tmp.name)
         cls.run_dir = make_run(cls.root)
         cls.profiles = sample_profiles(3, 7, ["galaxy-s24"])
+        bind_fixture_profile(cls.run_dir, cls.profiles[0])
         qa = json.loads((Path(__file__).parent / "fixtures" / "valid-bundle.json").read_text(encoding="utf-8"))
         # An existing QA graph whose findings carry no P0/P1 (those would need their
         # own fresh receipts and second passes under the same validator).
@@ -322,6 +336,8 @@ class AttachBridgeTests(unittest.TestCase):
             run_path = target / "run.json"
             run = json.loads(run_path.read_text(encoding="utf-8"))
             run.update(updates or {})
+            if run["profile_id"] == "no-profile":
+                run.pop("profile_binding", None)
             run_path.write_text(json.dumps(run, ensure_ascii=False), encoding="utf-8")
             if corrupt_png:
                 (target / "S-R-1-000.png").write_bytes(b"not a png")
@@ -466,7 +482,7 @@ class AttachIntegrityTests(unittest.TestCase):
         from ergoqa.qa_attach import AttachError
         original_run = (self.run_dir / "run.json").read_bytes()
         original_snap = (self.run_dir / "S-R-1-001.json").read_bytes()
-        device = {"id": "galaxy-s24", "viewport_css": [W, H], "dpr": 1, "orientation": "portrait"}
+        device = {"id": "galaxy-s24", "viewport_css": [W, H], "dpr": 3, "orientation": "portrait"}
         cases = [("run device", {"device": dict(device, id="iphone-15")}, {}, "device"),
                  ("later device", {}, {"device": dict(device, id="iphone-15")}, "device"),
                  ("later orientation", {}, {"device": dict(device, orientation="landscape")}, "orientation"),
@@ -536,6 +552,7 @@ class AttachIntegrityTests(unittest.TestCase):
         self.assertFalse(self.receipts.exists())
 
     def test_known_build_and_probe_context_survive_without_relabeling(self) -> None:
+        bind_fixture_profile(self.run_dir, self.profiles[0])
         self.edit_run(surface={"kind": "web", "build_id": "owned-fixture-v2"},
                       reflow=[{"snapshot_id": "S-R-1-001", "width": 320}],
                       focus_walks=[{"snapshot_id": "S-R-1-000", "where": "load"}])
@@ -608,6 +625,7 @@ class AttachIntegrityTests(unittest.TestCase):
                 self.assertFalse(self.receipts.exists())
 
     def test_clean_runs_keep_owner_coverage_and_capture_receipts(self) -> None:
+        bind_fixture_profile(self.run_dir, self.profiles[0])
         self.edit_run(steps=[], timing_windows=[], persona_notes=[])
         for index in (0, 1):
             self.edit_snap(index=index, elements=[el("title", "heading", (16, 70, 200, 28), text="주문 확인", size=20)],

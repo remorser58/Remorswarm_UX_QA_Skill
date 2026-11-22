@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 import _paths  # noqa: E402,F401  (puts the skill folder on sys.path)
 
 from ergoqa import bench, checks, params, swarm  # noqa: E402
-from ergoqa.devices import get_device  # noqa: E402
+from ergoqa.devices import get_device, rotate  # noqa: E402
 from ergoqa.hf import reach  # noqa: E402
 from ergoqa.profiles import _finalise, sample_profiles, touch_sigma_multiplier  # noqa: E402
 
@@ -49,10 +49,88 @@ def ctx(elements, prof=None, device_id="galaxy-s24", previous=None, step=None, f
     prof = prof or profile(device_id=device_id)
     device = get_device(device_id)
     snap = {"snapshot_id": "S-1", "step_index": 1, "surface": {"kind": "web", "url": "http://x/a"},
-            "device": {"id": device_id, "viewport_css": list(device.viewport_css), "orientation": device.orientation},
-            "elements": elements, "focus_point": focus}
+            "device": {"id": device_id, "viewport_css": list(device.viewport_css), "orientation": device.orientation, "dpr": device.dpr},
+            "elements": elements, "focus_point": focus,
+            "viewport_alignment": {"basis": "emulated-full-viewport", "origin_css": [0, 0]}}
     return checks.Context(run=run or {"run_id": "R-1", "steps": []}, snapshot=snap, previous=previous, step=step, profile=prof,
                           device=device, scenario=None, conspicuity=None, path_element_ids=set(path_ids))
+
+
+class CaptureAlignment(unittest.TestCase):
+    def context(self, y, viewport_h=852, alignment=None):
+        prof = profile(device_id="iphone-15", grip="one_hand_right")
+        prof["attributes"]["thumb_length_mm"] = 102.6  # hypothetical functional reach, not measured anatomy
+        a = el("apply", "button", (200, y, 44, 44), text="Apply", interactive=True, roles=("primary",))
+        b = el("delete", "button", (246, y, 44, 44), text="Delete", interactive=True, roles=("destructive",))
+        out = ctx([a, b], prof, "iphone-15")
+        out.snapshot["device"].update(viewport_css=[393, viewport_h], dpr=3)
+        if alignment is None:
+            out.snapshot.pop("viewport_alignment")
+        else:
+            out.snapshot["viewport_alignment"] = alignment
+        return out
+
+    def test_reach_is_invariant_under_aligned_crop_but_not_an_actual_target_move(self):
+        emulated = {"basis": "emulated-full-viewport", "origin_css": [0, 0]}
+        observed = {"basis": "observed-landmarks", "origin_css": [0, 24], "reference": "synthetic top-edge landmark"}
+        full = self.context(300, alignment=emulated)
+        crop = self.context(276, viewport_h=828, alignment=observed)
+        moved = self.context(276, alignment=emulated)
+
+        def primary(context):
+            return next(o for o in checks.check_reach(context) if o.check_id == "RH-01")
+
+        self.assertEqual((primary(full).measurement["zone"], primary(full).measurement["value"]), ("natural", 0.0))
+        self.assertEqual(primary(crop).extra["point_mm"], primary(full).extra["point_mm"])
+        self.assertEqual(primary(crop).measurement["value"], primary(full).measurement["value"])
+        self.assertEqual(primary(crop).measurement["viewport_alignment"], observed)
+        self.assertEqual(primary(moved).measurement["zone"], "stretch")
+        self.assertAlmostEqual(primary(moved).measurement["value"], 0.443, places=3)
+        # Only point-based position changes; hit sizes and neighbor gaps are lengths.
+        self.assertEqual(checks._box_mm(full, full.elements[0]["box"]), checks._box_mm(crop, crop.elements[0]["box"]))
+        self.assertEqual([o.measurement for o in checks.check_touch_accuracy(full)],
+                         [o.measurement for o in checks.check_touch_accuracy(crop)])
+
+    def test_missing_unverified_and_out_of_display_are_not_scored(self):
+        unproven = {"basis": "unknown"}
+        impossible = {"basis": "observed-landmarks", "origin_css": [0, 24], "reference": "synthetic"}
+        for alignment, reason in ((None, "missing_viewport_alignment"), (unproven, "unverified_viewport_alignment"),
+                                  (impossible, "incompatible_display_bounds_or_pitch")):
+            with self.subTest(alignment=alignment):
+                result = checks.check_reach(self.context(276, alignment=alignment))
+                self.assertEqual({o.check_id for o in result}, {"RH-01", "RH-02"})
+                for obs in result:
+                    self.assertIsNone(obs.measurement["value"])
+                    self.assertIsNone(obs.severity)
+                    self.assertEqual(obs.extra["verdict"], "inconclusive")
+                    self.assertEqual(obs.measurement["viewport_alignment"]["reason"], reason)
+
+    def test_explicit_dpr_conflict_cannot_authorize_emulated_reach(self):
+        full = self.context(300, alignment={"basis": "emulated-full-viewport", "origin_css": [0, 0]})
+        full.snapshot["device"]["dpr"] = 1  # iPhone 15 catalog pitch is 3.
+        for obs in checks.check_reach(full):
+            self.assertIsNone(obs.measurement["value"])
+            self.assertEqual(obs.extra["verdict"], "inconclusive")
+
+    def test_landscape_game_origin_uses_the_capture_axes(self):
+        emulated = {"basis": "emulated-full-viewport", "origin_css": [0, 0]}
+        observed = {"basis": "observed-landmarks", "origin_css": [0, 24], "reference": "synthetic landscape landmark"}
+        full = self.context(52, alignment=emulated)
+        crop = self.context(28, alignment=observed)
+        for c, h in ((full, 393), (crop, 369)):
+            c.device = rotate(c.device)
+            c.attrs["grip"] = "two_thumbs"
+            c.attrs["orientation"] = "landscape"
+            c.elements[0]["roles"] = ["game_control"]
+            c.snapshot["device"].update(viewport_css=[852, h], orientation="landscape")
+        a = next(o for o in checks.check_reach(full) if o.check_id == "GM-02")
+        b = next(o for o in checks.check_reach(crop) if o.check_id == "GM-02")
+        self.assertEqual(a.extra["point_mm"], b.extra["point_mm"])
+        self.assertEqual(a.measurement["value"], b.measurement["value"])
+        # Portrait bounds mislabeled as landscape cannot establish the mapping.
+        crop.snapshot["device"].update(viewport_css=[393, 828])
+        unknown = next(o for o in checks.check_reach(crop) if o.check_id == "GM-02")
+        self.assertEqual(unknown.extra["verdict"], "inconclusive")
 
 
 class Occlusion(unittest.TestCase):

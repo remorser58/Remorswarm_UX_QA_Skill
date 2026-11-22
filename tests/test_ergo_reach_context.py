@@ -113,3 +113,17 @@ class ReachContext(unittest.TestCase):
         gm, = checks.check_reach(c)
         self.assertTrue(checks.applicable("GM-02", c.profile, c.device))
         self.assertEqual((gm.check_id, gm.measurement["name"]), ("GM-02", "thumb_travel_mm"))
+
+    def test_neutral_cradle_still_requires_alignment_and_verified_viewport_raster(self):
+        for field, problem in (("alignment", "missing_viewport_alignment"), ("sha256", "SHA-256")):
+            with self.subTest(field=field):
+                c = self.fixture("galaxy-tab-s9", "cradle_right")
+                if field == "alignment":
+                    del c.snapshot["viewport_alignment"]
+                else:
+                    c.snapshot["screenshot"]["sha256"] = "0" * 64
+                out = self.root / "unverified-neutral.png"
+                code, _, err = self.render(c, out)
+                self.assertEqual(code, cli.EXIT_USAGE)
+                self.assertIn(problem, err)
+                self.assertFalse(out.exists())

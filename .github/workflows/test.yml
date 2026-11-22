@@ -51,6 +51,12 @@ jobs:
           cache-dependency-path: skills/remorsearch-ux-qa/drivers/web/package-lock.json
       - name: Install driver dependencies
         run: npm ci
+      - name: Seed and recorder binding regressions on Node 22
+        working-directory: .
+        run: |
+          node --version
+          node -e "if (process.versions.node.split('.')[0] !== '22') process.exit(1)"
+          PYTHONPATH=tests PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest -v test_ergo_seed_bindings test_ergo_profile_binding
       - name: Install Chromium for Playwright
         run: npx playwright install --with-deps chromium
       - name: Driver selftest

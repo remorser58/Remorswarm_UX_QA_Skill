@@ -23,9 +23,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from ..devices import get_device
+from ..devices import get_device, valid_viewport_alignment
 from ..snapshot import (ROLES, SURFACE_KINDS, SnapshotError, is_number, parse_hex_color, resolve_within,
-                        safe_relative_path, sha256_file, validate_snapshot)
+                        safe_relative_path, sha256_file, valid_raster_reference, validate_snapshot)
 
 INTERACTIVE_ROLES = ("button", "link", "textbox", "searchbox", "checkbox", "radio", "switch", "slider",
                      "tab", "menuitem", "combobox", "spinbutton", "option")
@@ -60,8 +60,16 @@ def validate_annotation(annotation: Any) -> list[str]:
         errors.append("viewport_css: must be [width, height] positive numbers")
     if "dpr" in annotation and not (is_number(annotation["dpr"]) and annotation["dpr"] > 0):
         errors.append("dpr: must be a positive number")
+    if "viewport_raster_reference" in annotation and not valid_raster_reference(annotation["viewport_raster_reference"]):
+        errors.append("viewport_raster_reference: identify the evidence that the PNG covers precisely the full CSS viewport")
     if annotation.get("box_units", "css") not in ("css", "screenshot_px"):
         errors.append("box_units: must be 'css' or 'screenshot_px'")
+    if "viewport_alignment" in annotation:
+        alignment = annotation["viewport_alignment"]
+        if not valid_viewport_alignment(alignment) or alignment["basis"] == "emulated-full-viewport":
+            errors.append("viewport_alignment: must be explicit unknown or an observed CSS origin with a reference")
+        elif alignment["basis"] == "observed-landmarks" and annotation.get("box_units", "css") != "css":
+            errors.append("viewport_alignment: an observed origin requires boxes already mapped to viewport CSS px")
     if annotation.get("orientation", "portrait") not in ("portrait", "landscape"):
         errors.append("orientation: must be portrait or landscape")
     surface = annotation.get("surface")
@@ -186,6 +194,7 @@ def annotation_to_snapshot(annotation: dict[str, Any], *, base_dir: str | Path |
         "captured_at": captured_at or datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         "surface": surface,
         "device": {"id": device.id, "viewport_css": [vw, vh], "dpr": dpr, "orientation": orientation},
+        "viewport_alignment": annotation.get("viewport_alignment", {"basis": "unknown"}),
         "screenshot": {"path": ref, "sha256": sha, "width_px": width_px, "height_px": height_px},
         "elements": elements,
         "focus_point": annotation.get("focus_point"),
@@ -194,6 +203,8 @@ def annotation_to_snapshot(annotation: dict[str, Any], *, base_dir: str | Path |
                           if isinstance(n, str)],
         "geometry_basis": "estimated",
     }
+    if "viewport_raster_reference" in annotation:
+        snapshot["screenshot"]["viewport_raster_reference"] = annotation["viewport_raster_reference"]
     problems = validate_snapshot(snapshot)
     if problems:
         raise SnapshotError("annotation produced an invalid snapshot: " + "; ".join(problems))

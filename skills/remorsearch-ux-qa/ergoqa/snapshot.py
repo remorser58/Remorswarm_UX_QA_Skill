@@ -83,6 +83,10 @@ def _nonempty_str(value: Any) -> bool:
     return isinstance(value, str) and value.strip() != ""
 
 
+def valid_raster_reference(value: Any) -> bool:
+    return _nonempty_str(value) and len(value) <= 256
+
+
 def _timestamp_ok(value: Any) -> bool:
     if not isinstance(value, str):
         return False
@@ -380,6 +384,11 @@ def validate_snapshot(doc: Any) -> list[str]:
             errors.string(surface, key, "$.surface", required=False, nullable=True, nonempty=False)
     _device_block(errors, errors.obj(doc, "device", "$"), "$.device")
     device = doc.get("device")
+    if "viewport_alignment" in doc:
+        from .devices import valid_viewport_alignment
+
+        errors.require(valid_viewport_alignment(doc["viewport_alignment"]), "$.viewport_alignment",
+                       "must be explicit unknown, zero-aligned emulation, or a finite nonnegative CSS origin with an observation reference")
     if "adaptation" in doc or (isinstance(device, dict) and device.get("probe") == "adaptation"):
         meta = errors.obj(doc, "adaptation", "$")
         errors.require(isinstance(device, dict) and device.get("probe") == "adaptation", "$.device.probe", "must identify the auxiliary capture")
@@ -397,6 +406,9 @@ def validate_snapshot(doc: Any) -> list[str]:
                        "$.screenshot.sha256", "must be 64 lowercase hex characters or null")
         errors.number(shot, "width_px", "$.screenshot", integer=True, minimum=1)
         errors.number(shot, "height_px", "$.screenshot", integer=True, minimum=1)
+        if "viewport_raster_reference" in shot:
+            errors.require(valid_raster_reference(shot["viewport_raster_reference"]), "$.screenshot.viewport_raster_reference",
+                           "must identify the evidence that the PNG covers precisely the full CSS viewport")
     elements = errors.array(doc, "elements", "$")
     if elements is not None:
         seen: set[str] = set()
@@ -610,6 +622,11 @@ def validate_run(doc: Any) -> list[str]:
         for key in ("version", "browser"):
             errors.string(driver, key, "$.driver", required=False, nullable=True)
     _device_block(errors, errors.obj(doc, "device", "$"), "$.device")
+    if "profile_binding" in doc:
+        from .profile_binding import validate_binding
+
+        errors.require(doc.get("profile_id") != "no-profile" and validate_binding(doc["profile_binding"], doc.get("device")),
+                       "$.profile_binding", "must be a valid v1 binding for the recorded profile and device")
     errors.enum(doc, "mode", RUN_MODES, "$")
     errors.timestamp(doc, "started_at", "$")
     errors.timestamp(doc, "ended_at", "$", nullable=doc.get("status") != "completed")

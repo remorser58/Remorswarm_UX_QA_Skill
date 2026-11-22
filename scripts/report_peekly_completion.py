@@ -159,7 +159,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("stage", type=Path)
     parser.add_argument("output", type=Path)
-    parser.add_argument("--repo", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument("--repo", type=Path, required=True,
+                        help="already-authorized private archive checkout containing the pinned baseline")
     parser.add_argument("--requested", type=int, default=32)
     args = parser.parse_args()
     try:
