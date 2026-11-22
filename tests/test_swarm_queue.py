@@ -4,6 +4,7 @@ The small plans exercise queue storage directly. Persona evidence and execution
 admission are covered independently by the runner and evidence suites.
 """
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 import json
 import os
 from pathlib import Path
@@ -13,6 +14,7 @@ import sys
 import tempfile
 import threading
 import unittest
+from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "skills/remorsearch-ux-qa"))
 from uxpersonas.swarm_providers import ProviderSpec
@@ -89,13 +91,34 @@ class QueueTests(unittest.TestCase):
         self.assertEqual(caught.exception.issue["code"], code)
 
     def sql(self, statement, parameters=()):
-        with sqlite3.connect(self.root / "queue.sqlite") as db:
+        with closing(sqlite3.connect(self.root / "queue.sqlite")) as db, db:
             db.execute(statement, parameters)
 
     def authorize(self, queue, *, expires=None):
         return queue.authorize(plan_sha256=queue.plan_sha256, actor="offline-reviewer",
                                consent_reference="offline-test-approval", expires_at=expires or self.clock() + 30,
                                budget_microusd=queue.plan["limits"]["budget_microusd"])
+
+    def test_connection_closes_when_setup_fails_before_yield(self):
+        queue = self.create()
+        for write, statement in ((False, "PRAGMA foreign_keys=ON"), (True, "BEGIN IMMEDIATE")):
+            with self.subTest(write=write):
+                error = sqlite3.OperationalError("injected SQLite setup failure")
+                connection = Mock(spec=sqlite3.Connection)
+
+                def execute(sql):
+                    if sql == statement:
+                        raise error
+
+                connection.execute.side_effect = execute
+                with patch("uxpersonas.swarm_queue.sqlite3.connect", return_value=connection):
+                    with self.assertRaises(sqlite3.OperationalError) as caught:
+                        with queue._db(write=write):
+                            self.fail("A caller must not receive a connection whose setup failed")
+                self.assertIs(caught.exception, error)
+                connection.close.assert_called_once_with()
+                connection.commit.assert_not_called()
+                connection.rollback.assert_not_called()
 
     def test_twelve_distinct_sessions_keep_context_and_checkpoint_isolation(self):
         queue = self.create(count=12)
