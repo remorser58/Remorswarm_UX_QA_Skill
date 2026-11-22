@@ -90,6 +90,12 @@ host's tools. HTTP errors, including 429, may still represent an accepted/billed
 request; cooldown is recorded but uncertain requests are never automatically sent
 again. This version does not claim provider idempotency or remote reconciliation.
 
+Check both the serialized internal request and the final provider HTTP JSON body
+in UTF-8 bytes. Each is capped at 256 KiB (262,144 bytes); protocol fields and
+re-escaping the embedded JSON can make the body exceed the cap even when the
+internal request fits. The local rejection is `provider_request_too_large`, before
+transport. Track disk use, peak RAM and model tokens separately from both counts.
+
 Prices use integer micro-USD per million tokens. The host records a billing review
 matching the exact input/output prices and caps, its source and checked date,
 and confirms `no_unpriced_features: true`. For live callbacks, also name the
