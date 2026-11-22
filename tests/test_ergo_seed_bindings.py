@@ -86,6 +86,31 @@ class SeedBindings(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.out.read_bytes(), second.read_bytes())
 
+    def test_seed_receipt_and_recording_cli_agree_only_on_the_profile_content(self):
+        self.write_inputs()
+        result = self.invoke()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        receipt = json.loads(self.out.read_bytes())
+        self.assertEqual(receipt["reach_input_status"], "unknown")
+        self.assertFalse(receipt["analysis_performed"])
+
+        profile = self.profiles[0]
+        link = next(row for row in receipt["bindings"] if row["profile_id"] == profile["profile_id"])
+        command = [sys.executable, "-B", str(SKILL / "scripts/ergo_qa.py"), "profile-binding"]
+        raw = json.dumps(profile, indent=2).encode("utf-8")
+        recorded = subprocess.run(command, input=raw, capture_output=True, cwd=self.root)
+        self.assertEqual(recorded.returncode, 0, recorded.stderr)
+        recording = json.loads(recorded.stdout)
+        self.assertEqual(recording["profile_id"], link["profile_id"])
+        self.assertEqual(recording["binding"]["profile_sha256"], link["profile_sha256"])
+        self.assertEqual(recording["binding"]["profile_file_sha256"], byte_digest(raw))
+
+        # A provenance link does not turn the seed receipt into a recording profile.
+        invalid = subprocess.run(command, input=self.out.read_bytes(), capture_output=True, cwd=self.root)
+        self.assertEqual(invalid.returncode, 2, invalid.stderr)
+        self.assertIn(b"invalid recording profile", invalid.stderr)
+        self.assertEqual(invalid.stdout, b"")
+
     def test_wrong_pack_ambiguity_and_missing_ids_fail_without_receipt(self):
         first, second = self.doc["bindings"]
         for override, expected in [

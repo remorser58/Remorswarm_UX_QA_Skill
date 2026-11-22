@@ -15,6 +15,7 @@ from __future__ import annotations
 from typing import Any, Iterable
 
 from .profiles import COVERAGE_STRATA, profile_fingerprint, profile_index
+from .profile_binding import match_status, validate_binding
 
 
 def _persona_record(profile: dict[str, Any], strategy: str, seed: int | None) -> dict[str, Any]:
@@ -57,7 +58,7 @@ def to_evidence_bundle(
     analyses = list(analyses)
     findings = list(findings)
     profiles = list(profiles)
-    profile_index(profiles)
+    indexed = profile_index(profiles)
     personas = [_persona_record(p, strategy, seed) for p in profiles]
     pairs: dict[str, dict[str, Any]] = {}
     runs: dict[str, dict[str, Any]] = {}
@@ -68,10 +69,20 @@ def to_evidence_bundle(
     obs_owner: dict[str, str | None] = {}
     for analysis in analyses:
         scenario_id = analysis.get("scenario_id") or "unknown"
-        # The recorded owner is the identity the run actually executed with; a missing
-        # explicit owner (legacy analyses, --device captures) means no evaluation can
-        # claim a persona execution, so every evaluation is analytical.
-        owner_profile_id = analysis.get("owner_profile_id")
+        recorded_id = analysis.get("owner_profile_id")
+        binding = analysis.get("recorded_profile_binding")
+        owner_profile_id = None
+        status = analysis.get("profile_binding_status", "legacy_unverified")
+        # Recheck against the profiles exported here; a caller may have replaced
+        # a same-ID profile between analysis and export. No fallback to ID alone.
+        if (recorded_id in indexed and status == "matched"
+                and analysis.get("verified_owner_profile_id") == recorded_id
+                and isinstance(binding, dict) and validate_binding(binding, binding.get("device"))):
+            status = match_status(binding, indexed[recorded_id])
+            if status == "matched":
+                owner_profile_id = recorded_id
+        elif status == "matched":
+            status = "unverified"
         evaluated = analysis.get("profiles_evaluated", [])
         for pid in dict.fromkeys([*evaluated, *(o["profile_id"] for o in analysis["observations"])]):
             pair_id = f"{scenario_id}@{pid}"
@@ -85,6 +96,9 @@ def to_evidence_bundle(
                 "status": str(analysis.get("run_status") or "unknown"),
                 "task_success": analysis.get("run_success"),
                 "recorded_run_id": analysis["run_id"],
+                "recorded_profile_id": recorded_id,
+                "profile_binding_status": status if pid == recorded_id else "analytical",
+                "recorded_build_id": analysis.get("recorded_build_id"),
                 "cross_profile_evaluation": pid != owner_profile_id,
                 "coverage": [key for key, pids in analysis.get("coverage", {}).items() if pid in pids],
             }
@@ -95,11 +109,16 @@ def to_evidence_bundle(
             run_record_id = f"{analysis['run_id']}@{obs['profile_id']}"
             if obs["id"] in observations:
                 raise ValueError(f"duplicate observation id {obs['id']!r}")
+            kind = ("captured_task" if obs["check_id"] == "TI-01" and obs.get("analysis_kind") == "captured_task"
+                    and obs["profile_id"] == recorded_id else
+                    "owner_execution" if obs.get("analysis_kind") == "owner_execution"
+                    and obs["profile_id"] == owner_profile_id else "analytical_cross_profile")
             observations[obs["id"]] = {
                 "id": obs["id"],
                 "run_id": run_record_id,
                 "epistemic_status": obs["epistemic_status"],
                 "basis": obs["basis"],
+                "analysis_kind": kind,
                 "check_id": obs["check_id"],
                 "element_key": obs["element_key"],
                 "measurement": obs["measurement"],
@@ -109,7 +128,8 @@ def to_evidence_bundle(
             obs_pair[obs["id"]] = pair_id
             obs_run_status[obs["id"]] = runs[run_record_id]["status"]
             obs_profile[obs["id"]] = obs["profile_id"]
-            obs_owner[obs["id"]] = owner_profile_id
+            obs_owner[obs["id"]] = (recorded_id if kind == "captured_task" else
+                                    owner_profile_id if kind == "owner_execution" else None)
     bundle_findings: list[dict[str, Any]] = []
     proposals: list[dict[str, Any]] = []
     for finding in findings:
@@ -144,6 +164,8 @@ def to_evidence_bundle(
                 "epistemic_status": "observed" if verified else "inferred",
                 "verification_status": "verified" if verified else "unverified",
                 "check_id": finding["check_id"],
+                "analysis_kind": (observations[obs_ids[0]]["analysis_kind"]
+                                  if len({observations[o]["analysis_kind"] for o in obs_ids}) == 1 else "mixed"),
                 "summary": finding["summary_ko"],
                 "segments_affected": list(finding.get("segments_affected") or []),
             })
