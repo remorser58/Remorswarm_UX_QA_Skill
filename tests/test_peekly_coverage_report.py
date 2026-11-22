@@ -3,12 +3,14 @@ import copy
 import hashlib
 import json
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
 import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+import report_peekly_completion as completion
 import report_peekly_coverage as reporting
 
 
@@ -95,6 +97,81 @@ def dummy_columns():
 class CoverageReportTests(unittest.TestCase):
     def summarize(self, values=None):
         return reporting.summarize_candidate(*(values or inputs()), 3, ".ux-loop/cohort/stage-3")
+
+    def test_report_entry_points_require_explicit_archive_before_resolving_stage(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            stage, output = repo / "absent-stage", repo / "report"
+            scripts = Path(reporting.__file__).parent
+            for name, arguments in (
+                ("report_peekly_coverage.py", [str(stage), str(output)]),
+                ("report_peekly_completion.py", [str(stage), str(output)]),
+                ("finalize_peekly_completion.py", ["--run-root", str(stage), "--output", str(output)]),
+            ):
+                with self.subTest(script=name):
+                    cmd = [sys.executable, str(scripts / name), *arguments]
+                    refused = subprocess.run(cmd, cwd=repo, capture_output=True, text=True)
+                    self.assertEqual(refused.returncode, 2)
+                    self.assertIn("--repo", refused.stderr)
+                    self.assertNotIn(str(stage), refused.stderr)
+                    selected = subprocess.run([*cmd, "--repo", str(repo)], cwd=repo,
+                                              capture_output=True, text=True)
+                    self.assertEqual(selected.returncode, 2)
+                    if name == "finalize_peekly_completion.py":
+                        self.assertIn("must name this finalizer's own checkout", selected.stderr)
+                        self.assertNotIn(str(stage), selected.stderr)
+                    else:
+                        self.assertNotIn("--repo", selected.stderr)
+                    self.assertFalse(output.exists())
+            check = subprocess.run([sys.executable, str(scripts / "finalize_peekly_completion.py"),
+                                    "--run-root", str(stage), "--output", str(output), "--check-only"],
+                                   cwd=repo, capture_output=True, text=True)
+            self.assertEqual(check.returncode, 2)
+            self.assertNotIn("--repo", check.stderr)
+            self.assertFalse(output.exists())
+
+    def test_finalizer_rejects_foreign_checkout_before_stage_lookup_in_both_modes(self):
+        script = Path(reporting.__file__).with_name("finalize_peekly_completion.py")
+        checkout = script.parent.parent
+        with tempfile.TemporaryDirectory() as tmp:
+            foreign = Path(tmp)
+            stage, output = foreign / "absent-stage", foreign / "report"
+            cmd = [sys.executable, str(script), "--run-root", str(stage), "--output", str(output)]
+            for mode in ([], ["--check-only"]):
+                with self.subTest(check_only=bool(mode)):
+                    refused = subprocess.run([*cmd, *mode, "--repo", str(foreign)], cwd=foreign,
+                                             capture_output=True, text=True)
+                    self.assertEqual(refused.returncode, 2)
+                    self.assertIn("must name this finalizer's own checkout", refused.stderr)
+                    self.assertNotIn(str(stage), refused.stderr)
+                    accepted = subprocess.run([*cmd, *mode, "--repo", str(checkout)], cwd=foreign,
+                                              capture_output=True, text=True)
+                    self.assertEqual(accepted.returncode, 2)
+                    self.assertIn("FileNotFoundError", accepted.stderr)
+                    self.assertIn(str(stage), accepted.stderr)
+                    self.assertFalse(output.exists())
+
+    def test_completion_reads_only_selected_pinned_baseline_and_refuses_changed_bytes(self):
+        candidate = dict(criteria_all=dict(passed=71, failed=8, not_run=23, not_applicable=19),
+                         assessed_completed_sessions=29,
+                         criteria=[dict(status="not_run", requirement_ids=["R-fixture"],
+                                        persona_id=f"P-fixture-{i}", kind="success", job_id=f"J-fixture-{i}",
+                                        index=0, reason="Authored fixture only") for i in range(23)])
+        raw = json.dumps({"candidate": candidate, "artifact_path": "/synthetic/archive/not-created"}).encode()
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            with patch.object(completion, "BASE_SHA", reporting.sha(raw)), \
+                 patch.object(completion.subprocess, "run") as git:
+                git.return_value = subprocess.CompletedProcess([], 0, raw)
+                value, reference, remaining = completion.load_reviewed(repo)
+                self.assertEqual(value["candidate"], candidate)
+                self.assertEqual(len(remaining["rows"]), 23)
+                self.assertEqual(reference["sha256"], reporting.sha(raw))
+                self.assertEqual(git.call_args.args[0], [
+                    "git", "-C", str(repo), "show", completion.BASE_COMMIT + ":" + completion.BASE_PATH])
+                git.return_value = subprocess.CompletedProcess([], 0, raw + b" ")
+                with self.assertRaisesRegex(reporting.ReportError, "digest changed"):
+                    completion.load_reviewed(repo)
 
     def test_uncertain_and_current_invalid_receipts_never_enter_denominator(self):
         result = self.summarize()

@@ -15,6 +15,7 @@ from pathlib import Path
 from _paths import SKILL as ROOT  # noqa: E402,F401  (puts the skill folder on sys.path)
 
 from ergoqa import analyze, bench, bundle, png, report, swarm  # noqa: E402
+from ergoqa.profile_binding import prepare  # noqa: E402
 from ergoqa.profiles import sample_profiles  # noqa: E402
 from ergoqa.snapshot import sha256_file  # noqa: E402
 from validate_bundle import validate_bundle  # noqa: E402
@@ -106,6 +107,17 @@ def make_run(root: Path) -> Path:
     return run_dir
 
 
+def bind_fixture_profile(run_dir: Path, profile: dict) -> dict:
+    """The synthetic fixture gets explicit provenance just like a new recorder."""
+    binding = prepare(json.dumps(profile, ensure_ascii=False).encode("utf-8"))["binding"]
+    path = run_dir / "run.json"
+    run = json.loads(path.read_text())
+    assert run["profile_id"] == profile["profile_id"]
+    run.update(profile_binding=binding, device=binding["device"])
+    path.write_text(json.dumps(run))
+    return binding
+
+
 class PipelineTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -113,6 +125,7 @@ class PipelineTests(unittest.TestCase):
         cls.root = Path(cls.tmp.name)
         cls.run_dir = make_run(cls.root)
         cls.profiles = sample_profiles(14, 3, ["galaxy-s24"])
+        bind_fixture_profile(cls.run_dir, cls.profiles[0])
         cls.analysis = analyze.analyze_run(cls.run_dir, cls.profiles, None, cross_profile=True)
         cls.findings = swarm.aggregate([cls.analysis], cls.profiles)
         cls.by_check = {}
@@ -223,6 +236,7 @@ class AttachBridgeTests(unittest.TestCase):
         cls.root = Path(cls.tmp.name)
         cls.run_dir = make_run(cls.root)
         cls.profiles = sample_profiles(3, 7, ["galaxy-s24"])
+        bind_fixture_profile(cls.run_dir, cls.profiles[0])
         qa = json.loads((Path(__file__).parent / "fixtures" / "valid-bundle.json").read_text(encoding="utf-8"))
         # An existing QA graph whose findings carry no P0/P1 (those would need their
         # own fresh receipts and second passes under the same validator).
@@ -322,6 +336,8 @@ class AttachBridgeTests(unittest.TestCase):
             run_path = target / "run.json"
             run = json.loads(run_path.read_text(encoding="utf-8"))
             run.update(updates or {})
+            if run["profile_id"] == "no-profile":
+                run.pop("profile_binding", None)
             run_path.write_text(json.dumps(run, ensure_ascii=False), encoding="utf-8")
             if corrupt_png:
                 (target / "S-R-1-000.png").write_bytes(b"not a png")
@@ -536,6 +552,7 @@ class AttachIntegrityTests(unittest.TestCase):
         self.assertFalse(self.receipts.exists())
 
     def test_known_build_and_probe_context_survive_without_relabeling(self) -> None:
+        bind_fixture_profile(self.run_dir, self.profiles[0])
         self.edit_run(surface={"kind": "web", "build_id": "owned-fixture-v2"},
                       reflow=[{"snapshot_id": "S-R-1-001", "width": 320}],
                       focus_walks=[{"snapshot_id": "S-R-1-000", "where": "load"}])
@@ -608,6 +625,7 @@ class AttachIntegrityTests(unittest.TestCase):
                 self.assertFalse(self.receipts.exists())
 
     def test_clean_runs_keep_owner_coverage_and_capture_receipts(self) -> None:
+        bind_fixture_profile(self.run_dir, self.profiles[0])
         self.edit_run(steps=[], timing_windows=[], persona_notes=[])
         for index in (0, 1):
             self.edit_snap(index=index, elements=[el("title", "heading", (16, 70, 200, 28), text="주문 확인", size=20)],

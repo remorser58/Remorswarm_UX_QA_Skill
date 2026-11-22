@@ -662,14 +662,25 @@ async function toolingTest(base, tmp) {
     '--build-id', 'different-source', '--out', path.join(tmp, 'conflicting-runs'), '--run-id', 'R-conflict'], { env: noBrowserEnv });
   check('build identity: conflicting operator and scenario identities fail before browser or write',
     r.code === 2 && /conflicts/.test(r.err) && !fs.existsSync(path.join(tmp, 'conflicting-runs')), r.err);
+  const bindOptions = pythonAvailable() ? ['--bind-profile'] : [];
   r = await runDriver(['run', '--scenario', versionedPath, '--profile', path.join(tmp, 'p-s24.json'),
-    '--out', path.join(tmp, 'versioned-runs'), '--run-id', 'R-versioned', '--no-focus-walk', '--no-reflow']);
+    '--out', path.join(tmp, 'versioned-runs'), '--run-id', 'R-versioned', '--no-focus-walk', '--no-reflow', ...bindOptions]);
   if (check('build identity: profile-bearing scenario metadata records on a real surface', r.code === 0, r.err)) {
     const recorded = loadRun(path.join(tmp, 'versioned-runs', 'R-versioned'));
     check('build identity: run and every snapshot retain the source identifier and operator provenance',
       recorded.run.surface.build_id === buildId && recorded.run.surface.build_id_basis === 'operator_supplied'
       && recorded.run.surface.build_id_source === 'scenario.surface.build_id'
       && [...recorded.snaps.values()].every((s) => s.surface.build_id === buildId && s.surface.build_id_basis === 'operator_supplied'));
+    if (bindOptions.length) {
+      const binding = recorded.run.profile_binding;
+      const raw = fs.readFileSync(path.join(tmp, 'p-s24.json'));
+      check('profile binding: actual run retains only digests and its declared emulation',
+        binding?.schema_version === 'ergo-profile-binding.v1'
+        && binding.profile_file_sha256 === crypto.createHash('sha256').update(raw).digest('hex')
+        && binding.device.id === recorded.run.device.id && binding.device.orientation === recorded.run.device.orientation
+        && binding.thumb_length_mm === undefined, binding);
+      pythonLoadRun('profile-bound versioned recording', path.join(tmp, 'versioned-runs', 'R-versioned'));
+    }
   }
   if (pythonAvailable()) {
     const py = spawnSync('python3', ['-c', 'import json, sys; from ergoqa.snapshot import validate_scenario; errors = validate_scenario(json.load(open(sys.argv[1]))); print(errors); sys.exit(bool(errors))', sc], { cwd: REPO, encoding: 'utf8' });

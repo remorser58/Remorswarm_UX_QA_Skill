@@ -343,6 +343,17 @@ codes (normally exit 2). Both product readiness and measured UX improvement
 remain false. Separately saved comparison exports need their own retention
 review.
 
+**For hosts that summarize the JSON:** Pair the report and exit status from the
+same invocation. Show task coverage, criterion gaps, and the directions of
+observed changes separately. An exit of 1 can still carry a usable partial
+report; keep its observed changes and mark what was not compared. If the report
+is unavailable, say so instead of reporting no regressions. Use only permitted
+evidence references. The comparison summary is not an acceptance decision.
+
+| Synthetic input | Expected summary from an existing consumer |
+| --- | --- |
+| Exit 0, `complete`, 3/3 tasks, one failed-to-passed and one passed-to-failed | Show both directions, including the regression. Do not label the candidate as passed. |
+| Exit 1, `partial`, 3/3 tasks, one baseline criterion `not_run` and candidate criterion `passed` | Keep observed task changes. Mark the criterion `not_compared`, not improved. Do not present the report as complete or discard it. |
 
 ## 12. Prepare the next build without rewriting the journey plan
 

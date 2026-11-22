@@ -622,6 +622,11 @@ def validate_run(doc: Any) -> list[str]:
         for key in ("version", "browser"):
             errors.string(driver, key, "$.driver", required=False, nullable=True)
     _device_block(errors, errors.obj(doc, "device", "$"), "$.device")
+    if "profile_binding" in doc:
+        from .profile_binding import validate_binding
+
+        errors.require(doc.get("profile_id") != "no-profile" and validate_binding(doc["profile_binding"], doc.get("device")),
+                       "$.profile_binding", "must be a valid v1 binding for the recorded profile and device")
     errors.enum(doc, "mode", RUN_MODES, "$")
     errors.timestamp(doc, "started_at", "$")
     errors.timestamp(doc, "ended_at", "$", nullable=doc.get("status") != "completed")

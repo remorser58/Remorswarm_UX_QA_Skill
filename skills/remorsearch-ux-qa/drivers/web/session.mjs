@@ -10,6 +10,7 @@ import path from 'node:path';
 
 import { openBrowser } from './browser_transport.mjs';
 import { resolveDevice } from './devices.mjs';
+import { bindingDeviceMatches } from './profile_binding.mjs';
 import { inspectPage } from './inspect.mjs';
 import { STATE_KEY, TW_BINDING, armBinaryControl, controlOf, disposeBinaryControl, extractSnapshot, hitTest, idAtPoint, idForElement, pageInit, readBinaryControl } from './page_scripts.mjs';
 import {
@@ -842,12 +843,13 @@ function focusInfo() {
 }
 
 export class WebSession {
-  constructor({ pw, pwInfo, scenario, deviceRequest, profileId, runId, runDir, mode, options, warnings }) {
+  constructor({ pw, pwInfo, scenario, deviceRequest, profileId, profileBinding, runId, runDir, mode, options, warnings }) {
     this.pw = pw;
     this.pwInfo = pwInfo;
     this.scenario = scenario;
     this.deviceRequest = deviceRequest;
     this.profileId = profileId;
+    this.profileBinding = profileBinding;
     this.runId = runId;
     this.runDir = runDir;
     this.mode = mode;
@@ -955,6 +957,9 @@ export class WebSession {
       pwDevices: this.pw.devices,
       chromeMajor: parseInt(this.browserVersion, 10),
     });
+    if (this.profileBinding && !bindingDeviceMatches(this.profileBinding, dev.snapshotDevice)) {
+      throw new DriverFailure('actual emulation differs from the bound device configuration');
+    }
     this.dev = dev;
     for (const w of dev.warnings) this.warnOnce(`dev:${w}`, w);
     this.vw = dev.contextOptions.viewport.width;
@@ -3127,6 +3132,7 @@ export class WebSession {
         run_id: this.runId,
         scenario_id: this.scenario.scenario_id,
         profile_id: this.profileId,
+        ...(this.profileBinding && this.dev ? { profile_binding: this.profileBinding } : {}),
         driver: {
           name: 'playwright-web',
           version: this.pwInfo.version,

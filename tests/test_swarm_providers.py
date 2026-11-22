@@ -166,6 +166,37 @@ class HTTPFixtureTests(unittest.IsolatedAsyncioTestCase):
                 await transport.call(req)
         exchange.assert_not_called()
 
+    async def test_utf8_request_fits_but_escaped_http_body_never_dispatches(self):
+        req = request()
+        req["payload"]["large"] = "가" * 50_000 + '"' * 30_000
+        req["request_sha256"] = digest(req["payload"])
+        self.assertLess(len(canonical(req)), p.MAX_REQUEST_BYTES)
+
+        for protocol in ("openai-chat", "anthropic-messages"):
+            with self.subTest(protocol=protocol):
+                bodies = []
+
+                def record_body(document):
+                    raw = canonical(document)
+                    if "messages" in document:
+                        bodies.append(raw)
+                    return raw
+
+                exchange = Mock(side_effect=AssertionError("dispatch forbidden"))
+                transport = p._FixtureHTTPProvider(spec(protocol), exchange)
+                # Observe the adapter's actual encoded body; leave both limits intact.
+                with (
+                    patch.object(p, "canonical", side_effect=record_body),
+                    patch.object(p.http.client, "HTTPSConnection", side_effect=AssertionError("network forbidden")) as https,
+                ):
+                    with self.assertRaises(p.DefinitelyNotSent) as caught:
+                        await transport.call(req)
+                self.assertEqual(caught.exception.code, "provider_request_too_large")
+                body, = bodies
+                self.assertGreater(len(body), p.MAX_REQUEST_BYTES)
+                exchange.assert_not_called()
+                https.assert_not_called()
+
     async def test_protocol_model_usage_and_native_tools_fail_uncertain(self):
         variants = [wire(model="different"), wire(usage={"prompt_tokens": 8193, "completion_tokens": 4}),
                     wire(usage={"prompt_tokens": True, "completion_tokens": 4}),
