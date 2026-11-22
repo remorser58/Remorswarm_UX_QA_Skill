@@ -57,6 +57,10 @@ export function writeJsonAtomic(file, obj, mode = 0o644) {
 }
 
 export function readJsonFile(file, what) {
+  return readJsonFileWithBytes(file, what).document;
+}
+
+export function readJsonFileWithBytes(file, what) {
   let stat;
   try {
     stat = fs.statSync(file);
@@ -65,9 +69,10 @@ export function readJsonFile(file, what) {
   }
   if (!stat.isFile()) throw new UsageError(`${what}: ${file} is not a regular file`);
   if (stat.size > MAX_JSON_BYTES) throw new UsageError(`${what}: ${file} exceeds ${MAX_JSON_BYTES} bytes`);
-  const text = fs.readFileSync(file, 'utf8');
+  const bytes = fs.readFileSync(file);
+  if (bytes.length > MAX_JSON_BYTES) throw new UsageError(`${what}: ${file} exceeds ${MAX_JSON_BYTES} bytes`);
   try {
-    return JSON.parse(text);
+    return { bytes, document: JSON.parse(bytes.toString('utf8')) };
   } catch (err) {
     throw new UsageError(`${what}: ${file} is not valid JSON (${err.message})`);
   }

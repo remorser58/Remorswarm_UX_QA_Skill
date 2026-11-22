@@ -13,7 +13,7 @@ from pathlib import Path
 from _paths import SKILL  # noqa: F401 (makes the skill importable)
 from ergoqa import analyze, bundle, cli, swarm
 from ergoqa.profiles import sample_profiles
-from test_ergo_pipeline import make_run
+from test_ergo_pipeline import bind_fixture_profile, make_run
 
 
 class OwnerIdentityTests(unittest.TestCase):
@@ -25,7 +25,7 @@ class OwnerIdentityTests(unittest.TestCase):
         self.root = Path(self.tmp.name)
         self.profiles = sample_profiles(4, 7, ["galaxy-s24"])
 
-    def _run(self, profile_id: str) -> Path:
+    def _run(self, profile_id: str, *, bound: bool = False) -> Path:
         target = self.root / profile_id
         target.mkdir(parents=True, exist_ok=True)
         run_dir = make_run(target)
@@ -33,11 +33,15 @@ class OwnerIdentityTests(unittest.TestCase):
         run = json.loads(run_path.read_text(encoding="utf-8"))
         run["profile_id"] = profile_id
         run_path.write_text(json.dumps(run), encoding="utf-8")
+        if bound:
+            bind_fixture_profile(run_dir, next(p for p in self.profiles if p["profile_id"] == profile_id))
         return run_dir
 
     def test_analysis_exposes_the_recorded_owner(self) -> None:
         named = analyze.analyze_run(self._run("EP-03"), self.profiles, cross_profile=True, gaze_enabled=False)
         self.assertEqual(named["owner_profile_id"], "EP-03")
+        self.assertIsNone(named["verified_owner_profile_id"])
+        self.assertEqual(named["profile_binding_status"], "legacy_unverified")
         self.assertEqual(named["profiles_evaluated"][0], "EP-03")
         device_only = analyze.analyze_run(self._run("no-profile"), self.profiles, cross_profile=True, gaze_enabled=False)
         self.assertIsNone(device_only["owner_profile_id"])
@@ -52,7 +56,7 @@ class OwnerIdentityTests(unittest.TestCase):
         self.assertFalse(any(f["verification_status"] == "verified" for f in doc["records"]["findings"]))
 
     def test_cross_profile_export_classifies_only_the_owner_as_execution(self) -> None:
-        analysis = analyze.analyze_run(self._run("EP-02"), self.profiles, cross_profile=True, gaze_enabled=False)
+        analysis = analyze.analyze_run(self._run("EP-02", bound=True), self.profiles, cross_profile=True, gaze_enabled=False)
         findings = swarm.aggregate([analysis], self.profiles)
         # A consumer that reorders profiles_evaluated must not change classification:
         # ownership comes from the recorded owner, never from list order.
@@ -72,7 +76,7 @@ class OwnerIdentityTests(unittest.TestCase):
         self.assertFalse(any(f["verification_status"] == "verified" for f in analytical_findings))
 
     def test_mixed_owner_runs_cannot_borrow_the_first_pairs_owner(self) -> None:
-        first = analyze.analyze_run(self._run("EP-01"), self.profiles, cross_profile=True, gaze_enabled=False)
+        first = analyze.analyze_run(self._run("EP-01", bound=True), self.profiles, cross_profile=True, gaze_enabled=False)
         for owner in ("EP-02", "no-profile", "missing-owner-evidence"):
             with self.subTest(owner=owner):
                 later = copy.deepcopy(first)

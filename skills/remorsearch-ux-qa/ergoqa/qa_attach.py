@@ -259,9 +259,14 @@ def attach_run(
         raise AttachError(f"run {run_id}: recorded device {device_id!r}/{orientation!r} does not match profile "
                           f"{owner_id} ({attrs['device_id']!r}/{attrs.get('orientation', 'portrait')!r})")
 
-    analysis = analyze.analyze_run(run_path, profiles, scenario, cross_profile=cross_profile, gaze_enabled=gaze_enabled)
+    try:
+        analysis = analyze.analyze_run(run_path, profiles, scenario, cross_profile=cross_profile, gaze_enabled=gaze_enabled)
+    except ValueError as exc:
+        raise AttachError(str(exc)) from exc
     if analysis.get("owner_profile_id") != owner_id:
         raise AttachError(f"run {run_id}: analysis owner {analysis.get('owner_profile_id')!r} != recorded owner {owner_id!r}")
+    condition_owner = analysis["verified_owner_profile_id"]
+    profile_status = analysis["profile_binding_status"]
     evaluated = analysis["profiles_evaluated"]
     unbound = [pid for pid in evaluated if pid not in profile_to_scenario]
     if unbound:
@@ -311,7 +316,9 @@ def attach_run(
             "recorded_run_id": run_id,
             "profile_id": pid,
             "owner_profile_id": owner_id,
-            "cross_profile_evaluation": pid != owner_id,
+            "verified_owner_profile_id": condition_owner,
+            "profile_binding_status": profile_status if pid == owner_id else "analytical",
+            "cross_profile_evaluation": pid != condition_owner,
             "surface_ref": snapshots[-1]["surface"]["url"],
             "device_id": device_id,
             "orientation": orientation,
@@ -337,7 +344,7 @@ def attach_run(
         new_observations[coverage_id] = {
             "id": coverage_id, "run_id": owner_obs_run,
             "kind": "capture_coverage", "epistemic_status": "observed", "basis": "measured",
-            "analysis_kind": "owner_execution", "snapshot_id": snap["snapshot_id"],
+            "analysis_kind": "recorded_capture", "snapshot_id": snap["snapshot_id"],
             "snapshot_device": copy.deepcopy(snap["device"]),
             "receipt": copy.deepcopy(receipt),
             "build_identity_status": "unknown" if receipt["build_id"] == "unknown" else "recorded",
@@ -348,7 +355,7 @@ def attach_run(
             continue
         pair_profile = obs["profile_id"]
         pair_run_id = f"ERGO-RUN-{run_id}@{pair_profile}"
-        kind = "owner_execution" if pair_profile == owner_id else "analytical_cross_profile"
+        kind = obs["analysis_kind"]
         obs_id = f"ERGO-{obs['id']}"
         _claim(obs_id)
         record: dict[str, Any] = {
@@ -395,7 +402,9 @@ def attach_run(
             pair_profile = pair_profile_of[pair_run_id]
             finding_id = f"ERGO-{finding['id']}@{run_id}@{pair_profile}"
             _claim(finding_id)
-            analytical = pair_run_id != owner_obs_run
+            kinds = {new_observations[o]["analysis_kind"] for o in obs_ids}
+            kind = next(iter(kinds)) if len(kinds) == 1 else "mixed"
+            analytical = kind not in ("owner_execution", "captured_task")
             verified = (not analytical and finding.get("tier") != "hypothesis"
                         and all(new_observations[o]["epistemic_status"] == "observed"
                                 and new_observations[o]["basis"] == "measured"
@@ -410,7 +419,7 @@ def attach_run(
                 "check_id": finding["check_id"],
                 "summary": finding["summary_ko"],
                 "basis": finding["basis"],
-                "analysis_kind": "owner_execution" if not analytical else "analytical_cross_profile",
+                "analysis_kind": kind,
                 "coverage_label": finding["coverage_label"],
                 "triggered_profiles": list(finding["triggered_profiles"]),
             }
@@ -460,14 +469,15 @@ def attach_run(
         out["notes"] = notes
     notes["ergo_attach"] = {
         "attached_runs": sorted(new_runs),
-        "owner_executions": sum(1 for r in new_runs.values() if not r["cross_profile_evaluation"]),
+        "recorded_executions": 1,
+        "matched_profile_configurations": sum(1 for r in new_runs.values() if not r["cross_profile_evaluation"]),
         "analytical_evaluations": sum(1 for r in new_runs.values() if r["cross_profile_evaluation"]),
         "build_identity_status": "unknown" if any(r["build_id"] == "unknown" for r in receipts_by_snapshot.values()) else "recorded",
         "capture_count": len(receipts_by_snapshot),
         "limitations": list(analysis.get("limitations") or []),
-        "basis_note": "Owner-execution findings may verify from measured observations; cross-profile evaluations are "
-                      "analytical model coverage and never count as persona executions or verified experiences. "
-                      "Counts are simulated-profile coverage, not prevalence.",
+        "basis_note": "Matching inputs establish recorded profile/model consistency, not authenticity or observed grip. "
+                      "Captured task evidence is separate; analytical evaluations cannot establish persona executions. "
+                      "Model observations are inferred and counts are not prevalence.",
     }
     if notes["ergo_attach"]["build_identity_status"] == "unknown":
         notes["ergo_attach"]["build_gap"] = "빌드 ID가 기록되지 않은 캡처입니다. 해당 결과는 미검증 상태이며 같은 빌드의 재현 증거로 사용할 수 없습니다."

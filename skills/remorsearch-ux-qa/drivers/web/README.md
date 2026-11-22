@@ -184,6 +184,21 @@ hold transient values, and they are disposed immediately. Checks precede later
 focus/reflow probes. Matching endpoints do not exclude a transition that returns
 to the same state during capture; rapidly changing targets need another capture.
 
+## Binding a run to authored profile inputs
+
+For a new run with an authored profile, add `--bind-profile` to `run` or `serve`.
+This opt-in requires Python 3.10+ and a built-in catalog device matching the
+profile orientation. The recorder pins digests of the bytes it read, canonical
+profile content, resolved reach inputs and model source revision in `run.json`.
+It does not store profile dimensions in the binding, calibrate captured coordinates,
+or measure grip or anatomy. Matching digests establish consistency for the recorded
+profile and selected reach-model revision, not capture authenticity.
+A changed bound profile/model is rejected by default. Use `--analytical-rescore`
+with `ergo_qa.py analyze` or `swarm` for a comparison, not an owner result.
+`attach` refuses that changed analysis. ID-only captures can still be analyzed,
+but their profile revision is unverified; their original task and capture
+evidence is separate. Model predictions always remain inferred.
+
 ## Analysing a run recorded without a profile
 
 Runs recorded with `--device` alone have `profile_id: "no-profile"`. Analyze the
