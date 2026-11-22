@@ -93,6 +93,18 @@ def cmd_profiles(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def cmd_bind_seeds(args: argparse.Namespace) -> int:
+    from .seed_bindings import bind
+
+    receipt = bind(load_json(args.bindings), _load_profiles(args.profiles))
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with out.open("x", encoding="utf-8") as stream:
+        stream.write(json.dumps(receipt, ensure_ascii=False, indent=2) + "\n")
+    print(f"{len(receipt['bindings'])} authored binding(s); reach inputs not evaluated -> {out}")
+    return EXIT_OK
+
+
 def cmd_audience_check(args: argparse.Namespace) -> int:
     doc = load_json(args.audience)
     if args.draft or args.gate or args.bundle or args.run:
@@ -164,7 +176,8 @@ def _analyses(args: argparse.Namespace, profiles: list[dict[str, Any]], scenario
     for run_dir in run_dirs:
         run_doc = load_json(run_dir / "run.json")
         out.append(analyze.analyze_run(run_dir, profiles, _bound_scenario(scenarios, run_doc, run_dir),
-                                       cross_profile=args.cross_profile, gaze_enabled=not args.no_gaze))
+                                       cross_profile=args.cross_profile, gaze_enabled=not args.no_gaze,
+                                       analytical_rescore=args.analytical_rescore))
     return out
 
 
@@ -175,6 +188,18 @@ def cmd_analyze(args: argparse.Namespace) -> int:
     _write_json(Path(args.out), {"analyses": analyses})
     failed = sum(1 for a in analyses for o in a["observations"] if not o["passed"])
     print(f"{len(analyses)} run(s), {failed} failing observation(s) -> {args.out}")
+    return EXIT_OK
+
+
+def cmd_profile_binding(_args: argparse.Namespace) -> int:
+    """The recorder controls stdin; no user-asserted digest or external path is accepted."""
+    from .profile_binding import prepare
+    from .snapshot import MAX_JSON_BYTES
+
+    raw = sys.stdin.buffer.read(MAX_JSON_BYTES + 1)
+    if len(raw) > MAX_JSON_BYTES:
+        raise ValueError("recording profile exceeds the JSON input limit")
+    print(json.dumps(prepare(raw), ensure_ascii=False))
     return EXIT_OK
 
 
@@ -358,9 +383,11 @@ def cmd_attach(args: argparse.Namespace) -> int:
     with out_path.open("x", encoding="utf-8") as output:
         output.write(json.dumps(bundle_doc, ensure_ascii=False, indent=2) + "\n")
     runs = bundle_doc["records"]["runs"]
-    owner_runs = [r for r in runs if isinstance(r, dict) and r.get("recorded_run_id") and not r.get("cross_profile_evaluation")]
+    matched = [r for r in runs if isinstance(r, dict) and r.get("profile_binding_status") == "matched"
+               and not r.get("cross_profile_evaluation")]
     analytical = [r for r in runs if isinstance(r, dict) and r.get("cross_profile_evaluation")]
-    print(f"attached {attached} run(s): {len(owner_runs)} owner execution(s), {len(analytical)} analytical evaluation(s) -> {args.out}")
+    print(f"attached {attached} run(s): {len(matched)} matched profile/reach configuration(s), "
+          f"{len(analytical)} analytical evaluation(s) -> {args.out}")
     print(f"receipts: {args.receipts_dir} (validate with --artifacts-root {args.receipts_dir})")
     if (bundle_doc.get("notes", {}).get("ergo_attach", {}).get("build_identity_status") == "unknown"):
         print("빌드 ID가 기록되지 않은 결과는 미검증 상태입니다. 같은 빌드의 재현 증거로 사용할 수 없습니다.", file=sys.stderr)
@@ -384,6 +411,15 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--personas", help="optional JSON list of persona records (dataset, revision, record_id, age_band)")
     p.add_argument("--out", required=True)
     p.set_defaults(func=cmd_profiles)
+
+    p = sub.add_parser("bind-seeds", help="validate authored NVIDIA seed IDs against existing profiles (provenance only)")
+    p.add_argument("--profiles", required=True, help="existing ergo-profile.v1 list or profiles document")
+    p.add_argument("--bindings", required=True, help="ergo-seed-bindings.v1 manifest")
+    p.add_argument("--out", required=True, help="new receipt file, not an input profile set")
+    p.set_defaults(func=cmd_bind_seeds)
+
+    p = sub.add_parser("profile-binding", help="derive recording binding from a single profile JSON on stdin")
+    p.set_defaults(func=cmd_profile_binding)
 
     p = sub.add_parser("audience-check", help="validate an ergo-audience.v1 file (Stage 0 target-user research)")
     p.add_argument("audience")
@@ -415,6 +451,8 @@ def build_parser() -> argparse.ArgumentParser:
         p.add_argument("--profiles", required=True)
         p.add_argument("--scenario", action="append", help="scenario JSON file or directory (repeatable)")
         p.add_argument("--cross-profile", action="store_true", help="evaluate each run under every profile with the same device and orientation; required for runs recorded without a profile")
+        p.add_argument("--analytical-rescore", action="store_true",
+                       help="allow changed bound profile/model as analytical only, never as the recorded condition")
         p.add_argument("--no-gaze", action="store_true", help="skip screenshot conspicuity (faster)")
         p.add_argument("--out", required=True)
         if name == "swarm":
