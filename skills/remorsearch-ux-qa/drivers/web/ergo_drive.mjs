@@ -17,7 +17,8 @@ import { WebSession, ensureRunDir } from './session.mjs';
 import { startServer } from './serve.mjs';
 import { normalizeBuildId, normalizeProfile, normalizeScenario } from './validate.mjs';
 import { loadPlaywright } from './playwright_loader.mjs';
-import { DriverFailure, EXIT, UsageError, readJsonFile } from './util.mjs';
+import { DriverFailure, EXIT, UsageError, readJsonFile, readJsonFileWithBytes } from './util.mjs';
+import { prepareProfileBinding } from './profile_binding.mjs';
 
 const USAGE = `usage:
   node drivers/web/ergo_drive.mjs devices
@@ -29,6 +30,7 @@ options:
   --run-id ID              run directory name (default R-<scenario>-<profile>-<utc>-<rand>)
   --base URL               replaces "{BASE}" in scenario urls, e.g. http://127.0.0.1:8765
   --build-id ID            operator-supplied product commit/version/deploy or source identity
+  --bind-profile           pin exact --profile content and model revision (catalog device, Python 3.10+)
   --device ID              override the profile's attributes.device_id (${[...CATALOG.keys()].join(', ')})
   --device-json FILE       device object (ergoqa Device.to_dict) instead of the built-in table
   --orientation O          override the profile's orientation (portrait|landscape)
@@ -72,7 +74,7 @@ const VALUE_FLAGS = new Set([
   'scenario', 'profile', 'out', 'run-id', 'base', 'build-id', 'port', 'flash-sample-ms', 'device', 'device-json', 'orientation',
   'allow-origin', 'feedback-timeout-ms', 'settle-ms', 'timeout-s', 'idle-timeout-s', 'locale', 'timezone', 'agent', 'agent-json', 'url', 'task',
 ]);
-const BOOL_FLAGS = new Set(['headed', 'continue-on-error', 'no-auto-scroll', 'no-visual-feedback', 'focus-walk', 'no-focus-walk', 'no-reflow', 'help']);
+const BOOL_FLAGS = new Set(['headed', 'continue-on-error', 'no-auto-scroll', 'no-visual-feedback', 'focus-walk', 'no-focus-walk', 'no-reflow', 'bind-profile', 'help']);
 
 function parseArgs(argv) {
   const out = { command: null, flags: {}, allowOrigins: [] };
@@ -184,6 +186,9 @@ async function main(argv) {
   if (!f.scenario) throw new UsageError('--scenario is required');
   if (!f.out) throw new UsageError('--out is required');
   if (!f.profile && !f.device && !f['device-json']) throw new UsageError('--profile or --device is required');
+  if (f['bind-profile'] && (!f.profile || f['device-json'])) {
+    throw new UsageError('--bind-profile needs --profile and a built-in device, not --device-json');
+  }
   // Every interactive session names its operator: the channel decides what the replies
   // may carry, and corroboration counts operators by model family and channel.
   if (args.command === 'serve' && !f['agent-json']) {
@@ -240,7 +245,8 @@ async function main(argv) {
   if (scenario.build_id && buildId !== scenario.build_id) throw new UsageError('--build-id conflicts with scenario.surface.build_id');
   options.buildId = buildId;
   options.buildIdSource = buildId ? (f['build-id'] === undefined ? 'scenario.surface.build_id' : '--build-id') : null;
-  const profile = f.profile ? normalizeProfile(readJsonFile(f.profile, 'profile')) : null;
+  const profileInput = f.profile ? readJsonFileWithBytes(f.profile, 'profile') : null;
+  const profile = profileInput ? normalizeProfile(profileInput.document) : null;
   let device = null;
   if (f['device-json']) {
     try {
@@ -264,6 +270,8 @@ async function main(argv) {
     warnings.push(`device ${deviceId} is not listed in scenario.device_ids (${scenario.device_ids.join(', ')})`);
   }
   const profileId = profile ? profile.profile_id : 'no-profile';
+  if (f['bind-profile'] && profileId === 'no-profile') throw new UsageError('--bind-profile cannot bind the reserved no-profile ID');
+  const profileBinding = f['bind-profile'] ? prepareProfileBinding(profileInput.bytes, profile, early.snapshotDevice) : null;
   const runId = f['run-id'] || defaultRunId(scenario.scenario_id, profileId);
   if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(runId)) throw new UsageError('--run-id must match [A-Za-z0-9][A-Za-z0-9._-]{0,127}');
   const { pw, info } = loadPlaywright();
@@ -278,6 +286,7 @@ async function main(argv) {
     scenario,
     deviceRequest: { id: deviceId, device, orientation, fallbackDevice: early.snapshotDevice },
     profileId,
+    profileBinding,
     runId,
     runDir,
     mode: args.command === 'run' ? 'scripted' : 'interactive',

@@ -185,6 +185,11 @@ def _device_of(profile: dict[str, Any]) -> Any:
     return device
 
 
+def _analysis_kind(records: Iterable[dict[str, Any]]) -> str:
+    kinds = {r.get("analysis_kind") or "unverified" for r in records}
+    return next(iter(kinds)) if len(kinds) == 1 else "mixed"
+
+
 def aggregate(analyses: Iterable[dict[str, Any]], profiles: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
     profiles_by_id = {p["profile_id"]: p for p in profiles}
     groups: dict[tuple[str, str, str], dict[str, Any]] = {}
@@ -265,6 +270,7 @@ def aggregate(analyses: Iterable[dict[str, Any]], profiles: Iterable[dict[str, A
             "element_key": element_key,
             "severity": worst["severity"],
             "basis": spec.basis,
+            "analysis_kind": _analysis_kind(group["failed"]),
             # Measured on estimated geometry (vision annotation) is still inferred.
             "epistemic_status": "observed" if spec.basis == "measured" and not any(o.get("epistemic_status") == "inferred" for o in group["failed"]) else "inferred",
             "model": worst.get("model"),
@@ -326,6 +332,7 @@ def units(findings: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
             "tier": worst.get("tier", checks.tier(check_id)),
             "category": worst["category"],
             "basis": worst["basis"],
+            "analysis_kind": _analysis_kind(members),
             "severity": worst["severity"],
             "condition": diff,
             "profile_specific": worst.get("profile_specific") or {},

@@ -1,4 +1,5 @@
 """CLI-to-queue selection regressions; every live boundary is replaced or forbidden."""
+from contextlib import closing
 import copy
 import importlib.util
 from pathlib import Path
@@ -230,7 +231,7 @@ class LiveSelectionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(queue.plan["limits"]["max_model_calls"], 30)
         self.assertIn("Inspect the draft", queue.plan["jobs"][0]["task"]["actions"])
         self.assertFalse(read_json(queue.root / "preview.json")["selection_ui_verified"])
-        with sqlite3.connect(queue.path) as db:
+        with closing(sqlite3.connect(queue.path)) as db:
             approval = db.execute("SELECT actor,consent_reference,ceiling FROM approvals").fetchone()
             operations = db.execute("SELECT COUNT(*) FROM operations").fetchone()[0]
         self.assertEqual(approval, (self.args.approval_actor, self.args.consent_reference, 0))
