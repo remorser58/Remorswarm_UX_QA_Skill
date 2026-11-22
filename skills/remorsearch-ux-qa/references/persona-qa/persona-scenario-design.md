@@ -109,6 +109,12 @@ Evidence that motivated the scenario: two people in one community report that pa
 
 The example is a test condition. It is not evidence that every member of the segment behaves this way, and the segment's share says nothing about how many users would meet this failure.
 
+## Draft vs. Save
+
+If an existing layered confirmation applies to a draft and the underlying editor has a separate Save, add this recovery subcase. From the same safe starting state, exercise pointer and keyboard activation separately. The confirmation changes only the intended draft once, with no editor save or dismissal. Separately activate the editor's Save and check that the intended values persist once. Record actual focus, draft state, and persisted state independently. If the original opener was replaced by another item's control, return to a surviving, meaningful point in the still-open editor, not to the replacement by position or label. For [React portals](https://react.dev/reference/react-dom/createPortal#caveats), callback ancestry can differ from DOM ancestry; neither a parent callback nor a correct-looking screenshot establishes the save outcome. Use only existing authorized controls and mark unexercised branches untested.
+
+For a disposable record, note its saved value before either run. In the no-save run, confirm a different value in the child, then close the editor without saving; reopen the same record and check for the original value. In the save run, start from the same baseline, confirm the change in the child, then choose Save in the editor; reopen the record and check for the changed value. If the product exposes no independent saved-state readback or save count, mark that fact unverified rather than inferring it from a toast or the open draft.
+
 ## Korean products
 
 Use this section for Korean product QA conditions. Report language alone changes headings and wording. Community research runs only when requested. It adds test conditions. None of it is evidence about real users. A cue from the Korean context becomes part of a claim only when a gate-supported claim, or a statistic with a source card (`references/research/korea/statistics.md`), backs it. Until then it is an assumption and is labelled as one. Read `references/persona-qa/kwcag-card.md` for safeguards; lookup `references/persona-qa/kwcag-2.2.md` by item. Only requested Korean research uses the channel router `references/research/korea/overview.md`; lookup channels by ID.

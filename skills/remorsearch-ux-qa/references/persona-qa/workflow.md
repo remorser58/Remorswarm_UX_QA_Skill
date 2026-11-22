@@ -28,7 +28,7 @@ List screens, states, devices reached or not. Where relevant, test Korean clippi
 
 Scenario: ID/task/goal/safe data, basis/brief condition, context/constraints/device/input/start, expected decision/integrity/risk, claim IDs and omissions. Audience rows cite audience_id/segment_id/task_id/facet and gate-supported motivations. Without an audience, choose task-changing strata: new/returning, touch/keyboard, interruption, delay, empty/stale/edge data. Do not add demographic decoration or stereotype behavior.
 
-Optional dataset: exact source/revision/schema, bounded/streaming sample; record adapter/schema fingerprint/seed/config/shard/read-byte-time bounds/IDs/strata/stop. Separate original attributes/assumptions. Scenario detail: `references/persona-qa/persona-scenario-design.md` by section.
+Optional dataset: exact source/revision/schema, bounded/streaming sample; record adapter/schema fingerprint/seed/config/shard/read-byte-time bounds/IDs/strata/stop. Separate original attributes/assumptions. See `references/persona-qa/persona-scenario-design.md` by section (Draft vs. Save).
 
 ## 2. Exercise and capture
 
