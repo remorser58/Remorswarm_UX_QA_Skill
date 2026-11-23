@@ -27,6 +27,18 @@ Resolve overlaps: protect raw details while showing a safe state or next action;
 - **Apple, iPhone lock-screen notification preview.** [iPhone guide](https://support.apple.com/guide/iphone/iph7c3d96bab/ios) documents Always / When Unlocked / Never preview settings. [Notifications HIG](https://developer.apple.com/design/human-interface-guidelines/notifications) explains why to avoid private details when someone nearby might see the display, and why a safe generic description still helps decide whether to open. Application: separate event type from identity/content. Replay permitted settings × lock states and verify a synthetic title/body canary is present only in entitled states; don’t generalize defaults to all versions, apps or preview modes.
 - **Airbnb, search and checkout.** The [price announcement](https://news.airbnb.com/total-price-display-is-now-standard-globally/) says its search total includes mandatory fees and explains that it helps budget comparisons. [Help: price breakdown](https://www.airbnb.com/help/article/125) documents the breakdown; [tax exceptions](https://www.airbnb.com/help/article/3610) are region/collection dependent. Application: show the decision value first and arithmetic on demand. Replay two equal-date/occupancy/currency fixtures whose rank flips when mandatory fees are added. Check search comparison, pre-confirmation total and breakdown; distinguish any separately collected cost.
 
+## Evidence card: verify the current zero-result query
+
+In one owned synthetic list, independently confirm that the unfiltered view contains `R-17` (Blue) and `R-18` (Gray). Use the existing filter to select Green; no record edits are part of this task. Capture what the view says separately from what the current query and recovery establish. A blank list or count of zero can establish neither query completion nor the absence of records.
+
+| Branch in the same list | Readback and task verdict |
+| --- | --- |
+| Current Green query completes with zero matches. | Tie the zero to this query and its current filter. Clear the filter once with the existing control. Verify the reset completes and both original IDs and values return; use the permitted independent readback to confirm the list data was not changed. |
+| An earlier query showed zero, but Green is still pending or failed. | Keep the loading or failure outcome; the previous zero is not a result for Green. Do not count recovery as complete before the reset result is observed. |
+| The current request, reset result or permitted readback cannot be inspected. | Mark that observation unavailable. Keep any label or rendered rows actually seen; do not infer zero or grant extra access to get evidence. |
+
+This is a recovery check for a known nonempty list. Claim a truly empty list only for the authorized scope after a completed unfiltered query and independent evidence of no records. [IBM Carbon's user-action empty states](https://www.carbondesignsystem.com/building-blocks/core/patterns/empty-states#user-action-empty-states) suggests adjusting search terms or filters when no matches were found (checked 2026-11-23). It does not establish a query result, a safe reset, or actual product recovery.
+
 ## Research and transfer
 
 - [Pirolli and Card, Information Foraging](https://doi.org/10.1037/0033-295X.106.4.643): proximal cues guide which path people pursue. A descriptive heading helps test destination expectations; a theory is not proof this label works for this product.
