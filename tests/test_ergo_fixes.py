@@ -120,6 +120,7 @@ class CaptureAlignment(unittest.TestCase):
         for c, h in ((full, 393), (crop, 369)):
             c.device = rotate(c.device)
             c.attrs["grip"] = "two_thumbs"
+            c.attrs["orientation"] = "landscape"
             c.elements[0]["roles"] = ["game_control"]
             c.snapshot["device"].update(viewport_css=[852, h], orientation="landscape")
         a = next(o for o in checks.check_reach(full) if o.check_id == "GM-02")

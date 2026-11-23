@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from typing import Literal
 
 MODEL_ID = "thumb-reach-v3-uncalibrated"
 SUPPORTED_GRIPS = ("one_hand_right", "one_hand_left", "two_thumbs", "cradle_right", "cradle_left")
@@ -74,6 +75,36 @@ def geometry_for_device(device) -> Geometry:
 def tablet_like(geom: Geometry, p: ReachParams = DEFAULT) -> bool:
     """Handheld tablets and unfolded foldables (HGR-9): side grips, no one-hand thumb model."""
     return min(geom.body_w, geom.body_h) > p.tablet_min_short_side_mm
+
+
+@dataclass(frozen=True)
+class ReachApplicability:
+    kind: Literal["scored", "neutral", "unsupported"]
+    reason: str
+
+
+def applicability(attrs: dict, device, capture: dict | None = None) -> ReachApplicability:
+    """Scope of the grip model, independent of coordinate/raster calibration.
+
+    Coverage uses the oriented profile device. Observations and overlays also
+    bind the recorded device; a catalog or analysis fallback is not a capture.
+    """
+    if (attrs.get("device_id") != device.id
+            or (capture is not None and capture.get("id") != device.id)):
+        return ReachApplicability("unsupported", "profile and capture must identify the same device")
+    if (attrs.get("orientation") != device.orientation
+            or (capture is not None and capture.get("orientation") != device.orientation)):
+        return ReachApplicability("unsupported", "profile and capture must declare the same orientation")
+    if device.input != "touch":
+        return ReachApplicability("unsupported", "reach scoring requires a touch-input device")
+    grip = attrs.get("grip")
+    if grip not in SUPPORTED_GRIPS:
+        return ReachApplicability("unsupported", f"no thumb model for grip {grip!r}")
+    if grip.startswith("cradle"):
+        return ReachApplicability("neutral", f"{grip}: no modeled reach penalty; not a reach assessment")
+    if grip.startswith("one_hand") and tablet_like(geometry_for_device(device)):
+        return ReachApplicability("unsupported", "one-hand thumb model does not apply to tablet-like geometry")
+    return ReachApplicability("scored", "")
 
 
 def _pivot(geom: Geometry, p: ReachParams) -> tuple[float, float]:

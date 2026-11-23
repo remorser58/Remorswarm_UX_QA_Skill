@@ -76,6 +76,8 @@ P0/P1은 정확한 `finding_id`의 캡처·텍스트 재검토 기록을 `--seco
 
 Add `--audience audience.json` only for a completed audience. Use the emitted bundle path if this version names it differently. Outputs: findings.json, analyses.json, report.md and an evidence bundle. Segment groups/segments_affected describe triggered profiles, never user shares. Record model IDs and differential conditions (shared by triggered profiles and no untriggered profile). Use `python3 scripts/ergo_qa.py heatmap --help` for reach/gaze review options.
 
+Reach overlays require matching device and orientation. Non-touch input/grip or one-hand tablet-like geometry: exit 2, no image. Matched touch cradle: unchanged image, labeled **no modeled reach penalty**. Neither is scored RH-01/RH-02 coverage or evidence of human reach.
+
 Lookup fired check IDs in `references/ergonomics/human-factors-checks.md`: reach, pointing/Fitts/misfire, gaze, contrast/CVD/visual angle/bright light, choice/reading/latency, game reaction/flash, names/labels/errors/focus/clipping/reflow. Formulas and validity limits are in `ergoqa/params.py`; repository briefs `docs/human-factors/` are not installed. A detector alone cannot decide WCAG size exceptions, irreversible actions, destructive-primary styling, ad-like information, game intent, left-handed options or heuristic fit: record screenshot/step-backed judgment and its limit. ACT examples gate covered checks; a screening result never certifies standards compliance.
 
 ## 5. Report, fix and replay

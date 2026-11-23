@@ -456,17 +456,13 @@ def check_reach(ctx: Context) -> list[Observation]:
     """Reach/grip checks (HGR-3/5/11). Model-only severities are capped at P2."""
     from .devices import css_to_display_mm_point, display_mapping
 
-    if not ctx.is_touch:
+    if reach.applicability(ctx.attrs, ctx.device, ctx.snapshot.get("device", {})).kind != "scored":
         return []
     grip = ctx.attrs.get("grip")
     orientation = ctx.snapshot.get("device", {}).get("orientation", "portrait")
     landscape_game = orientation == "landscape" and grip == "two_thumbs"
-    if grip not in reach.SUPPORTED_GRIPS or grip.startswith("cradle"):
-        return []
     out: list[Observation] = []
     geom = reach.geometry_for_device(ctx.device)
-    if reach.tablet_like(geom) and grip.startswith("one_hand"):
-        return []  # HGR-9: nobody operates a tablet with the holding thumb; the phone model does not apply
     mapped, alignment = display_mapping(ctx.snapshot, ctx.device)
     thumb_input = resolve_thumb_input(ctx.profile)
     thumb = thumb_input["mm"]
@@ -2803,12 +2799,10 @@ def applicable(check_id: str, profile: dict[str, Any], device: Any) -> bool:
     attrs = profile.get("attributes", {})
     touch = getattr(device, "input", "touch") == "touch"
     grip = attrs.get("grip", "")
-    if check_id in ("RH-01", "RH-02"):
-        if not touch or grip.startswith("cradle") or grip not in reach.SUPPORTED_GRIPS:
+    if check_id in ("RH-01", "RH-02", "GM-02"):
+        if reach.applicability(attrs, device).kind != "scored":
             return False
-        return not (grip.startswith("one_hand") and reach.tablet_like(reach.geometry_for_device(device)))
-    if check_id == "GM-02":
-        return touch and grip == "two_thumbs" and attrs.get("orientation") == "landscape"
+        return check_id != "GM-02" or (grip == "two_thumbs" and device.orientation == "landscape")
     if check_id in ("PT-03", "PT-04", "GM-05"):
         return touch
     if check_id in ("PT-05", "PT-06"):

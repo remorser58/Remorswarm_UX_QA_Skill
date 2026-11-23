@@ -261,7 +261,7 @@ def _reach_overlay_image(snapshot: dict[str, Any], root: Path):
         for scale in (1, device["dpr"])
     ):
         raise ValueError("reach heatmap PNG does not match the declared full viewport at CSS or device scale")
-    return png.to_rgb(png.decode(raw))
+    return png.decode(raw)
 
 
 def cmd_heatmap(args: argparse.Namespace) -> int:
@@ -278,19 +278,26 @@ def cmd_heatmap(args: argparse.Namespace) -> int:
     cols, rows = max(1, int(vw // 8)), max(1, int(vh // 8))
     values: list[list[float | None]] = []
     if args.kind == "reach":
+        grip = profile["attributes"]["grip"]
+        scope = reach.applicability(profile["attributes"], device, snapshot["device"])
+        if scope.kind == "unsupported":
+            raise ValueError(f"reach heatmap unavailable: {scope.reason}")
         mapped, alignment = display_mapping(snapshot, device)
         if mapped is None:
             raise ValueError(f"reach heatmap needs verified display alignment: {alignment['reason']}")
         image = _reach_overlay_image(snapshot, Path(args.snapshot).parent)
+        if scope.kind == "neutral":
+            png.write_png(args.out, image)
+            print(f"{scope.reason}; unchanged image -> {args.out}")
+            return EXIT_OK
         geom = reach.geometry_for_device(device)
-        grip = profile["attributes"]["grip"]
         thumb_input = resolve_thumb_input(profile)
         thumb = thumb_input["mm"]
         for r in range(rows):
             row = []
             for c in range(cols):
                 x_mm, y_mm = css_to_display_mm_point(mapped, (c + 0.5) * vw / cols, (r + 0.5) * vh / rows)
-                row.append(reach.reach_score(x_mm, y_mm, geom, grip, thumb)["difficulty"] if grip in reach.SUPPORTED_GRIPS else None)
+                row.append(reach.reach_score(x_mm, y_mm, geom, grip, thumb)["difficulty"])
             values.append(row)
     else:
         image = png.to_rgb(png.read_png(shot))
@@ -306,7 +313,7 @@ def cmd_heatmap(args: argparse.Namespace) -> int:
                 bottom_up = grid[min(gh - 1, int(yf * gh))][min(gw - 1, int(xf * gw))] if gh else 0.0
                 row.append(0.5 * bottom_up + 0.5 * gaze.position_prior(xf, yf, gaze.prior_kind(form, snapshot.get("surface", {}).get("kind", "web"))))
             values.append(row)
-    overlay = png.heat_overlay(image, values, alpha=0.45)
+    overlay = png.heat_overlay(png.to_rgb(image), values, alpha=0.45)
     png.write_png(args.out, overlay)
     print(f"{args.kind} heatmap -> {args.out}")
     if args.kind == "reach" and "reference_percentile" in thumb_input:
