@@ -36,6 +36,22 @@ Can the user reach the **right result** with less avoidable work? For example, c
 
 [Seckler et al., CHI 2014](https://storage.googleapis.com/gweb-research2023-media/pubtools/pdf/42513.pdf) compared bundled changes to three registration forms: completion time improved significantly for two, not the third. That result motivates testing the actual task; it does not predict the gain from any one edit. [GOV.UK's benchmarking protocol](https://www.gov.uk/service-manual/measuring-success/usability-benchmarking-a-website-or-whole-service#what-to-measure) distinguishes correct completion from giving up or believing a failed attempt succeeded.
 
+### Synthetic evidence card: returning to the saved list
+
+In an owned fixture, review saved item `Q-17` at revision `B` without changing the list. Add a lookalike `Q-18`. Interrupt at the saved-list checkpoint just before opening the item. Replay from that same list and checkpoint on the same build, input, viewport, interruption and observation limit. When comparing builds, vary only the build. The fixture offers `Not now` as a valid exit; verify it leaves the list unchanged. For completion, verify the intended item and revision in the review result and confirm the list is unchanged; a click or banner is not enough.
+
+Start one elapsed-time clock at the first observation of the reopened list being actionable. Record what was visible and tie the start and subsequent events to the same run. The launcher click, loading state and no-op inputs do not count as resumption. Record the first task-relevant move and any wrong turns, the first verified action that continues the intended task, and the final outcome separately. Judge actions by the recorded state, not by which route the reviewer expected or by guessing intent.
+
+| Invented trace from the same checkpoint | Record separately |
+| --- | --- |
+| At 2 s opens `Q-18`; at 6 s reaches `Q-17/B`; at 10 s verifies the review and unchanged list. | Wrong first move retained; correct continuation at 6 s; completion verified at 10 s. |
+| At 2 s opens `Q-17/B`; at 10 s verifies the review and unchanged list. | Correct first move and continuation at 2 s; completion verified at 10 s. |
+| At 2 s chooses `Not now`; independent readback shows the list unchanged. | Valid decline, not a wrong turn, continuation or task completion. |
+| The trace is continuous through the 20 s observation limit, with no correct continuation or verified completion. | Report no event observed through 20 s (right-censored), not a 20 s success latency or a known ultimate failure. |
+| The actionable return point or required event evidence is missing. | The affected timing or outcome is unavailable; keep any independently observed result and do not substitute 0 s or the observation limit. |
+
+[Trafton et al. (2003), §4.1.4, Measures](https://interruptions.net/literature/Trafton-IJHCS03.pdf#page=10) measured from restoration of the task interface to the first input to resume it; that is not this card's verified continuation. [Altmann et al. (2014), Analysis 1](https://interruptions.net/literature/Altmann-JExpPsycholGen14.pdf#page=4) separated step-order errors from response latency. These lab tasks motivate separate measures, not a product timing target or a claim about users. The times above are invented for the evidence card.
+
 ## Primary and practitioner reading
 
 - [GOV.UK: contextual research](https://www.gov.uk/service-manual/user-research/contextual-research-and-observation), [moderated usability testing](https://www.gov.uk/service-manual/user-research/using-moderated-usability-testing), and [benchmarking end-to-end services](https://www.gov.uk/service-manual/measuring-success/usability-benchmarking-a-website-or-whole-service).
