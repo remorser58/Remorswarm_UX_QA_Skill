@@ -152,3 +152,40 @@ No image analysis SDK or model is included by this change.
 This release's tests use owned synthetic fixtures. They establish contracts and failure
 handling; actual host dialogs, actual model execution, camera analysis, browser UX and human
 benefit each need their own current observations.
+
+## 6. Reduced motion must preserve task completion
+
+Use the same existing, authorized synthetic progress or disclosure flow in two
+fresh runs. Match build, initial state, viewport, input and action; vary only
+the browser's reported [motion preference](https://www.w3.org/TR/mediaqueries-5/#prefers-reduced-motion)
+(`no-preference` and `reduce`). Record how the preference was set and which
+value the browser actually reports before the action. Record the authored
+movement that the baseline actually shows and the reason any remaining
+movement is essential to the function or information. Do not assume that
+a necessary status message makes its decorative animation essential.
+
+Before testing, define the expected settled state, next usable action and
+observation limit. At the trigger and through completion, record actual focus,
+visible and semantic state (for example, expanded where relevant), and the
+available progress or completion cue. Verify within the same task bounds that
+the reduced run suppresses the nonessential motion and still reaches the
+intended usable result. A static cue can replace motion; identical animation
+durations are not required. If the animation disappears but the flow stays
+busy, focus is lost, the next action is blocked, or the result becomes
+imperceptible, do not pass. A screenshot or an animation-end event alone does
+not establish completion. Keep the observed timing and outcome for each run.
+
+Report [WCAG 2.2 SC 2.3.3 (AAA)](https://www.w3.org/WAI/WCAG22/Understanding/animation-from-interactions.html)
+for disabling nonessential interaction-triggered motion.
+[C39](https://www.w3.org/WAI/WCAG22/Techniques/css/C39) is one technique, not a
+requirement to use this CSS feature. Assess automatically started motion
+under [2.2.2](https://www.w3.org/WAI/WCAG22/Understanding/pause-stop-hide.html)
+only when its conditions apply, and applicable status messages under
+[4.1.3](https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html)
+separately. DOM evidence does not establish an assistive-technology announcement.
+If no suitable existing flow or preference observation is available, mark
+that comparison `not_run`. Browser emulation does not verify the operating
+system setting or real-device behavior. If server-rendered initial paint or
+the client handoff is relevant but unseen, mark it separately `not_run`;
+do not infer it from a settled frame. A synthetic check is not a conformance
+or product-readiness verdict.
