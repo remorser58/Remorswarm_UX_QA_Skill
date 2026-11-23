@@ -33,3 +33,46 @@ Resolve overlaps: protect raw details while showing a safe state or next action;
 - [GOV.UK Details](https://design-system.service.gov.uk/components/details/) and [Accordion](https://design-system.service.gov.uk/components/accordion/) distinguish supplementary information from information most users need. [Check answers](https://design-system.service.gov.uk/patterns/check-answers/) provides a concrete review-and-edit path before submit. Apply the principle before choosing a component: do not copy government screens wholesale.
 - [W3C cognitive accessibility pattern](https://www.w3.org/WAI/WCAG2/supplemental/patterns/o5p04-task-expectations/) advises revealing task prerequisites and steps early. This is supplementary guidance, not an additional WCAG conformance requirement. The [UK Office for Statistics Regulation's dashboard guidance](https://osr.statisticsauthority.gov.uk/guidance/regulatory-guidance-dashboards/pages/4/) puts decision-changing warnings by the data and methodology in supporting detail. In a product, test that missing/stale coverage is apparent beside the number, not merely buried in a glossary.
 - Use existing product intent and access rules. For a UX change, keep decision facts and preserved styling explicit, carry before/after task and adjacent regression evidence, and use the existing Figma-first workflow where required. Record the implication of new sources or contradictions; do not add a new gate solely because a popular service uses a component.
+
+## Evidence card: reach and dismiss help shown on hover or focus
+
+In one reviewed owned synthetic screen, use an authored help popup with still-valid
+information that covers nearby meaningful text. Pick a trigger with a harmless
+known action. Use separate fresh pointer and keyboard trials on the same build,
+viewport, fixture state and trigger. Record dismissal and the ordinary action separately.
+
+- **Hoverable:** When pointer hover opens the popup, move the real pointer from
+  the trigger onto the revealed content along an ordinary path. Capture whether
+  it stays visible throughout the transfer. A matched negative control closes
+  at the trigger edge before the pointer reaches the content.
+- **Persistent:** In separate trials, dwell while the pointer still hovers the
+  trigger, after transfer while it hovers the popup, and while the relevant
+  keyboard focus holds, where each trigger applies. Keep the information valid.
+  It should remain visible until hover or focus is removed from both the trigger
+  and the additional content, the user dismisses it, or the information becomes
+  invalid. A matched negative times out while the pointer is still over the popup
+  and the information remains valid. Report only the interval observed.
+- **Dismissible:** In separate trials, use the supported dismissal without moving
+  the pointer or moving keyboard focus from the trigger, as applicable. Escape is
+  an example, not the only mechanism. Verify that the covered content is visible
+  again and the pointer coordinates or focused control are unchanged, with no
+  ordinary trigger action or other side effect. A matched negative clears the
+  obstruction only when the pointer moves away or keyboard focus advances.
+
+The positive control retains the help during transfer and dwell, closes without
+moving the pointer or focus, and leaves the trigger's ordinary action usable. Separately
+activate the original trigger and check the expected harmless result; that is
+a task-usability check, not an extra condition of WCAG 1.4.13.
+
+[WCAG 2.2 SC 1.4.13](https://www.w3.org/TR/WCAG22/#content-on-hover-or-focus)
+applies to additional content shown and hidden by hover or focus. Input errors
+and content that neither obscures nor replaces other content are exceptions to
+dismissibility only. User-agent visual presentation unmodified by the author is
+excepted from the criterion (for example, a native `title` tooltip). Click-only
+disclosure is outside this recipe. [SCR39](https://www.w3.org/WAI/WCAG22/Techniques/client-side-script/SCR39),
+[F95](https://www.w3.org/WAI/WCAG22/Techniques/failures/F95) and
+[F114](https://www.w3.org/WAI/WCAG22/Techniques/failures/F114) are examples.
+Save the observed trigger, pointer endpoint, focus identity, validity and visible
+before/after results by condition. An unavailable input path, state or evidence is
+`not_run`, not a pass. This synthetic check does not establish touch, native
+device, assistive-technology, product or WCAG conformance.
