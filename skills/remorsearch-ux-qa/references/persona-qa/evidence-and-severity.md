@@ -110,6 +110,21 @@ Keep unverified cards and unsupported community claims in the annex. Where the b
 
 An accepted fix records the baseline artifact/receipt/build, actual change and trade-off, then the fresh replay artifact/receipt/build on the same scenario and device. Repeat the second pass for P0/P1 fixes and record regressions. A comparison between A and B or a future test plan supplies no post-fix result.
 
+### Synthetic evidence card: Undo the current list change
+
+Use an owned, disposable list with `S-17` tagged Blue and a lookalike `S-18` tagged Gray. In each fresh run, change only `S-17` from Blue to Amber and first verify that change in a separate visible readback. Use the Undo offered for that specific change, not a global Undo history. Record which change the control identifies, what the UI reports, and the independently observed result. Use a fresh approved list view or reopen and match the stable record ID, tag and visible row count; the original optimistic view or a success toast cannot serve as independent readback.
+
+| Synthetic branch | Evidence to retain |
+| --- | --- |
+| One timely Undo and reopen | Exactly one `S-17` row, Blue again; `S-18` still Gray. Check the persisted view after reopen. |
+| The same change-specific Undo can still be invoked after the first success | On this fixture only, repeat that control once. The readback should be unchanged, with no added rows or changes to other records. A single visible row does not prove a single write; leave the write count unverified without independent evidence. |
+| Reopen before Undo, or pass the declared expiry | Probe separately under the product's stated scope. If this Undo is still valid after reopen, use the timely check. If unavailable or expired, no restoration should be claimed and `S-17` should stay Amber. Never substitute another Undo. |
+| A newer owned edit changes the same tag to Green before the old Undo | First verify Green in a fresh view. For a fixture whose rule rejects stale Undo, check that the old control is unavailable or rejected without a success claim and that Green survives. A silent rollback to Blue fails; if the product cannot safely expose this branch, leave it untested. |
+
+If the original change or newer edit cannot be independently confirmed, the affected branch cannot establish a result. If fresh readback after Undo is unavailable, keep the UI and persistence verdicts separate and leave restoration unverified.
+
+[Apple's Undo and Redo guidance](https://developer.apple.com/design/human-interface-guidelines/undo-and-redo) recommends making the affected action and result clear. [RFC 9110 §13.1.1](https://www.rfc-editor.org/rfc/rfc9110.html#section-13.1.1) describes conditional HTTP updates as one way to guard against overwriting newer state. These motivate the checks, not an implementation requirement or guarantee about expiry, reopening, or cross-session behavior.
+
 ## Writer self-check
 
 - Decision first; impact-based P0–P3 and confidence kept separate.
