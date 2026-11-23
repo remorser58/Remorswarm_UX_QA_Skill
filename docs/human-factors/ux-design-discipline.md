@@ -144,7 +144,7 @@ This logging is cheap, universal and auditable [D].
     - > 0.1 s with no visual response on the pressed control ⇒ note.
     - > 1 s with no busy indicator ⇒ violation.
     - > 10 s with no progress indication or cancel ⇒ violation.
-  - Status messages: the element has `role=status|alert|log|progressbar` or `aria-live` (WCAG 4.1.3) [P].
+  - Status messages: for an authored update covered by [WCAG 4.1.3](https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html), verify that assistive technology can present the programmatically exposed message without moving focus. A `role=progressbar` exposes progress semantics but is not itself a live region ([ARIA25](https://www.w3.org/WAI/WCAG22/Techniques/aria/ARIA25)); its presence alone is not evidence that updates can be presented without focus. Do not require one ARIA technique or announcement cadence. Record actual speech or braille only if observed with assistive technology; otherwise mark it not observed. [P]
   - Duplicate-submission probe: a second click within 1 s on a submit or pay button. Check whether it is disabled or deduplicated (network log shows one request) [D].
 - **Severity.**
   - P0: no feedback on payment or submit, and a repeat action creates a duplicate order or charge (observed in the network log or order list).
