@@ -61,6 +61,41 @@ For every outcome, separate:
 Changes still require product-edit authority and the project's design/intent
 checks. A verified defect in a QA target does not authorize changing that target.
 
+## Same focused control across a sticky breakpoint
+
+Use an existing, authorized synthetic flow with an author-created sticky footer
+and a control it can cover. In one browser at a time, start from the same task
+state at a wide and a narrow CSS viewport. Use the same Tab or Shift+Tab path to
+the same logical control. Record browser/build, CSS viewport, scroll container
+and offset, whether the footer is sticky, and the actual focused control. If
+the control has no matched counterpart, record that rather than comparing
+different controls as if only viewport width changed. If focus lands on the
+wrong control or is lost, record that separately from occlusion.
+
+At keyboard focus arrival, capture the rendered control and footer together;
+record any intervening automatic scroll and the settled result before another
+input. Distinguish complete, partial and no coverage of the control itself.
+Record [indicator visibility](https://www.w3.org/WAI/WCAG22/Understanding/focus-visible.html)
+and contrast separately. Do not infer coverage from intersecting rectangles
+or focus from pixels alone. Then try ordinary user scrolling without changing
+focus: record whether the same control becomes visible and usable, or whether
+focus actually moved. Later recovery does not erase a covered focus stop.
+Hiding only after incidental scroll is a separate observation, not by itself
+a focus-arrival failure.
+
+[WCAG 2.2 SC 2.4.11 (AA)](https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum.html)
+addresses a component entirely hidden by author-created content on receipt of
+keyboard focus; see [F110](https://www.w3.org/WAI/WCAG22/Techniques/failures/F110).
+Partial coverage alone is not a 2.4.11 failure; assess
+[2.4.12 (AAA)](https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-enhanced.html)
+and actual usability separately. The user-opened-content note is not an exemption
+for an always-present authored footer. [C43](https://www.w3.org/WAI/WCAG22/Techniques/css/C43)
+shows a responsive reference, not a mandated fix. Report
+[KWCAG 2.2 6.1.2 focus order and indication](https://www.rra.go.kr/ko/reference/kcsList_view.do?nb_seq=5247&nb_type=6)
+separately, not as an equivalent occlusion result. Mark unobserved rendering,
+browser software keyboard, device safe area and assistive technology as
+`not_run`; a CSS viewport check is not a compliance or product verdict.
+
 ## Korean input: distinguish composition from the intended action
 
 For a Korean search, form or composer, use a disposable record and a supported
