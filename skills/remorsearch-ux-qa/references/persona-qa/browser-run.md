@@ -123,3 +123,51 @@ preservation, and identical readback with no redispatch.
 This is real browser execution of an authored synthetic page with known answers.
 It is not Peekly execution, public community acquisition, actual participants,
 an effectiveness comparison or measured real-user UX improvement.
+
+## 6. Read control states under forced colors
+
+In an already authorized owned synthetic browser, compare the same reviewed
+checkbox in two fresh runs: `forced-colors: none` and `forced-colors: active`.
+Keep the build, viewport, fixture data, target identity and action order fixed.
+Record browser/version and how each mode was obtained (emulated or native).
+Verify in the page which media query actually matches after setup. Dark mode,
+grayscale, a contrast preference or an accessibility tree is not a substitute
+for observing the forced-colors mode.
+
+- **Focus:** Tab to the unchecked checkbox. Capture the visible focus indicator
+  and verify that keyboard focus is on that exact control without checking it.
+  Move focus away: the focus cue should stop identifying that control.
+- **Selection:** With focus on the enabled checkbox, press Space. Compare the
+  rendered unchecked and checked indicators and read the actual checked state
+  (for example, the native checked property). Tab away: the checked indicator
+  should still identify the checked state, separately from focus.
+- **Disabled:** If a reviewed disabled state exists, record its visible cue and
+  disabled semantics separately. For a native disabled checkbox, verify that
+  Tab skips it and attempting activation does not change its checked state.
+  The enabled toggle above is the positive control. If only a distinct disabled
+  example exists, identify it as such; do not claim the original was tested disabled.
+
+Save paired state captures and the observed focus, checked/disabled state and
+activation outcome. With a confirmed mode, a missing visible checked or focus
+cue is a visual failure even when semantics are correct. A cue with
+incorrect state or unintended activation is a separate failure. Neither
+pixels nor DOM state alone establishes both. If a mode cannot be set or
+confirmed, or a state or evidence channel is unavailable, mark that part
+`not_run` with the reason. Keep any valid findings on the other parts.
+
+Use [Media Queries 5 §12.4](https://www.w3.org/TR/mediaqueries-5/#forced-colors)
+to interpret the mode. [CSS Color Adjustment 1 §3](https://www.w3.org/TR/css-color-adjust-1/#forced)
+explains system color keywords (such as `Canvas` and `CanvasText`), forced
+adjustments such as removed shadows, and the scoped `forced-color-adjust`
+opt-out. Check the actual painted cue; an authored color or shadow declaration
+is not evidence that it survives. Do not disable forcing to get a pass.
+
+If applicable, map visible keyboard focus to
+[WCAG 2.2 SC 2.4.7](https://www.w3.org/WAI/WCAG22/Understanding/focus-visible.html)
+and contrast of required visual state cues against adjacent colors to
+[SC 1.4.11](https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html)
+(with its inactive and unmodified user-agent exceptions). Check exposed
+semantics separately under [SC 4.1.2](https://www.w3.org/WAI/WCAG22/Understanding/name-role-value.html)
+where applicable. A fixture or emulated browser result is not a native OS,
+actual device, assistive-technology, product or WCAG conformance result. This
+recipe does not add a runner feature or justify changing system settings.
