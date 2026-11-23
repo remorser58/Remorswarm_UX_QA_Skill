@@ -114,6 +114,52 @@ class ReachContext(unittest.TestCase):
         self.assertTrue(checks.applicable("GM-02", c.profile, c.device))
         self.assertEqual((gm.check_id, gm.measurement["name"]), ("GM-02", "thumb_travel_mm"))
 
+    def game_context(self, box, **geometry):
+        c = self.fixture("galaxy-s24", "two_thumbs", orientation="landscape", capture_orientation="landscape")
+        c.snapshot["device"]["viewport_css"] = [780, 360]
+        c.snapshot["elements"] = [
+            el("fire", "button", box, interactive=True, roles=("game_control",), **geometry),
+        ]
+        return c
+
+    def test_gm02_measured_viewport_edge_uses_visible_center_but_size_uses_authored_box(self):
+        c = self.game_context((750, 220, 200, 40), visible_geometry="measured",
+                              visible_box={"x": 750, "y": 220, "w": 30, "h": 40})
+        gm, = checks.check_reach(c)
+        self.assertTrue(gm.passed)
+        self.assertAlmostEqual(gm.measurement["value"], 22.3)
+        self.assertEqual(gm.extra["point_mm"], [140.2, 44.0])
+        self.assertEqual(gm.extra["point_basis"], "measured_viewport_visible_center")
+        size, = checks.check_game_controls(c)
+        self.assertEqual(size.measurement["value"], [36.7, 7.3])
+
+    def test_gm02_does_not_score_unverified_or_ancestor_clipped_targets(self):
+        for box, geometry in (
+            ((750, 220, 200, 40), {}),
+            ((750, 220, 200, 40), {"visible_geometry": "measured",
+                                  "visible_box": {"x": 760, "y": 220, "w": 15, "h": 40}}),
+            ((120, 20, 60, 340), {"visible_geometry": "ancestor_clipped",
+                                "visible_box": {"x": 120, "y": 20, "w": 60, "h": 40}}),
+            ((120, 20, 60, 340), {"visible_geometry": "unsupported", "visible_box": None}),
+        ):
+            with self.subTest(geometry=geometry):
+                gm, = checks.check_reach(self.game_context(box, **geometry))
+                self.assertFalse(gm.passed)
+                self.assertIsNone(gm.measurement["value"])
+                self.assertIsNone(gm.severity)
+                self.assertEqual(gm.extra["verdict"], "inconclusive")
+
+    def test_gm02_fully_in_view_preserves_the_authored_center(self):
+        box = (720, 220, 40, 40)
+        measured = self.game_context(box, visible_geometry="measured", visible_box=dict(zip("xywh", box)))
+        legacy = self.game_context(box)
+        a, = checks.check_reach(measured)
+        b, = checks.check_reach(legacy)
+        self.assertTrue(a.passed and b.passed)
+        self.assertEqual(a.measurement, b.measurement)
+        self.assertEqual(a.extra, b.extra)
+        self.assertEqual(a.extra["point_mm"], [135.7, 44.0])
+
     def test_neutral_cradle_still_requires_alignment_and_verified_viewport_raster(self):
         for field, problem in (("alignment", "missing_viewport_alignment"), ("sha256", "SHA-256")):
             with self.subTest(field=field):
