@@ -115,6 +115,39 @@ If an existing layered confirmation applies to a draft and the underlying editor
 
 For a disposable record, note its saved value before either run. In the no-save run, confirm a different value in the child, then close the editor without saving; reopen the same record and check for the original value. In the save run, start from the same baseline, confirm the change in the child, then choose Save in the editor; reopen the record and check for the changed value. If the product exposes no independent saved-state readback or save count, mark that fact unverified rather than inferring it from a toast or the open draft.
 
+## Password visibility is not submission
+
+Use an existing, authorized synthetic form with an inert local submit target and
+an invented value. Never use a real account, credential or autofill data. Start
+with valid synthetic input masked; from that same state, test the existing Show
+then Hide control with pointer and keyboard in separate runs. For the keyboard
+run, activate the focused toggle rather than pressing Enter in the input. Check
+masking and any exposed action label or state; the value and intended field/form
+association stay intact.
+Record where focus actually lands and whether editing can resume at the expected
+caret or selection, when observable. Focus on the toggle during keyboard use is
+not itself input loss. Retain state observations, not the exposed value or an
+unmasked screenshot.
+
+Require zero submit attempts and no navigation from either toggle action, using
+the fixture's existing submit and navigation observations rather than the
+appearance of the form. In a separate run from the same valid baseline, activate
+the explicit synthetic Submit once: require one observed attempt through the
+same observer as a positive control, without sending to a real service. An
+unobservable count or navigation result, or a positive control that does not
+register once, cannot support a pass for the no-submit check. Mark unobservable
+field identity, focus or caret/selection separately as `not_run`; do not infer
+them from a screenshot.
+
+Record the browser and OS. Exercise a browser-native reveal control separately
+from the app control if normally available on that surface. Browser-managed
+availability may depend on entry and focus; absence, interference you cannot
+isolate, or an unavailable observation is `not_run`, not a pass for the native
+path. Do not enable a control or change browser settings to complete the check.
+See the [HTML button submission rules](https://html.spec.whatwg.org/multipage/form-elements.html#the-button-element),
+the [GOV.UK password input example](https://design-system.service.gov.uk/components/password-input/),
+and [Edge's native reveal conditions](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/password-reveal).
+
 ## Korean products
 
 Use this section for Korean product QA conditions. Report language alone changes headings and wording. Community research runs only when requested. It adds test conditions. None of it is evidence about real users. A cue from the Korean context becomes part of a claim only when a gate-supported claim, or a statistic with a source card (`references/research/korea/statistics.md`), backs it. Until then it is an assumption and is labelled as one. Read `references/persona-qa/kwcag-card.md` for safeguards; lookup `references/persona-qa/kwcag-2.2.md` by item. Only requested Korean research uses the channel router `references/research/korea/overview.md`; lookup channels by ID.
