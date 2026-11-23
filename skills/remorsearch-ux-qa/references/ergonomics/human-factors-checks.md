@@ -24,6 +24,10 @@ orientation. A full driver-controlled emulation may establish zero offset;
 a real capture needs independent landmarks locating the viewport. Screenshot
 dimensions alone do not locate it. With missing or incompatible alignment,
 RH-01/RH-02 and GM-02 are inconclusive; size/spacing checks remain independent.
+For GM-02, a verified viewport-only clip uses the center of the visible rectangle;
+the center of a fully visible control is unchanged. Unverified partial, ancestor,
+or unsupported clips are inconclusive. The point is a model input, not proof
+that an input hit or activated the control; target-size checks keep the authored box.
 Even with known alignment the thumb model is uncalibrated.
 The reach heatmap additionally needs a hash-bound PNG and a
 `screenshot.viewport_raster_reference` identifying independent evidence that

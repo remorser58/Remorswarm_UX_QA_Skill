@@ -1508,6 +1508,46 @@ async function viewportTest(base, tmp) {
     check('viewport: boxes are screen coordinates (the tapped button is inside the 360x780 screen in the snapshots around the tap)',
       boxes.length >= 2 && boxes.slice(1).every((b) => b.in_viewport === true && b.box.y >= 0 && b.box.y + b.box.h <= 780), boxes.map((b) => [b.box, b.in_viewport]));
   }
+  // Four fresh browser runs; geometry, dispatched input, and hit/activation
+  // outcomes are deliberately separate (even when a wrong hit returns ok).
+  for (const [name, mode, offset, point, expectedExit, afterState] of [
+    ['authored-center', 'edge', null, [850, 240], 3, 'intended=0;cover=0'],
+    ['visible-offset', 'edge', { x: 15, y: 20 }, [765, 240], 0, 'intended=1;cover=0'],
+    ['covered-offset', 'covered', { x: 15, y: 20 }, [765, 240], 3, 'intended=0;cover=1'],
+    ['fully-visible', 'full', null, [740, 240], 0, 'intended=1;cover=0'],
+  ]) {
+    const sc = path.join(tmp, `gm02-${name}.json`);
+    const runId = `R-gm02-${name}`;
+    writeJson(sc, {
+      ...scenario(`SC-gm02-${name}`, `?gm02=${mode}`, 'galaxy-s24', { text_present: 'intended=1;cover=0' }),
+      targets: { game_control: ['#gm02-control'] },
+      steps: [{ action: 'tap', target: '#gm02-control', auto_scroll: false, ...(offset && { offset }) }],
+    });
+    r = await runDriver(['run', '--scenario', sc, '--device', 'galaxy-s24', '--orientation', 'landscape',
+      '--out', outDir, '--run-id', runId, '--base', base, '--no-auto-scroll', '--no-reflow', '--no-focus-walk']);
+    if (!check(`GM-02 ${name}: expected exit ${expectedExit}`, r.code === expectedExit, `${r.code} ${r.err}`)) continue;
+    const { run, snaps } = loadRun(path.join(outDir, runId));
+    const step = run.steps[0];
+    const before = snaps.get(step.before), after = snaps.get(step.after);
+    const item = (snap, id) => snap?.elements.find((e) => e.dom_id === id);
+    const target = item(before, 'gm02-control'), cover = item(before, 'gm02-cover');
+    const full = mode === 'full';
+    const box = (b, x, w) => b?.x === x && b.y === 220 && b.w === w && b.h === 40;
+    check(`GM-02 ${name}: 780×360 authored and visible geometry with unchanged scroll`,
+      [before, after].every((s) => s?.device.viewport_css.join() === '780,360')
+      && (item(before, 'gm02-state')?.text === 'intended=0;cover=0;scroll=0,0')
+      && (item(after, 'gm02-state')?.text === `${afterState};scroll=0,0`)
+      && step.auto_scrolled !== true && box(target?.box, full ? 720 : 750, full ? 40 : 200)
+      && box(target?.visible_box, full ? 720 : 750, full ? 40 : 30)
+      && target?.visible_geometry === 'measured', { target, state: item(after, 'gm02-state') });
+    const centerMiss = name === 'authored-center', covered = mode === 'covered';
+    check(`GM-02 ${name}: selected target, input and actual hit remain distinct`,
+      run.steps.length === 1 && target?.id && step.target_element_id === target.id
+      && step.point?.x === point[0] && step.point?.y === point[1]
+      && (centerMiss ? step.result === 'no_target' && step.input == null && step.hit_element_id == null && step.target_hit == null
+        : step.result === 'ok' && step.input === 'touch' && step.target_hit === !covered
+          && step.hit_element_id === (covered ? cover?.id : target.id)), step);
+  }
 }
 
 async function reflowTest(base, tmp) {

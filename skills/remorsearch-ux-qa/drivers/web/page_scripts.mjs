@@ -920,8 +920,8 @@ export function extractSnapshot(args) {
     return g;
   };
 
-  // Gaze uses the viewport/overflow intersection, while target-size and reach
-  // retain the authored bounding box. Non-rectangular clipping stays unknown.
+  // Keep the authored target for size checks and the viewport/overflow
+  // intersection for checks that require it. Non-rectangular clipping stays unknown.
   const visibleBoxOf = (el) => {
     const r = geo(el).r;
     let x0 = Math.max(VX0, r.left), y0 = Math.max(VY0, r.top);

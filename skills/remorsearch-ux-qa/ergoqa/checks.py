@@ -452,6 +452,38 @@ def _easiest_point(ctx: Context, box: dict[str, float], geom: Any, grip: str, th
     return best[1]
 
 
+def _gm02_target_point(element: dict[str, Any], viewport: tuple[float, float]) -> tuple[tuple[float, float], str] | None:
+    """A model point, not a hit test: score only known viewport-edge clipping."""
+    raw = element.get("box")
+    if not isinstance(raw, dict) or not all(is_number(raw.get(k)) for k in "xywh"):
+        return None
+    x, y, w, h = (raw[k] for k in "xywh")
+    left, top = max(0.0, x), max(0.0, y)
+    right, bottom = min(viewport[0], x + w), min(viewport[1], y + h)
+    if right <= left or bottom <= top:
+        return None
+    complete = (left, top, right, bottom) == (x, y, x + w, y + h)
+    geometry = element.get("visible_geometry")
+    if geometry is None and "visible_box" not in element:
+        return (pointing.centre(raw), "authored_fully_in_viewport") if complete else None
+    if geometry != "measured":
+        return None  # ancestor/nonrectangular clipping is not a verified hit region
+    visible = element.get("visible_box")
+    if not isinstance(visible, dict) or not all(is_number(visible.get(k)) for k in "xywh"):
+        return None
+    if min(visible["w"], visible["h"]) <= 0:
+        return None
+    # Compare with the plain viewport intersection, allowing the recorder's
+    # rounding of coordinates and lengths to hundredths of a CSS pixel.
+    observed = (visible["x"], visible["y"], visible["w"], visible["h"])
+    expected = (left, top, right - left, bottom - top)
+    if not all(math.isclose(a, b, rel_tol=0, abs_tol=0.02) for a, b in zip(observed, expected)):
+        return None
+    if complete:
+        return pointing.centre(raw), "authored_fully_in_viewport"
+    return ((left + right) / 2, (top + bottom) / 2), "measured_viewport_visible_center"
+
+
 def check_reach(ctx: Context) -> list[Observation]:
     """Reach/grip checks (HGR-3/5/11). Model-only severities are capped at P2."""
     from .devices import css_to_display_mm_point, display_mapping
@@ -482,13 +514,19 @@ def check_reach(ctx: Context) -> list[Observation]:
             continue
         model = "landscape-thumb-rest-v1" if game_control else reach.MODEL_ID
         metric = "thumb_travel_mm" if game_control else "reach_difficulty"
-        if mapped is None:
+        gm02_point = _gm02_target_point(element, ctx.viewport) if game_control and mapped is not None else None
+        if mapped is None or (game_control and gm02_point is None):
             check_id = "GM-02" if game_control else "RH-02" if destructive_off_path else "RH-01"
+            extra = {"verdict": "inconclusive"}
+            if mapped is None:
+                reason = "뷰포트의 실제 또는 에뮬레이션 화면 내 위치를 확인할 수 없어 엄지 도달 위치를 판정하지 않았습니다."
+            else:
+                reason = "게임 조작의 뷰포트 내 표시 영역을 확인할 수 없어 엄지 이동 거리를 판정하지 않았습니다."
+                extra["reason"] = "target_geometry_unverified"
             out.append(Observation(
                 check_id, *base, [element["id"]], element_key(element),
                 {"name": metric, "value": None, "unit": "mm" if game_control else "0-1", "viewport_alignment": alignment},
-                False, None, "뷰포트의 실제 또는 에뮬레이션 화면 내 위치를 확인할 수 없어 엄지 도달 위치를 판정하지 않았습니다.",
-                model, {"verdict": "inconclusive"},
+                False, None, reason, model, extra,
             ))
             continue
         if not game_control:
@@ -496,7 +534,8 @@ def check_reach(ctx: Context) -> list[Observation]:
             # button is scored at its reachable end, not its centre (cross-review 2026-09-28).
             pt = _easiest_point(ctx, _target_box(element), geom, grip, thumb, mapped)
         else:
-            pt = css_to_display_mm_point(mapped, *pointing.centre(element["box"]))
+            point_css, point_basis = gm02_point
+            pt = css_to_display_mm_point(mapped, *point_css)
             cost = reach.landscape_control_cost(pt[0], pt[1], geom, *params.LANDSCAPE_REST_INSET_MM)
             far = cost["travel_mm"] > params.LANDSCAPE_TRAVEL_MAX_MM
             # Apple HIG: frequent controls near the thumbs, secondary controls (pause, menus)
@@ -513,7 +552,7 @@ def check_reach(ctx: Context) -> list[Observation]:
                 f"게임 조작 '{label}'은(는) {cost['thumb']} 엄지 휴지 위치에서 {cost['travel_mm']:.0f}mm"
                 + (" 떨어진 상단 영역에 있습니다(자주 쓰는 조작은 엄지 근처, 상단은 보조 메뉴용: Apple HIG)." if cost["top_band"] else " 떨어져 있습니다."),
                 model,
-                {"point_mm": [round(pt[0], 1), round(pt[1], 1)]},
+                {"point_mm": [round(pt[0], 1), round(pt[1], 1)], "point_basis": point_basis},
             ))
             continue
         score = reach.reach_score(pt[0], pt[1], geom, grip, thumb)
