@@ -35,3 +35,19 @@ Use a disposable draft with distinguishable revisions A and B. Interrupt after B
 [Figma documents](https://help.figma.com/hc/en-us/articles/360040328553-What-can-I-do-offline-in-Figma) offline edits in the current browser and later sync; pending edits are not portable. Its [engineering account](https://www.figma.com/blog/behind-the-feature-autosave/) explains crash recovery and the risk that applying stale edits makes newer work appear lost. [Google Forms documents](https://support.google.com/docs/answer/10952360?hl=en) a same-account draft retained for 30 days under supported conditions and no autosave offline. Offline input not saving does not imply the earlier online draft was deleted; a saved draft is not a submission. These are documented comparisons, not live observations or evidence that either design works for your users.
 
 For user research, distinguish time to the first correct resumed action, wrong turns, and eventual completion. [Trafton et al.](https://interruptions.net/literature/Trafton-IJHCS03.pdf) motivate measuring resumption separately; their lab task supplies no product-specific timing target.
+
+## Example: verify the exported file, not the export click
+
+For a task that already supports export, use owned synthetic records and a separately approved download location. Record the selected scope, service readiness, transfer outcome, and file inspection separately. Inspect only the readable artifact tied to the current attempt (for example, by its observed download entry or a clean approved destination, not by filename alone). Check format, exact record identities, permitted columns and a distinguishing value. Record the verdict and permitted evidence reference, not private contents. If the transfer is observed to stop before completion, record it as interrupted. If the runner denies downloads, mark the transfer and inspection `not_run`; if a completed transfer's artifact cannot be read with approved access, preserve the observed transfer outcome and mark only inspection `not_run`. Do not change permissions or retry automatically.
+
+Synthetic check: the current attempt should yield `report.csv`, only columns `record_id,revision`, and only row `T-17,B`. A current, readable file that matches is the positive control.
+
+| Negative control | Expected verdict |
+| --- | --- |
+| Only a previous `report.csv` is found, even with the expected columns and `T-17,B`. | Current file inspection is `not_run`; byte equality cannot establish that this attempt produced the file. |
+| The current readable file has `T-18,B` instead of `T-17,B`. | Content check fails for wrong record identity despite a completed transfer. |
+| The current readable file has the expected row but adds a `private_note` column. | Content check fails for out-of-scope data. |
+| The runner denies the download. | Transfer and file inspection are `not_run`; do not substitute an earlier file. |
+| Transfer completion was observed, but approved access cannot open the current file. | Keep the transfer outcome; file inspection is `not_run`. |
+
+[Shopify's report-export guide](https://help.shopify.com/en/manual/reports-and-analytics/shopify-reports/report-types/custom-reports/export-reports) documents opening a completed local download and shows how column scope can differ for some legacy finance reports. [Firefox Downloads](https://support.mozilla.org/en-US/kb/where-find-and-manage-downloaded-files-firefox) distinguishes transfer progress from a finished file that can be opened. These are documented examples, not observations of the product under test.
