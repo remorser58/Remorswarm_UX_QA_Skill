@@ -45,6 +45,16 @@ Record each action, resulting UI state, focused element, outcome and time.
 Screenshots cannot establish focus isolation on their own. Include actual
 runtime/build hashes and distinguish an existing built artifact from a fresh
 source build. Preserve failed harness attempts separately from product findings.
+
+Record keyboard reachability and visible focus separately. After recording where
+focus landed on recovery, use Tab or Shift+Tab to compare the same control with
+focus on it and off it. Keep the build, viewport, scroll position, theme and
+error state the same in both captures; include the control and its surroundings
+so a clipped indicator is visible. Identify what changes at the control, not
+elsewhere on the screen. A matching focused role/name proves the destination,
+not a visible cue. If the state cannot be held comparable, keep the observed
+destination and report cue visibility as unverified.
+
 For visible labels, handle rendered nonbreaking spaces deliberately without
 altering the product text or accepting a different control.
 
