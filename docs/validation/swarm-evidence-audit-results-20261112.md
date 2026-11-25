@@ -81,7 +81,7 @@ user acceptance.
 
 `--skip-web` intentionally left `ready=false` and `published=false`; the single
 non-passing check is the explicitly skipped web driver. No actual browser,
-Chrome profile, user tab, public-source collection, service account or Peekly
+Chrome profile, user tab, public-source collection, service account or external
 product was accessed or modified. No Codex CLI, API, model quota, keyboard or
 clipboard interaction occurred.
 

@@ -206,7 +206,7 @@
   "not_performed": [
     "real user research or public-source acquisition",
     "browser/Chrome/extension/previous tab interaction",
-    "Peekly product modifications",
+    "external product modifications",
     "service account, credentials or personal data transmission",
     "Codex CLI, API or model quota",
     "keyboard or clipboard interaction",

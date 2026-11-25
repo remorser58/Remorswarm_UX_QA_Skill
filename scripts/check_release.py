@@ -23,7 +23,7 @@ SKILL = ROOT / "skills/remorsearch-ux-qa"
 # Explicit repository source scope; no Git dependency or personal-directory walk.
 VALIDATION_ROOT_FILES = ("VERSION", "README.md", "README.ko.md", "PRD.md", "AGENTS.md", "LICENSE",
                          "COPYING", "NOTICE", "requirements.txt", "pyproject.toml")
-VALIDATION_ROOT_DIRS = ("tests", "scripts", "skills/remorsearch-ux-qa",
+VALIDATION_ROOT_DIRS = ("tests", "scripts", "skills/remorsearch-ux-qa", "skills/react-design-system",
                         "integrations/insane-search", "examples", "benchmarks", "docs")
 VALIDATION_IGNORED = frozenset({"dist", "node_modules", "__pycache__", "venv", "env",
                               "secrets", "credentials", "credentials.json"})

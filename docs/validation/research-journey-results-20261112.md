@@ -17,7 +17,7 @@ invented, downgraded or imported by run.
 
 This completes this bounded code connection, not the whole QA product or an
 actual-user study. No UI, browser/WebDriver, real account, model call, OS setup,
-permission change, deployment, original Peekly or other-product edit occurred.
+permission change, deployment, or external-product edit occurred.
 The host displaying this conversation does not determine the executor machine.
 
 ## Reuse and root cause
@@ -82,7 +82,7 @@ product edits. SHA-256:
 ## Observed owned diagnostic
 
 The shipped known-defect product clears earlier in-memory items before rejecting
-malformed input. This is an authored diagnostic, not a new Peekly discovery.
+malformed input. This is an authored diagnostic, not a new product discovery.
 The new variant uses the shipped invented native-input contract and actual
 merge → gate → authored export → Library import → current run → status.
 

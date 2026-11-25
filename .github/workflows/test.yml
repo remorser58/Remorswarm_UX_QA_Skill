@@ -33,8 +33,11 @@ jobs:
         run: python skills/remorsearch-ux-qa/scripts/smoke_loop.py
       - name: Research smoke test
         run: python skills/remorsearch-ux-qa/examples/research/run_fixture.py
-      - name: Distribution file check
-        run: python scripts/release_files.py
+      - name: Distribution file check and script syntax
+        run: |
+          python scripts/release_files.py >/dev/null
+          bash -n scripts/install.sh
+          bash -n skills/react-design-system/scripts/audit-react-ds.sh
 
   web-driver:
     name: Web driver selftest on Node 22

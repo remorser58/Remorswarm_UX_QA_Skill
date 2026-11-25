@@ -3,7 +3,6 @@
   "date_kst": "2026-11-12",
   "branch": "rem/journey-run-report-20261112",
   "base": "21681e17d83357736df448e93b94ba96b539f4bf",
-  "peekly_ancestor": "0f623f1055b269249ea77ebec8493b2e203efa8f",
   "remote_baselines_reverified": true,
   "scope": "owned synthetic local Python execution; no real UI or user-effect evidence",
   "host": {
@@ -405,7 +404,7 @@
     "Core observations cannot satisfy the existing screenshot-and-log pass gate.",
     "No actual browser, installed host skill, real-account service or actual-user effect validation.",
     "Mac Python 3.14.7 was executed; other Python/OS combinations were not executed here.",
-    "Existing Peekly results were preserved, not rerun or relabelled.",
+    "Existing external-product results were preserved, not rerun or relabelled.",
     "Browser release check skipped by explicit user constraint; release remains non-ready."
   ]
 }

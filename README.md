@@ -58,7 +58,7 @@ cp -R Remorswarm_UX_QA_Skill/skills/remorsearch-ux-qa ~/.codex/skills/
 
 Existing installations (including copies cloned before `v1.1.0`) can install or upgrade
 from verified [GitHub Releases](https://github.com/remorser58/Remorswarm_UX_QA_Skill/releases) with SHA-256 verification, timestamped backups,
-local-edit protection, and preserved `drivers/web/node_modules` and `.ux-*` state. Set `REMORSEARCH_NO_UPDATE_CHECK=1` to opt out of cached background checks.
+local-edit protection, and preserved `drivers/web/node_modules` and `.ux-*` state. On macOS where system `python3` is 3.9, replace `python3` below with the Python 3.10+ binary printed by `scripts/find_runtime.py`. Set `REMORSEARCH_NO_UPDATE_CHECK=1` to opt out of cached background checks.
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/remorser58/Remorswarm_UX_QA_Skill/main/scripts/install.sh | bash -s -- --target claude --with-design-system
@@ -391,7 +391,7 @@ From a repository checkout:
 ```sh
 python3 -m unittest discover -s tests -p 'test_*.py'
 python3 skills/remorsearch-ux-qa/scripts/smoke_loop.py
-(cd skills/remorsearch-ux-qa/drivers/web && npm install && node selftest.mjs)
+(cd skills/remorsearch-ux-qa/drivers/web && npm ci && node selftest.mjs)
 python3 skills/remorsearch-ux-qa/scripts/ergo_bench.py --suite benchmarks/heldout-mixed --out .ergo-bench/heldout
 ```
 

@@ -2,10 +2,9 @@
 
 Date: 2026-11-12 KST. Branch: `rem/journey-run-report-20261112`.
 Base: `21681e17d83357736df448e93b94ba96b539f4bf`.
-Prior Peekly ancestor: `0f623f1055b269249ea77ebec8493b2e203efa8f`.
 The remote heads and ancestor relationship were verified before creating the
 independent worktree. Original worktrees, persona libraries and experiments are
-outside the edit scope. No Peekly product code or previous result was changed.
+outside the edit scope. No external product code or previous result was changed.
 
 ## Outcome and original gap
 
@@ -35,7 +34,7 @@ false. See the installed [host contract](../../skills/remorsearch-ux-qa/referenc
 red test and implementation. Expected outcomes were not changed after observing
 results. Existing workspace intake, Library citation/version/expiry validation,
 swarm claims/receipts/quarantine/coverage, Store locking/atomic publication and
-the Python stdlib are reused. The existing frozen Peekly harness was reviewed as
+the Python stdlib are reused. Existing frozen benchmark harnesses were reviewed as
 an execution/receipt example, not rerun or promoted as a general provider. No
 additional orchestration SDK or dependency was needed.
 
@@ -45,7 +44,7 @@ The packaged sample is a purpose-built small in-memory product with a known
 defect: it clears earlier items before rejecting malformed input. Two authored
 PRD hypotheses existed in the sample Library before `run` selected them. This
 tests execution/evidence plumbing and defect reporting; it is not a newly found
-Peekly defect or a measurement of persona/user effectiveness.
+external-product defect or a measurement of persona/user effectiveness.
 
 | Goal | Actual local observation | Task verdict |
 | --- | --- | --- |
@@ -84,7 +83,7 @@ No whole PRD requirement is marked passed. Source diagnostic repeats `run` and
    preserved journey-entry tests.
 6. First full release run: 1,367 unit tests, one README link-parity failure and
    the unchanged capture-dependent skip. The English README linked the preserved
-   Peekly results but the Korean README omitted the same page. The Korean entry
+   baseline results but the Korean README omitted the same page. The Korean entry
    was corrected; the parity test was not changed. Packaging, integrity and the
    extracted local journey diagnostic passed in that run. Whole invocation:
    178.47 s, 147,783,680 bytes maximum RSS. The failed validation directory and
@@ -185,7 +184,7 @@ children were signalled. No other product process, account, global Library,
 installed skill, permission setting or repository was modified.
 
 Origin heads were rechecked before delivery: the requested journey-entry base
-remained `21681e17d83357736df448e93b94ba96b539f4bf` and the Peekly ancestor branch
+remained `21681e17d83357736df448e93b94ba96b539f4bf` and the reference ancestor branch
 remained `0f623f1055b269249ea77ebec8493b2e203efa8f`; the new branch did not already
 exist remotely. This work is delivered on `rem/journey-run-report-20261112` by
 explicit-file commit and ordinary push, with its exact commit/remote match in
@@ -211,5 +210,5 @@ separately from the authorized Git branch push.
   process/effects inspection is required. No saved PID is killed on return.
 - The user forbids browser execution. The existing `--skip-web` release path
   must remain non-ready with nonzero exit; no browser test is claimed.
-- Previous Peekly evidence remains failed 1 / inconclusive 4 / passed 0, without
+- Previous baseline benchmark evidence remains failed 1 / inconclusive 4 / passed 0, without
   being rerun or presented as actual UI/user evidence.

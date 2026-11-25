@@ -1,9 +1,9 @@
 # Repository guidance
 
 ## Layout and scope
-- Read `PRD.md`, `HANDOFF.md`, and `docs/release.md` before changing behavior. Treat historical machine paths and old instructions in handoffs as context, not current authorization.
-- The installable skill is `skills/remorsearch-ux-qa/`. Python entry points live in its `scripts/` folder and loop implementation in `uxloop/`; the pinned browser driver is `drivers/web/`.
-- Regression tests live in `tests/`. Distribution tools live in repository `scripts/`; validation records belong in `docs/validation/`.
+- Read `PRD.md` and `docs/release.md` before changing behavior. Treat historical machine paths in archive notes as context, not current authorization.
+- The installable skill is `skills/remorsearch-ux-qa/` (with optional companion `skills/react-design-system/`). Python entry points live in its `scripts/` folder and loop implementation in `uxloop/`; the pinned browser driver is `drivers/web/`.
+- Regression tests (including full-repo hygiene checks in `tests/test_repo_hygiene.py`) live in `tests/`. Distribution tools live in repository `scripts/`; validation records belong in `docs/validation/`.
 - Preserve product intent, access/privacy rules, explicit grants, Figma-first UX changes, and strict evidence/replay gates. Synthetic checks do not establish live UX improvement or product readiness.
 - Preserve existing changes and evidence. Local development does not authorize publication, pushing, merging, deployment, or changes to installed skills.
 

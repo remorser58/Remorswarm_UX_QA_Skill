@@ -33,6 +33,8 @@ jobs:
       should_release: ${{ steps.check.outputs.should_release }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Evaluate release trigger
         id: check
         env:
@@ -41,16 +43,27 @@ jobs:
           REF_NAME: ${{ github.ref }}
           BUMP_KIND: ${{ inputs.bump }}
         run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$REF_NAME" != "refs/heads/main" ]; then
+            echo "workflow_dispatch releases must run from refs/heads/main (got $REF_NAME)" >&2
+            exit 1
+          fi
           if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "${BUMP_KIND:-none}" != "none" ]; then
             echo "should_release=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           TAG="v$(tr -d '[:space:]' < VERSION)"
-          if [[ "$REF_NAME" == refs/tags/v* ]] || ! gh release view "$TAG" >/dev/null 2>&1; then
-            echo "should_release=true" >> "$GITHUB_OUTPUT"
-          else
+          if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Release $TAG already exists on $GITHUB_REPOSITORY; skipping." >> "$GITHUB_STEP_SUMMARY"
             echo "should_release=false" >> "$GITHUB_OUTPUT"
+          else
+            # Verify gh API is healthy rather than masking transient auth/network errors as missing release.
+            HTTP_CODE="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" --silent -i 2>&1 | head -n 1 || true)"
+            if gh release list --limit 1 >/dev/null 2>&1; then
+              echo "should_release=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "Failed to query GitHub Releases API ($HTTP_CODE)" >&2
+              exit 1
+            fi
           fi
 
   verify:
@@ -60,21 +73,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Check shell scripts and JS syntax
+        run: |
+          bash -n scripts/install.sh
+          bash -n skills/react-design-system/scripts/audit-react-ds.sh
+          node --check skills/react-design-system/assets/templates/visual-qa-probe.js
       - name: Run full Python test suite
         run: PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s tests -p 'test_*.py'
       - name: Run Node tests
         run: node --test skills/remorsearch-ux-qa/drivers/web/journey_bridge.test.mjs tests/scale_browser_guardrails.test.mjs tests/scale_browser_legacy_seed.test.mjs tests/scale_browser_lifecycle.test.mjs tests/scale_browser_action_deadline.test.mjs tests/scale_browser_scroll.test.mjs benchmarks/persona-effectiveness/tests/runner.test.cjs benchmarks/persona-effectiveness-pe2/tests/runner.test.cjs
-      - name: Run smoke diagnostics
+      - name: Run smoke diagnostics and release asset dry-run
         run: |
           python skills/remorsearch-ux-qa/scripts/smoke_loop.py
           python skills/remorsearch-ux-qa/examples/research/run_fixture.py
-          python scripts/release_files.py
+          python scripts/release_files.py >/dev/null
+          python scripts/build_release_assets.py --output /tmp/verify-release --repository "${GITHUB_REPOSITORY}" --commit "${GITHUB_SHA}" >/dev/null
+          (cd /tmp/verify-release && sha256sum -c SHA256SUMS.txt)
+          rm -rf /tmp/verify-release
       - name: Validate tag matches VERSION
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
@@ -98,14 +121,25 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Optional semver bump on manual dispatch
+      - name: Optional semver bump on manual dispatch (main only)
         if: github.event_name == 'workflow_dispatch' && inputs.bump != 'none'
+        env:
+          BUMP_KIND: ${{ inputs.bump }}
         run: |
+          if [ "${GITHUB_REF}" != "refs/heads/main" ]; then
+            echo "Refusing bump outside refs/heads/main" >&2
+            exit 1
+          fi
           python - <<'PY'
-          import json, os, pathlib, sys
+          import json, os, pathlib, re
           bump = os.environ["BUMP_KIND"]
+          if bump not in {"major", "minor", "patch"}:
+              raise SystemExit(f"Unsupported bump kind: {bump!r}")
           ver = pathlib.Path("VERSION").read_text(encoding="utf-8").strip()
-          major, minor, patch = (int(x) for x in ver.split("."))
+          m = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", ver)
+          if not m:
+              raise SystemExit(f"VERSION must be X.Y.Z for auto-bump, got {ver!r}")
+          major, minor, patch = (int(x) for x in m.groups())
           if bump == "major":
               next_ver = f"{major + 1}.0.0"
           elif bump == "minor":
@@ -119,25 +153,25 @@ jobs:
               data = json.loads(p.read_text(encoding="utf-8"))
               if "version" in data:
                   data["version"] = next_ver
-              if "plugins" in data and data["plugins"]:
-                  data["plugins"][0]["version"] = next_ver
+              if "plugins" in data:
+                  for plugin in data["plugins"]:
+                      plugin["version"] = next_ver
               p.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
           print(f"Bumped {ver} -> {next_ver}")
           PY
+          PYTHONDONTWRITEBYTECODE=1 python -m unittest tests/test_repo_hygiene.py tests/test_release_updater.py -v
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           NEXT_VER="$(tr -d '[:space:]' < VERSION)"
           git add VERSION skills/remorsearch-ux-qa/VERSION skills/react-design-system/VERSION .claude-plugin/plugin.json .claude-plugin/marketplace.json
           git commit -m "chore(release): bump version to v${NEXT_VER}"
           git push origin HEAD:main
-        env:
-          BUMP_KIND: ${{ inputs.bump }}
 
       - name: Build and verify deterministic release assets
         run: |
           TAG="v$(tr -d '[:space:]' < VERSION)"
           echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
-          python scripts/build_release_assets.py --output dist/release --tag "$TAG" --commit "$(git rev-parse HEAD)"
+          python scripts/build_release_assets.py --output dist/release --tag "$TAG" --commit "$(git rev-parse HEAD)" --repository "${GITHUB_REPOSITORY}"
           python scripts/build_insane_search_bundle.py --verify dist/release/bundle
           (cd dist/release && sha256sum -c SHA256SUMS.txt)
 
@@ -146,8 +180,27 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            echo "Release $RELEASE_TAG already exists; skipping publish. Bump VERSION or run workflow_dispatch with bump=patch|minor|major to publish a new release." >> "$GITHUB_STEP_SUMMARY"
+            echo "Release $RELEASE_TAG already exists; skipping publish." >> "$GITHUB_STEP_SUMMARY"
             exit 0
+          fi
+          IS_LATEST="$(python - <<'PY'
+          import json, os, re, subprocess
+          target = os.environ["RELEASE_TAG"].lstrip("v")
+          t_tuple = tuple(int(x) for x in target.split(".")[:3])
+          raw = subprocess.check_output(["gh", "release", "list", "--limit", "50", "--json", "tagName"], text=True)
+          highest = t_tuple
+          for row in json.loads(raw):
+              m = re.fullmatch(r"v?(\d+)\.(\d+)\.(\d+)", row["tagName"])
+              if m:
+                  v = tuple(int(x) for x in m.groups())
+                  if v > highest:
+                      highest = v
+          print("true" if t_tuple >= highest else "false")
+          PY
+          )"
+          LATEST_FLAG=""
+          if [ "$IS_LATEST" = "true" ]; then
+            LATEST_FLAG="--latest"
           fi
           gh release create "$RELEASE_TAG" \
             dist/release/remorsearch-ux-qa.zip \
@@ -157,5 +210,5 @@ jobs:
             --target "$(git rev-parse HEAD)" \
             --title "Remorswarm UX QA $RELEASE_TAG" \
             --generate-notes \
-            --latest
-          echo "Published $RELEASE_TAG with verified assets." >> "$GITHUB_STEP_SUMMARY"
+            $LATEST_FLAG
+          echo "Published $RELEASE_TAG (latest=$IS_LATEST) with verified assets." >> "$GITHUB_STEP_SUMMARY"

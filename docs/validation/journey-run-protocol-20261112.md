@@ -1,7 +1,8 @@
 # Local journey execution — criteria fixed before implementation
 
 Date: 2026-11-12 KST. Base: `21681e17d83357736df448e93b94ba96b539f4bf`.
-Ancestor: Peekly results `0f623f1055b269249ea77ebec8493b2e203efa8f`.
+The remote heads and ancestor relationship were verified before creating the
+branch.
 Branch: `rem/journey-run-report-20261112`.
 
 ## Chosen gap and bounded product path
@@ -27,7 +28,7 @@ exact source-context bindings. No persona is invented or imported automatically.
 Research-linked records outside the reviewed source boundary must be refused,
 not downgraded or relabelled. Existing research admission remains available in
 its normal host-driven workflow. Preserve every original Library and prior run.
-A prepared workspace containing prior Peekly results must not reset old attempts
+A prepared workspace containing prior results must not reset old attempts
 by starting a new local execution; use the existing reviewed replay workflow.
 
 ## Fixed acceptance criteria
@@ -73,7 +74,7 @@ by starting a new local execution; use the existing reviewed replay workflow.
   retention rules. Reuse a private selected snapshot; never mutate the original.
 - Existing swarm supplies fixed plan validation, claims, deadlines, uncertainty,
   resource quarantine, receipt integrity and obligation reporting.
-- Existing frozen Peekly pilot shows the required claim -> real local process ->
+- Existing frozen benchmark pilots show the required claim -> real local process ->
   observations -> record sequence, but is an experiment-specific benchmark and
   must not be promoted as a general product or rerun without scope review.
 - Existing Python stdlib subprocess/selectors/signal/time and release tooling

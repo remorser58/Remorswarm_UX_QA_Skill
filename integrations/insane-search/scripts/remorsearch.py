@@ -99,6 +99,8 @@ def verify_bundle(root: Path) -> dict:
                 elif generated_directory(child.relative_to(root).as_posix()):
                     dirs.remove(name)
             for name in names:
+                if name == ".DS_Store":
+                    continue
                 child = parent / name
                 relative = child.relative_to(root).as_posix()
                 if child.is_symlink() or not child.is_file():
@@ -110,6 +112,9 @@ def verify_bundle(root: Path) -> dict:
                 receipt = files.get(relative)
                 if receipt is None:
                     problems.append("Unexpected file: " + relative)
+                    continue
+                if child.stat().st_size != receipt["bytes"]:
+                    problems.append("Changed file: " + relative)
                     continue
                 raw = child.read_bytes()
                 if len(raw) != receipt["bytes"] or hashlib.sha256(raw).hexdigest() != receipt["sha256"]:
@@ -160,9 +165,29 @@ def main(argv: list[str] | None = None) -> int:
         if sys.version_info < (3, 10):
             print("Python 3.10 or newer is required; found " + sys.version.split()[0], file=sys.stderr)
             return 2
+        updater_rel = COMMANDS[command]
+        updater_path = ENGINE / updater_rel
+        manifest_path = ROOT / MANIFEST
+        if (ROOT.is_symlink() or not ROOT.is_dir()
+                or manifest_path.is_symlink() or not manifest_path.is_file()
+                or updater_path.is_symlink() or not updater_path.is_file()):
+            print("Cannot run unverified updater script: missing regular manifest or update_skill.py", file=sys.stderr)
+            return 2
         try:
-            return run_engine(COMMANDS[command], arguments).returncode
-        except OSError as exc:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"), object_pairs_hook=unique_object)
+            receipt = manifest.get("files", {}).get(updater_rel)
+            if (manifest.get("schema_version") != SCHEMA_VERSION
+                    or not isinstance(receipt, dict)
+                    or not isinstance(receipt.get("bytes"), int)
+                    or not isinstance(receipt.get("sha256"), str)):
+                raise ValueError("Invalid manifest receipt for " + updater_rel)
+            if updater_path.stat().st_size != receipt["bytes"]:
+                raise ValueError("Size mismatch for " + updater_rel)
+            raw = updater_path.read_bytes()
+            if len(raw) != receipt["bytes"] or hashlib.sha256(raw).hexdigest() != receipt["sha256"]:
+                raise ValueError("SHA-256 mismatch for " + updater_rel)
+            return run_engine(updater_rel, arguments).returncode
+        except (OSError, UnicodeError, ValueError, TypeError) as exc:
             print("Cannot run bundled engine: " + str(exc), file=sys.stderr)
             return 2
         except KeyboardInterrupt:

@@ -11,8 +11,7 @@ Trudeau et al. 2012 (flexion/extension is slower), and OS reachability features
 The numeric parameters remain UNCONFIRMED heuristics, not the Bergstrom-Lehtovirta
 & Oulasvirta (CHI 2014) model. Its coefficients were unavailable during the original
 implementation; the 2026-11-19 source review recovered them without replacing this
-model. A migration still requires calibrated inputs and separate validation; see
-docs/human-factors/2026-11-19-reuse-review.md. This model reproduces 6 of 8 literature
+model. A migration still requires calibrated inputs and separate validation. This model reproduces 6 of 8 literature
 direction constraints (it fails Parhi's SW
 comfort result and marks NW 'out' on Parhi's small screen for thumbs < 106 mm).
 Use it for ordinal comparison and P2/P3 findings only; checks cap severities

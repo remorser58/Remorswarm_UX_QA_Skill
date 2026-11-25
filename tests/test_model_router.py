@@ -196,7 +196,7 @@ class RouterTests(unittest.TestCase):
         route=ModelRoute("PrimaryGateway","primary-gateway/free-model")
         with patch.dict(os.environ,{},clear=True):
             router=ModelRouter("http://127.0.0.1:10100/v1",[route],opener=lambda *a,**k:called.append(True))
-            with self.assertRaisesRegex(RuntimeError,"local_opencodex_auth_unavailable"):
+            with self.assertRaisesRegex(RuntimeError,"local_gateway_auth_unavailable"):
                 router.complete([{"role":"user","content":"test"}])
         self.assertEqual(called,[])
 

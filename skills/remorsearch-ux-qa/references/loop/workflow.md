@@ -11,7 +11,7 @@ The host agent investigates, operates browser/Figma tools, builds and replays. C
 
 Load only the active provider card. Product improvement starts with `references/persona-qa/workflow.md`, uses `references/research/workflow.md` for discovered questions, then returns to relevant QA. Narrow requests keep their scope. Label serial/self checks. Research supplies scrubbed hypotheses; actual product traces establish findings.
 
-Lookup `references/loop/provider-contract.md` by section. ux-loop.v1 intake: minimized summaries; receipts bind build/route/scenario/device/viewport/input/tool versions, steps/errors/keyboard/focus/semantics/accessibility, current actual/reference captures/comparisons. URL/image alone is insufficient. Editable Figma file/branch/version/nodes/readback; unresolved conflict blocks acceptance. Proposals use no side accent bars, attached side tabs or decorative rails.
+Lookup `references/loop/provider-contract.md` by section (React UI: `references/loop/react-design-system.md`). ux-loop.v1 intake: minimized summaries; receipts bind build/route/scenario/device/viewport/input/tool versions, steps/errors/keyboard/focus/semantics/accessibility, actual/reference captures/comparisons. URL/image alone is insufficient. Editable Figma file/branch/version/nodes/readback; unresolved conflict blocks acceptance. Proposals use no side accent bars, side tabs or rails.
 
 ## 2. Validate, run, fix and replay
 
@@ -55,4 +55,4 @@ Exits: 0 complete (mode/product_complete), 1 invalid validate input, 2 usage/int
 
 ## Done when
 
-Actual status/grants/versions, real baseline/replay or blockers, minimized intake, resolved design conflicts, applied/accepted/regressions and preserved-intent checks recorded. Failed/unknown/blocked required replay cannot complete; fixtures stay fixtures. Reaching the bound with unresolved work means partial completion. Fully exercised QA with no reproduced issue may finish without changes.
+Record status, grants, versions, baseline/replay or blockers, resolved conflicts, applied/accepted/regressions and preserved intent. Unverified/failed replay cannot complete; fixtures stay fixtures; reaching limits is partial completion. Clean QA ends unchanged.

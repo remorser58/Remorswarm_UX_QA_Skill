@@ -254,6 +254,12 @@ def build_payload(base: Path | None = None) -> tuple[dict[str, bytes], dict]:
     return payload, manifest
 
 
+def _member_mode(relative: str) -> int:
+    if relative.startswith("scripts/") and relative.endswith((".py", ".sh")):
+        return 0o755
+    return 0o644
+
+
 def write_zip(payload: dict[str, bytes], archive: Path) -> None:
     # Stored members avoid compression-library drift. No host timestamps,
     # absolute paths, directory entries or platform-dependent permissions enter.
@@ -261,7 +267,7 @@ def write_zip(payload: dict[str, bytes], archive: Path) -> None:
         for relative, raw in sorted(payload.items()):
             info = zipfile.ZipInfo(SKILL_NAME + "/" + relative, (1980, 1, 1, 0, 0, 0))
             info.create_system = 3
-            info.external_attr = (stat.S_IFREG | 0o644) << 16
+            info.external_attr = (stat.S_IFREG | _member_mode(relative)) << 16
             info.compress_type = zipfile.ZIP_STORED
             target.writestr(info, raw)
 
@@ -286,7 +292,7 @@ def build(base: Path | None, output: Path) -> dict:
             path = skill / relative
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(raw)
-            path.chmod(0o644)
+            path.chmod(_member_mode(relative))
         write_zip(payload, temporary / ARCHIVE_NAME)
         # Verification precedes publication of the local build directory.
         result = verify_output(temporary)

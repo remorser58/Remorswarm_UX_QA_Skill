@@ -47,11 +47,11 @@ Python-only statements to UI observations.
 
 The page and behavioral hypotheses are authored diagnostic fixtures with a
 known defect. A real headless browser can observe those synthetic page behaviors.
-This does not establish Peekly UI behavior, real participant experience,
+This does not establish external product UI behavior, real participant experience,
 research representativeness, comparative swarm benefit or product readiness.
 No real community acquisition is performed in this scope. Existing DC access
 restrictions and absent YouTube API authority remain unchanged.
 
-The original Peekly dirty checkout is read-only and is not the test target.
+Any external reference checkout stays read-only and is not the test target.
 Record exact commands, outcomes, unavailable checks and resource measurements in
 the matching result Markdown and JSON.

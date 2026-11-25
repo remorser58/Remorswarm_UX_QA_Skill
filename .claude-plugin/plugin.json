@@ -1,6 +1,6 @@
 {
   "name": "remorsearch-ux-qa",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Evidence-first UX research and UX QA: audience research from real communities, persona-driven usability testing on live web pages, ergonomics and accessibility checks (KWCAG/WCAG), and fix-and-replay loops.",
   "author": {
     "name": "SeongJu Kim (remorser58)",

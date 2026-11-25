@@ -5,8 +5,8 @@ SLUG: `handedness-grip-reach` · Date: 2026-09-28 · Scope: phones (5–7"), tab
 ## How to read this brief
 
 **2026-11-19 update:** the original access limitations below are historical. The author
-copy's functional-area coefficients and validation section have now been read; see
-[reuse review](2026-11-19-reuse-review.md). This closes the retrieval gap, not the model's
+copy's functional-area coefficients and validation section have now been read. This closes
+the retrieval gap, not the model's
 device calibration or validation gap. The current heuristic remains unchanged.
 
 **Evidence-access tags** (every number carries one):
