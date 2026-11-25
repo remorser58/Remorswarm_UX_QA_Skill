@@ -1,0 +1,226 @@
+{
+  "condition": "q",
+  "method": "Independent ordinary black-box UX QA of synthetic PE-1; only PRD, README, action-counted isolated harness and own artifacts used.",
+  "status": "First-pass frozen; browser ended with EOF, exit 0.",
+  "budget": {
+    "attempted_actions": 60,
+    "successful_actions": 58,
+    "failed_actions": 2,
+    "limit": 60,
+    "first_success_screenshot_timestamp_ms": 1794357881940,
+    "last_success_screenshot_timestamp_ms": 1794357989524,
+    "observed_success_interval_seconds": 107.584,
+    "total_harness_elapsed_seconds": null,
+    "elapsed_note": "Harness log contains no start/end elapsed field and failed action 1 has no timestamp. 107.584 seconds is first successful screenshot to final screenshot only, excluding launch and server-restoration wait; no exact total claimed."
+  },
+  "execution_issues": [
+    {
+      "action": 1,
+      "detail": "Initial K4M navigation refused localhost:4187. Parent restored same frozen server; same harness retained and failed action counted."
+    },
+    {
+      "action": 22,
+      "detail": "Fill using visible label Material names, one per line timed out; exact accessible label Material names succeeded at action 25. Not scored as PRD defect."
+    }
+  ],
+  "reproduced_defects": [
+    {
+      "id": "Q-1",
+      "case": "B7N",
+      "obligations": [
+        "D2"
+      ],
+      "title": "Pause/resume discards the edited seat limit",
+      "expected": "Resume preserves Gold ribbons and 27 seats. Review shows the same draft.",
+      "actual": "Resume shows Gold ribbons but restores seat limit to initial 14; review also shows 14.",
+      "steps": [
+        "Open B7N",
+        "Fill Workshop title with Gold ribbons",
+        "Fill Seat limit with 27",
+        "Click Pause task",
+        "Click Resume draft",
+        "Click Review draft"
+      ],
+      "impact": "An interruption silently loses the organizer seat-limit decision and puts the wrong capacity into review.",
+      "evidence": {
+        "log": "evidence/actions.jsonl",
+        "actions": [
+          11,
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "screenshots": [
+          "evidence/11-1794357901012.png",
+          "evidence/12-1794357901064.png",
+          "evidence/13-1794357901108.png",
+          "evidence/14-1794357901160.png",
+          "evidence/15-1794357901211.png",
+          "evidence/16-1794357901259.png"
+        ]
+      },
+      "qualification": "Direct edit after returning to editing successfully reviews and confirms 27 (actions 18–20); not a general inability to edit seat limit."
+    },
+    {
+      "id": "Q-2",
+      "case": "D5Q",
+      "obligations": [
+        "I2"
+      ],
+      "title": "Back without applying still adds imported materials",
+      "expected": "After preview then Back without applying, current materials remain Starter kit; retry/apply adds the preview once.",
+      "actual": "Back without applying exposes Starter kit, Red clay, Twine, Red clay before any Apply. Retrying and applying leaves two copies of the three-item batch.",
+      "steps": [
+        "Open D5Q",
+        "Fill Material names with \"  Red clay  \\n\\n Twine\\nRed clay\\n \"",
+        "Click Preview import",
+        "Click Back without applying",
+        "Click Preview import",
+        "Click Apply import"
+      ],
+      "impact": "Cancel does not retain control over import; a revision/retry accumulates unintended materials.",
+      "evidence": {
+        "log": "evidence/actions.jsonl",
+        "actions": [
+          30,
+          31,
+          32,
+          33,
+          34,
+          35
+        ],
+        "screenshots": [
+          "evidence/30-1794357940323.png",
+          "evidence/31-1794357940340.png",
+          "evidence/32-1794357940393.png",
+          "evidence/33-1794357940442.png",
+          "evidence/34-1794357940491.png",
+          "evidence/35-1794357940542.png"
+        ]
+      },
+      "qualification": "Current materials are not displayed on preview, so this session cannot distinguish mutation during Preview from mutation on Back. I1 nonmutation is therefore not independently localized."
+    },
+    {
+      "id": "Q-3",
+      "case": "P8R",
+      "obligations": [
+        "C1"
+      ],
+      "title": "Sorting replaces selected Cedar with Maple",
+      "expected": "Choosing Cedar then sorting by cost keeps Cedar visibly selected, reviewed, and confirmed.",
+      "actual": "After cost sort, Maple is visibly selected; review and confirmation both carry Maple.",
+      "steps": [
+        "Open P8R",
+        "Click Choose Cedar room",
+        "Select Sort rooms = cost",
+        "Click Review choice",
+        "Click Confirm plan"
+      ],
+      "impact": "A presentation-only sort changes the room commitment without an explicit replacement choice.",
+      "evidence": {
+        "log": "evidence/actions.jsonl",
+        "actions": [
+          36,
+          37,
+          38,
+          39,
+          40
+        ],
+        "screenshots": [
+          "evidence/36-1794357951208.png",
+          "evidence/37-1794357959398.png",
+          "evidence/38-1794357959434.png",
+          "evidence/39-1794357959509.png",
+          "evidence/40-1794357972346.png"
+        ]
+      }
+    }
+  ],
+  "hypotheses": [],
+  "coverage": [
+    {
+      "case": "K4M",
+      "actions": [
+        2,
+        10
+      ],
+      "obligations": {
+        "D1": "Title and seats carried to review and confirmation.",
+        "D2": "Pause/resume and review/back preserved edited values; pause showed paused state, not confirmation."
+      }
+    },
+    {
+      "case": "B7N",
+      "actions": [
+        11,
+        20
+      ],
+      "obligations": {
+        "D1": "Direct post-resume seat edit carried to review and confirmation; title retained.",
+        "D2": "Pause/resume fails seat retention (Q-1). Review/back retains title and already-reset seat state; no separate edited-seat review/back test."
+      }
+    },
+    {
+      "case": "T2V",
+      "actions": [
+        21,
+        29
+      ],
+      "obligations": {
+        "I1": "Whitespace/blank-line filtering and duplicate-name preview observed; preview/back leaves current materials unchanged.",
+        "I2": "Back retains input for equivalent retry preview; Apply appends exactly one three-item batch and screenshot shows cleared textarea."
+      }
+    },
+    {
+      "case": "D5Q",
+      "actions": [
+        30,
+        35
+      ],
+      "obligations": {
+        "I1": "Whitespace/blank-line filtering and duplicate-name preview observed; precise point of mutation not visible.",
+        "I2": "Back changes materials (Q-2). Input retained for retry. Apply adds three names once to already-mutated list and clears textarea."
+      }
+    },
+    {
+      "case": "P8R",
+      "actions": [
+        [
+          36,
+          40
+        ],
+        [
+          52,
+          60
+        ]
+      ],
+      "obligations": {
+        "C1": "Name-to-cost sort breaks identity through confirmation (Q-3).",
+        "C2": "Both orderings correct. Separate cost-first selection preserves ordering and selection through review/back; choosing Willow replaces Cedar."
+      }
+    },
+    {
+      "case": "H9S",
+      "actions": [
+        41,
+        51
+      ],
+      "obligations": {
+        "C1": "Cedar retained on name-to-cost sort; replacement Maple retained on cost-to-name sort, review and confirmation.",
+        "C2": "Review/back preserved each ordering and selection; Maple replaced Cedar; name/cost orders correct."
+      }
+    }
+  ],
+  "untested_conditions": [
+    "Full 1–30 seat boundary matrix; repeated interruption cycles.",
+    "B7N review/back with independently edited seat after resume.",
+    "Every possible room/ordering permutation; P8R reverse sort after selected room; final confirmation after Willow replacement.",
+    "Exact raw whitespace preservation in input after Back, beyond visible retained content and equivalent retried preview.",
+    "Independent current-material visibility while preview is open; no claim identifying mutation point.",
+    "Import after an already successful apply, rapid duplicate clicks, and multi-cycle imports.",
+    "Capacity below workshop seat limit was not exercised in compare cases."
+  ],
+  "limits": "Synthetic fixture evidence only. No inference of real-user benefit, persona effectiveness, hidden implementation cause, model token counts or cost."
+}

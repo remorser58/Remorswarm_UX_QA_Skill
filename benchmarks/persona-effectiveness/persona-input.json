@@ -1,0 +1,128 @@
+{
+  "schema_version": "ux-persona-library-input.v1",
+  "product_id": "workshop-pe1",
+  "mode": "prd_hypothesis",
+  "review_days": 7,
+  "context": {
+    "prd_path": "benchmarks/persona-effectiveness/PRD.md",
+    "prd_sha256": "57d7db6f323402dcc4cd389f11cb194e039c090bc8d4e5c00ee1132150f37983",
+    "requirements": [
+      {
+        "id": "D1",
+        "source_anchor": "Obligations D1",
+        "excerpt": "D1: Title and seat-limit edits must be reflected in review and confirmation."
+      },
+      {
+        "id": "D2",
+        "source_anchor": "Obligations D2",
+        "excerpt": "D2: Pause then resume within the same page must preserve every draft field. Review then back must also preserve edits. Pausing does not confirm a plan."
+      },
+      {
+        "id": "I1",
+        "source_anchor": "Obligations I1",
+        "excerpt": "I1: Import accepts one material name per line. Preview displays nonempty trimmed names and must not modify current materials."
+      },
+      {
+        "id": "I2",
+        "source_anchor": "Obligations I2",
+        "excerpt": "I2: Back without applying must leave current materials unchanged and preserve the input for revision/retry. Apply appends exactly the previewed materials once, clears input, and returns to the material list. Duplicate input names are allowed and not automatically deduplicated."
+      },
+      {
+        "id": "C1",
+        "source_anchor": "Obligations C1",
+        "excerpt": "C1: Room selection is an identity choice, not a row position. Sorting must preserve the chosen room, its visible selected state, and the identity carried into review and confirmation."
+      },
+      {
+        "id": "C2",
+        "source_anchor": "Obligations C2",
+        "excerpt": "C2: Review then back must preserve selection and ordering; choosing a different room must replace the previous selection."
+      }
+    ]
+  },
+  "personas": [
+    {
+      "persona_id": "PER-draft-resumer",
+      "label": "Interrupted workshop organizer",
+      "goals": [
+        "Confirm exactly the title and seat limit I intended"
+      ],
+      "behaviors": [
+        "Edit more than one field before pausing",
+        "Read the resumed draft before reviewing",
+        "Go back once to verify that the intended edits remain"
+      ],
+      "contexts": [
+        "A short interruption within the same planning page"
+      ],
+      "assumptions": [
+        "This is a synthetic test condition derived only from PRD D1 and D2",
+        "The organizer resumes without navigating away or reloading"
+      ],
+      "unknowns": [
+        "How often real organizers pause or revisit review",
+        "Whether actual users would choose these exact inputs"
+      ],
+      "requirement_ids": [
+        "D1",
+        "D2"
+      ],
+      "claim_ids": []
+    },
+    {
+      "persona_id": "PER-cautious-importer",
+      "label": "Organizer who previews before applying",
+      "goals": [
+        "Control which materials are added and avoid accidental application"
+      ],
+      "behaviors": [
+        "Preview a list with blank lines and surrounding spaces",
+        "Back out before applying and inspect both the existing list and retained input",
+        "Revise the input and apply once, then inspect the final list and cleared input"
+      ],
+      "contexts": [
+        "An organizer changes their mind after reading the preview"
+      ],
+      "assumptions": [
+        "This is a synthetic test condition derived only from PRD I1 and I2",
+        "Duplicate material names are allowed rather than automatically removed"
+      ],
+      "unknowns": [
+        "Real import frequency and error rates",
+        "The distribution of actual material-list sizes"
+      ],
+      "requirement_ids": [
+        "I1",
+        "I2"
+      ],
+      "claim_ids": []
+    },
+    {
+      "persona_id": "PER-room-comparer",
+      "label": "Organizer comparing rooms in different orders",
+      "goals": [
+        "Confirm the chosen room identity rather than an accidental row position"
+      ],
+      "behaviors": [
+        "Select a room before sorting by cost",
+        "Check selected state and review identity after sorting",
+        "Return, choose a different room, and confirm the replacement"
+      ],
+      "contexts": [
+        "A cost comparison changes the presentation order but not the intended choice"
+      ],
+      "assumptions": [
+        "This is a synthetic test condition derived only from PRD C1 and C2",
+        "Capacity is information only and does not filter the room list"
+      ],
+      "unknowns": [
+        "Real preference weights for cost and capacity",
+        "How often people change ordering during comparison"
+      ],
+      "requirement_ids": [
+        "C1",
+        "C2"
+      ],
+      "claim_ids": []
+    }
+  ]
+}

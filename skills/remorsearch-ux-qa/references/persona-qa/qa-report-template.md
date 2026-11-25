@@ -19,9 +19,9 @@ Writer guidance: keep at most three actions, each at most 25 words. Remove unuse
 | `ship` | The primary task and at least one recovery path were exercised on the current build on every device in scope, and no P0 or P1 remains. |
 | `inconclusive` | The surface could not be exercised, the coverage minimum was not met, or evidence is stale. Name the blocker: browser failure, production gate, missing build access or missing current evidence. |
 
-Check evidence and coverage first. Where they cannot support a release decision, use `inconclusive`. An empty findings list requires the same coverage proof as any other `ship` verdict. State remaining P2/P3 findings.
+A scoped inspection (named tasks, screens, devices) is a valid report with the same verdict rules; a task result is not whole-product release readiness or measured user benefit. Check evidence and coverage first. Where they cannot support the scoped verdict, use `inconclusive`. An empty findings list requires the same coverage proof as any other `ship` verdict. State remaining P2/P3 findings.
 
-For Korean reports keep this QA structure. Use 결론, 발견, 수정 전후, 시나리오와 점검 범위, 조사 방법, 부록 and 완료 점검. Verdict labels are 출시 가능 (`ship`), 수정 후 출시 (`ship after fixes`), 보류 (`hold`), 판단 불가 (`inconclusive`). Use the Korean research template's wording self-check and quoting rules when community evidence was requested.
+For Korean reports keep this QA structure. Use 결론, 발견, 수정 전후, 시나리오와 점검 범위, 조사 방법, 부록 and 완료 점검. Verdict labels are 점검 범위 통과 (`ship`), 수정 후 범위 재검증 (`ship after fixes`), 보류 (`hold`), 판단 불가 (`inconclusive`). Use the Korean research template's wording self-check and quoting rules when community evidence was requested.
 
 ## Findings
 
@@ -85,7 +85,7 @@ Use at most three priority scenario packets to cover every P0/P1. A separate rea
 
 ## Accepted fixes: before and after
 
-Include this table only for fixes actually accepted and replayed. If none, say “No accepted fixes; post-fix replay was not performed.”
+Include this table only for fixes actually accepted and replayed. If none, say “No accepted fixes; post-fix replay was not performed.” A completed inspection with no warranted change is a valid result; list the screens, states and devices reached and not reached.
 
 | Finding | Baseline artifact, receipt and build | Accepted change and trade-off | Replay artifact, receipt and build | Same scenario/device outcome; regressions; status |
 | --- | --- | --- | --- | --- |

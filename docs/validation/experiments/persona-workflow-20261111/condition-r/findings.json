@@ -1,0 +1,103 @@
+{
+  "condition": "R",
+  "freeze_basis": "Prior evaluator final response, before recovery",
+  "findings": [
+    {
+      "case_id": "P8R",
+      "obligations": [
+        "C1"
+      ],
+      "classification": "reproduced_observable_conflict",
+      "expected": "Cedar selected and reviewed after cost sort",
+      "actual": "Maple selected and reviewed",
+      "steps": [
+        "Choose Cedar",
+        "Sort by cost",
+        "Review"
+      ],
+      "impact": "Unintended room enters review",
+      "artifacts": [
+        "evidence/13-1794357989375.png",
+        "evidence/14-1794357989407.png",
+        "evidence/15-1794357989491.png"
+      ]
+    },
+    {
+      "case_id": "B7N",
+      "obligations": [
+        "D2",
+        "D1"
+      ],
+      "classification": "reproduced_observable_conflict",
+      "expected": "Ribbon planets and23 retained through resume and confirmation",
+      "actual": "Title retained; seat limit14 on resume, reviews and confirmation",
+      "steps": [
+        "Edit title Ribbon planets",
+        "Edit seats23",
+        "Pause",
+        "Resume",
+        "Review",
+        "Back",
+        "Review",
+        "Confirm"
+      ],
+      "impact": "Unintended seat limit confirmed",
+      "artifacts": [
+        "evidence/32-1794358080351.png",
+        "evidence/34-1794358080469.png",
+        "evidence/35-1794358080519.png",
+        "evidence/38-1794358090153.png"
+      ]
+    },
+    {
+      "case_id": "D5Q",
+      "obligations": [
+        "I1",
+        "I2"
+      ],
+      "classification": "reproduced_observable_conflict",
+      "expected": "Current materials remain Starter kit without Apply",
+      "actual": "After preview/back current list adds Blue paper, Gold cord",
+      "steps": [
+        "Enter padded Blue paper, blank line, Gold cord",
+        "Preview",
+        "Back without applying"
+      ],
+      "impact": "Canceled materials added",
+      "artifacts": [
+        "evidence/39-1794358115108.png",
+        "evidence/41-1794358115201.png",
+        "evidence/42-1794358115252.png"
+      ]
+    }
+  ],
+  "hypotheses": [],
+  "verified_attempted_actions": 45,
+  "additional_submitted_unconfirmed": 8,
+  "first_pass_case_status": {
+    "K4M": "passed",
+    "P8R": "failed",
+    "T2V": "passed",
+    "B7N": "failed",
+    "D5Q": "failed",
+    "H9S": "execution_uncertain"
+  },
+  "post_freeze_reconciliation": {
+    "new_UI_actions": 0,
+    "original_pty": "unknown_process",
+    "existing_log_last_action": 45,
+    "matching_harness_browser_processes": 0,
+    "H9S_receipt": "inconclusive accepted",
+    "execution_nonoccurrence_proven": false,
+    "exact_first_action_timestamp": null
+  },
+  "coverage_exclusions": [
+    "Duplicate input names in T2V and D5Q"
+  ],
+  "coverage_limits": [
+    "Exact retained whitespace not independently measured",
+    "Current materials not visible on preview page",
+    "H9S outcomes unobserved"
+  ],
+  "detail": "summary.md"
+}

@@ -53,6 +53,17 @@ Use a supplied completed audience, brief-derived conditions, or an optional boun
 
 ## Scenario format
 
+For scenarios about discoverability, optional decisions, or recovery, look up
+`references/persona-qa/behavior-guidance.md`: record the user goal, cue,
+expected state change, and reject/return path in the existing scenario.
+When that scenario depends on finding or safely disclosing information, look up
+`references/persona-qa/information-architecture.md` for classification, case
+evidence, and checks for first choice, disclosure, and privacy.
+For method selection or a finding that needs stronger evidence, look up
+`references/persona-qa/ux-qa-methods.md` and record the method and its limits.
+For Korean search, forms, or composers, use the input-provenance checks in
+`references/persona-qa/keyboard-recovery.md` when composition can affect the task.
+
 ```text
 Scenario ID:
 Audience ref (audience_id, segment_id, facet), or "none" with the reason:
@@ -97,6 +108,12 @@ Evidence that motivated the scenario: two people in one community report that pa
 ```
 
 The example is a test condition. It is not evidence that every member of the segment behaves this way, and the segment's share says nothing about how many users would meet this failure.
+
+## Draft vs. Save
+
+If an existing layered confirmation applies to a draft and the underlying editor has a separate Save, add this recovery subcase. From the same safe starting state, exercise pointer and keyboard activation separately. The confirmation changes only the intended draft once, with no editor save or dismissal. Separately activate the editor's Save and check that the intended values persist once. Record actual focus, draft state, and persisted state independently. If the original opener was replaced by another item's control, return to a surviving, meaningful point in the still-open editor, not to the replacement by position or label. For [React portals](https://react.dev/reference/react-dom/createPortal#caveats), callback ancestry can differ from DOM ancestry; neither a parent callback nor a correct-looking screenshot establishes the save outcome. Use only existing authorized controls and mark unexercised branches untested.
+
+For a disposable record, note its saved value before either run. In the no-save run, confirm a different value in the child, then close the editor without saving; reopen the same record and check for the original value. In the save run, start from the same baseline, confirm the change in the child, then choose Save in the editor; reopen the record and check for the changed value. If the product exposes no independent saved-state readback or save count, mark that fact unverified rather than inferring it from a toast or the open draft.
 
 ## Korean products
 

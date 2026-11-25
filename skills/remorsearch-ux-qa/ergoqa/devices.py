@@ -361,3 +361,59 @@ def device_for_snapshot(snapshot_device: dict[str, Any]) -> Device:
     d = get_device(snapshot_device.get("id"))
     orientation = snapshot_device.get("orientation") or d.orientation
     return rotate(d, orientation) if orientation != d.orientation else d
+
+
+_EMULATED_ORIGIN = "emulated-full-viewport"
+_OBSERVED_ORIGIN = "observed-landmarks"
+
+
+def _css_pair(value: Any) -> bool:
+    return isinstance(value, list) and len(value) == 2 and all(
+        type(v) in (int, float) and 0 <= v <= 100000 for v in value
+    )
+
+
+def valid_viewport_alignment(value: Any) -> bool:
+    """Validate a bounded provenance record; omitted and explicit unknown are distinct."""
+    if not isinstance(value, dict):
+        return False
+    basis = value.get("basis")
+    if basis == "unknown":
+        return set(value) == {"basis"}
+    if basis == _EMULATED_ORIGIN:
+        return set(value) == {"basis", "origin_css"} and _css_pair(value.get("origin_css")) and value["origin_css"] == [0, 0]
+    return (basis == _OBSERVED_ORIGIN and set(value) == {"basis", "origin_css", "reference"}
+            and _css_pair(value.get("origin_css")) and isinstance(value.get("reference"), str)
+            and len(value["reference"]) <= 256 and bool(value["reference"].strip()))
+
+
+def display_mapping(snapshot: dict[str, Any], device: Device) -> tuple[Device | None, dict[str, Any]]:
+    """Resolve relative viewport points to display points, without guessing an origin."""
+    if "viewport_alignment" not in snapshot:
+        return None, {"basis": "unknown", "reason": "missing_viewport_alignment"}
+    alignment = snapshot["viewport_alignment"]
+    if not valid_viewport_alignment(alignment):
+        return None, {"basis": "unknown", "reason": "invalid_viewport_alignment"}
+    if alignment["basis"] == "unknown":
+        return None, {"basis": "unknown", "reason": "unverified_viewport_alignment"}
+    block = snapshot.get("device")
+    if not isinstance(block, dict):
+        return None, {"basis": "unknown", "reason": "incompatible_device_or_viewport"}
+    vp = block.get("viewport_css")
+    if (block.get("id") != device.id or block.get("orientation") != device.orientation
+            or not _css_pair(vp) or not all(v > 0 for v in vp)):
+        return None, {"basis": "unknown", "reason": "incompatible_device_or_viewport"}
+    origin = alignment["origin_css"]
+    # The CSS-to-mm scale comes from the named device, not the saved PNG.
+    if type(block.get("dpr")) not in (float, int) or block["dpr"] != device.dpr:
+        return None, {"basis": "unknown", "reason": "incompatible_display_bounds_or_pitch"}
+    if alignment["basis"] == _EMULATED_ORIGIN:
+        if tuple(vp) != device.viewport_css:
+            return None, {"basis": "unknown", "reason": "not_full_emulated_viewport"}
+    else:
+        # Actual viewport CSS pitch must match the named panel and orientation.
+        # Allow one physical display pixel for rounding at a panel edge.
+        if any((offset + extent) * device.dpr > panel_px + 1
+               for offset, extent, panel_px in zip(origin, vp, device.display_px)):
+            return None, {"basis": "unknown", "reason": "incompatible_display_bounds_or_pitch"}
+    return replace(device, viewport_offset_css=tuple(origin)), dict(alignment)

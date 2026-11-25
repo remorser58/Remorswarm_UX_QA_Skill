@@ -4,14 +4,101 @@ from __future__ import annotations
 
 import copy
 import json
+import subprocess
+import sys
+import tempfile
 import unittest
+from contextlib import nullcontext
 from pathlib import Path
+from unittest.mock import patch
 
 import _paths  # noqa: F401  (puts the skill folder and its scripts on sys.path)
 
 import ergo_eval  # noqa: E402
 
 EXAMPLE = _paths.SKILL / "examples" / "audience" / "transit-card.audience.json"
+
+
+class RecordCLI(unittest.TestCase):
+    def run_record(self, suite: Path, out: Path) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            [sys.executable, str(_paths.SKILL / "scripts" / "ergo_eval.py"),
+             "record", "--suite", str(suite), "--out", str(out), "--c5-seeds", "1"],
+            capture_output=True, text=True, timeout=15,
+        )
+
+    def test_empty_recording_fails_without_creating_output(self) -> None:
+        for layout in ("missing", "audience-only", "empty-scenarios"):
+            with self.subTest(layout=layout), tempfile.TemporaryDirectory() as tmp:
+                suite, out = Path(tmp) / "suite", Path(tmp) / "out"
+                if layout == "audience-only":
+                    (suite / "audience").mkdir(parents=True)
+                elif layout == "empty-scenarios":
+                    (suite / "scenarios").mkdir(parents=True)
+                result = self.run_record(suite, out)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("no runnable scenario/device pairs", result.stderr)
+                self.assertIn(str(suite.resolve()), result.stderr)
+                self.assertFalse(out.exists())
+
+    def test_completed_recording_remains_resumable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            suite, out = Path(tmp) / "suite", Path(tmp) / "out"
+            sid = "SC-test-public-a"
+            (suite / "scenarios").mkdir(parents=True)
+            (suite / "scenarios" / "public.json").write_text(json.dumps(
+                {"scenario_id": sid, "device_ids": ["galaxy-s24"], "surface": {"kind": "web"}}
+            ), encoding="utf-8")
+            run_id = f"R-{sid}-galaxy-s24-p"
+            result_path = out / "runs" / run_id / "run.json"
+            result_path.parent.mkdir(parents=True)
+            result_path.write_text("{}", encoding="utf-8")
+            log = out / "record-log.json"
+            previous = (json.dumps([{"run_id": run_id, "exit": 0}]) + "\n").encode()
+            log.write_bytes(previous)
+            result = self.run_record(suite, out)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertNotIn("recorded ", result.stdout)
+            self.assertEqual(log.read_bytes(), previous)
+            self.assertEqual(result_path.read_text(encoding="utf-8"), "{}")
+            self.assertFalse((out / "profiles").exists())
+            log.unlink()
+            data = ergo_eval.load_suite(suite)
+            with patch.object(ergo_eval, "static_server", side_effect=AssertionError("unexpected server")):
+                ergo_eval.record(data, out)
+            self.assertFalse(log.exists())
+            self.assertFalse((out / "profiles").exists())
+
+    def test_pending_recording_appends_to_existing_log(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            data = suite_two_products_one_device()
+            done, pending = sorted(data["scenarios"])[:2]
+            run_id = f"R-{done}-galaxy-s24-p"
+            saved = out / "runs" / run_id / "run.json"
+            saved.parent.mkdir(parents=True)
+            saved.write_text("{}", encoding="utf-8")
+            log = out / "record-log.json"
+            previous = [{"run_id": run_id, "exit": 0}]
+            log.write_text(json.dumps(previous), encoding="utf-8")
+            data["paths"] = {pending: out / "pending.json"}
+            groups = {done: {"galaxy-s24|portrait"}, pending: {"galaxy-s24|portrait"}}
+            completed = subprocess.CompletedProcess([], 0)
+            with (
+                patch.object(ergo_eval, "configurations", return_value=({}, {}, groups, [])),
+                patch.dict(data, {"scenarios": {sid: data["scenarios"][sid] for sid in groups}}),
+                patch.object(ergo_eval, "static_server", return_value=nullcontext("http://fixture")) as server,
+                patch.object(ergo_eval.subprocess, "run", return_value=completed) as driver,
+            ):
+                ergo_eval.record(data, out)
+            server.assert_called_once()
+            driver.assert_called_once()
+            records = json.loads(log.read_text(encoding="utf-8"))
+            self.assertEqual(records[:1], previous)
+            self.assertEqual(len(records), 2)
+            self.assertEqual(records[1]["run_id"], f"R-{pending}-galaxy-s24-p")
+            self.assertEqual(records[1]["exit"], 0)
+            self.assertEqual(saved.read_text(encoding="utf-8"), "{}")
 
 
 def suite_two_products_one_device() -> dict:
@@ -31,6 +118,26 @@ def suite_two_products_one_device() -> dict:
 
 
 class Configurations(unittest.TestCase):
+    def test_experiment_pool_hand_conditions_change_the_reach_input(self) -> None:
+        from ergo_experiments import pool_for
+        from ergoqa.profiles import thumb_length_for_percentile
+
+        for orientation in ("portrait", "landscape"):
+            pool = pool_for("galaxy-s24", orientation)
+            grips = {p["pool"]["grip"] for p in pool}
+            for grip in grips:
+                conditions = {p["pool"]["condition"]: p["attributes"] for p in pool
+                              if p["pool"]["grip"] == grip}
+                with self.subTest(orientation=orientation, grip=grip):
+                    small, baseline, large = (conditions[name]["thumb_length_mm"]
+                                              for name in ("small_hand", "baseline", "large_hand"))
+                    self.assertLess(small, baseline)
+                    self.assertLess(baseline, large)
+                    self.assertEqual(small, thumb_length_for_percentile(5))
+                    self.assertEqual(large, thumb_length_for_percentile(95))
+                    # An unrelated condition must retain the baseline size.
+                    self.assertEqual(conditions["walking"]["thumb_length_mm"], baseline)
+
     def test_budgets_are_per_product_even_on_a_shared_device(self) -> None:
         old = ergo_eval.C5_SEEDS
         ergo_eval.C5_SEEDS = 2

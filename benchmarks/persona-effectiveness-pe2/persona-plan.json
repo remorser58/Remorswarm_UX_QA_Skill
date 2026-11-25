@@ -1,0 +1,572 @@
+{
+  "schema_version": "ux-persona-swarm-input.v1",
+  "product_id": "everyday-pe2",
+  "build": {
+    "id": "PE2",
+    "artifact_path": "benchmarks/persona-effectiveness-pe2/SHA256.json",
+    "sha256": "f2a5d318e7e1408a39f5db37c550a3df445ca57326066ec2ae0f2fce6133703a"
+  },
+  "max_parallel": 1,
+  "lease_seconds": 1200,
+  "max_attempts": 1,
+  "tasks": [
+    {
+      "id": "V7Q",
+      "persona_id": "PER-care-corrector",
+      "requirement_ids": [
+        "P1",
+        "P2"
+      ],
+      "goal": "Recover from invalid input and save the corrected interval, then save another valid edit",
+      "starting_state": "Fresh V7Q case in own isolated synthetic browser",
+      "actions": [
+        "Submit a representative invalid interval",
+        "Correct to a valid whole number and save",
+        "Change to another valid interval and save"
+      ],
+      "decisions": [
+        "Submit a representative invalid interval before correcting it",
+        "Read validation, entered correction and saved confirmation",
+        "Make a further valid edit without reloading"
+      ],
+      "success_criteria": [
+        "A valid correction visibly saves Fern with the intended interval",
+        "A subsequent different valid edit saves the newly intended interval"
+      ],
+      "recovery_criteria": [
+        "A representative invalid interval does not save and produces actionable validation",
+        "Correction and resubmission work without reload, retaining entered correction and clearing obsolete error"
+      ],
+      "data_namespace": "pe2-treatment-V7Q",
+      "resource_id": "pe2-treatment-browser",
+      "side_effects": "owned_fixture_write",
+      "stop_conditions": [
+        "Stop at sixty total attempted actions or twelve minutes from first UI action",
+        "Stop on real data, external navigation, uncertain execution or expired lease"
+      ],
+      "requirement_coverage": [
+        {
+          "requirement_id": "P1",
+          "obligations": [
+            {
+              "id": "invalid",
+              "description": "Representative invalid value is rejected with actionable validation",
+              "criterion_refs": [
+                {
+                  "kind": "recovery",
+                  "index": 0
+                }
+              ],
+              "exclusion_reason": null
+            },
+            {
+              "id": "valid",
+              "description": "Representative valid value is saved with correct Fern interval",
+              "criterion_refs": [
+                {
+                  "kind": "success",
+                  "index": 0
+                }
+              ],
+              "exclusion_reason": null
+            },
+            {
+              "id": "other-invalid",
+              "description": "Empty, nonnumeric, fractional and other out-of-range variants",
+              "criterion_refs": [],
+              "exclusion_reason": "Representative invalid value only; full input-class matrix is outside this bounded plan"
+            }
+          ]
+        },
+        {
+          "requirement_id": "P2",
+          "obligations": [
+            {
+              "id": "correct",
+              "description": "Correct invalid input and resubmit without reload or loss, clearing error",
+              "criterion_refs": [
+                {
+                  "kind": "recovery",
+                  "index": 1
+                }
+              ],
+              "exclusion_reason": null
+            },
+            {
+              "id": "edit",
+              "description": "Save another valid edit in the same page",
+              "criterion_refs": [
+                {
+                  "kind": "success",
+                  "index": 1
+                }
+              ],
+              "exclusion_reason": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "J2N",
+      "persona_id": "PER-queue-reconsiderer",
+      "requirement_ids": [
+        "Q1",
+        "Q2"
+      ],
+      "goal": "Cancel a removal without changing the queue, then intentionally remove one episode",
+      "starting_state": "Fresh J2N case in own isolated synthetic browser",
+      "actions": [
+        "Open removal confirmation",
+        "Cancel and inspect retained queue",
+        "Request again and confirm removal"
+      ],
+      "decisions": [
+        "Inspect both episodes and count before removal",
+        "Cancel first and check order and count",
+        "Request removal again and confirm only the intended episode"
+      ],
+      "success_criteria": [
+        "Confirmed removal closes dialog and leaves only River Sounds with count one"
+      ],
+      "recovery_criteria": [
+        "Opening confirmation does not change initial episodes, order or count",
+        "Cancel closes dialog and preserves both episodes in order with count two",
+        "Removal remains possible after cancellation"
+      ],
+      "data_namespace": "pe2-treatment-J2N",
+      "resource_id": "pe2-treatment-browser",
+      "side_effects": "owned_fixture_write",
+      "stop_conditions": [
+        "Stop at sixty total attempted actions or twelve minutes from first UI action",
+        "Stop on real data, external navigation, uncertain execution or expired lease"
+      ],
+      "requirement_coverage": [
+        {
+          "requirement_id": "Q1",
+          "obligations": [
+            {
+              "id": "preview",
+              "description": "Removal confirmation opens without changing queue",
+              "criterion_refs": [
+                {
+                  "kind": "recovery",
+                  "index": 0
+                }
+              ],
+              "exclusion_reason": null
+            },
+            {
+              "id": "cancel",
+              "description": "Cancel closes and preserves both episodes, order and count",
+              "criterion_refs": [
+                {
+                  "kind": "recovery",
+                  "index": 1
+                }
+              ],
+              "exclusion_reason": null
+            }
+          ]
+        },
+        {
+          "requirement_id": "Q2",
+          "obligations": [
+            {
+              "id": "repeat",
+              "description": "Another removal request works after cancel",
+              "criterion_refs": [
+                {
+                  "kind": "recovery",
+                  "index": 2
+                }
+              ],
+              "exclusion_reason": null
+            },
+            {
+              "id": "confirm",
+              "description": "Confirm removes only Morning Birds, retains River Sounds, closes dialog and count is one",
+              "criterion_refs": [
+                {
+                  "kind": "success",
+                  "index": 0
+                }
+              ],
+              "exclusion_reason": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "H8C",
+      "persona_id": "PER-stepfree-walker",
+      "requirement_ids": [
+        "R1",
+        "R2"
+      ],
+      "goal": "Retain the chosen preference through the required outage and retry, then compare the alternative",
+      "starting_state": "Fresh H8C case in own isolated synthetic browser",
+      "actions": [
+        "Choose Avoid stairs and preview",
+        "Use explicit Retry preview without re-entering preference",
+        "Choose Shortest path and preview again"
+      ],
+      "decisions": [
+        "Choose the nondefault preference before preview",
+        "Treat the first simulated outage as expected and retry without re-entry",
+        "Read route name, distance and stairs before switching preference"
+      ],
+      "success_criteria": [
+        "Successful retry shows Riverside ramp, 1.2 km, no stairs for Avoid stairs",
+        "Later Shortest path preview shows Hill steps, 0.8 km, includes stairs without another outage"
+      ],
+      "recovery_criteria": [
+        "First preview shows the required temporary outage and explicit retry without changing preference",
+        "Retry preserves preference, needs no re-entry and clears the outage"
+      ],
+      "data_namespace": "pe2-treatment-H8C",
+      "resource_id": "pe2-treatment-browser",
+      "side_effects": "owned_fixture_write",
+      "stop_conditions": [
+        "Stop at sixty total attempted actions or twelve minutes from first UI action",
+        "Stop on real data, external navigation, uncertain execution or expired lease"
+      ],
+      "requirement_coverage": [
+        {
+          "requirement_id": "R1",
+          "obligations": [
+            {
+              "id": "first",
+              "description": "Nondefault choice persists through required first outage and explicit Retry",
+              "criterion_refs": [
+                {
+                  "kind": "recovery",
+                  "index": 0
+                }
+              ],
+              "exclusion_reason": null
+            }
+          ]
+        },
+        {
+          "requirement_id": "R2",
+          "obligations": [
+            {
+              "id": "retry",
+              "description": "Retry preserves chosen preference and clears error without re-entry",
+              "criterion_refs": [
+                {
+                  "kind": "recovery",
+                  "index": 1
+                }
+              ],
+              "exclusion_reason": null
+            },
+            {
+              "id": "route",
+              "description": "Avoid stairs route identity, distance and stairs are correct",
+              "criterion_refs": [
+                {
+                  "kind": "success",
+                  "index": 0
+                }
+              ],
+              "exclusion_reason": null
+            },
+            {
+              "id": "change",
+              "description": "Subsequent choice change previews correct alternate without another outage",
+              "criterion_refs": [
+                {
+                  "kind": "success",
+                  "index": 1
+                }
+              ],
+              "exclusion_reason": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "R5B",
+      "persona_id": "PER-care-corrector",
+      "requirement_ids": [
+        "P1",
+        "P2"
+      ],
+      "goal": "Recover from invalid input and save the corrected interval, then save another valid edit",
+      "starting_state": "Fresh R5B case in own isolated synthetic browser",
+      "actions": [
+        "Submit a representative invalid interval",
+        "Correct to a valid whole number and save",
+        "Change to another valid interval and save"
+      ],
+      "decisions": [
+        "Submit a representative invalid interval before correcting it",
+        "Read validation, entered correction and saved confirmation",
+        "Make a further valid edit without reloading"
+      ],
+      "success_criteria": [
+        "A valid correction visibly saves Fern with the intended interval",
+        "A subsequent different valid edit saves the newly intended interval"
+      ],
+      "recovery_criteria": [
+        "A representative invalid interval does not save and produces actionable validation",
+        "Correction and resubmission work without reload, retaining entered correction and clearing obsolete error"
+      ],
+      "data_namespace": "pe2-treatment-R5B",
+      "resource_id": "pe2-treatment-browser",
+      "side_effects": "owned_fixture_write",
+      "stop_conditions": [
+        "Stop at sixty total attempted actions or twelve minutes from first UI action",
+        "Stop on real data, external navigation, uncertain execution or expired lease"
+      ],
+      "requirement_coverage": [
+        {
+          "requirement_id": "P1",
+          "obligations": [
+            {
+              "id": "invalid",
+              "description": "Representative invalid value is rejected with actionable validation",
+              "criterion_refs": [
+                {
+                  "kind": "recovery",
+                  "index": 0
+                }
+              ],
+              "exclusion_reason": null
+            },
+            {
+              "id": "valid",
+              "description": "Representative valid value is saved with correct Fern interval",
+              "criterion_refs": [
+                {
+                  "kind": "success",
+                  "index": 0
+                }
+              ],
+              "exclusion_reason": null
+            },
+            {
+              "id": "other-invalid",
+              "description": "Empty, nonnumeric, fractional and other out-of-range variants",
+              "criterion_refs": [],
+              "exclusion_reason": "Representative invalid value only; full input-class matrix is outside this bounded plan"
+            }
+          ]
+        },
+        {
+          "requirement_id": "P2",
+          "obligations": [
+            {
+              "id": "correct",
+              "description": "Correct invalid input and resubmit without reload or loss, clearing error",
+              "criterion_refs": [
+                {
+                  "kind": "recovery",
+                  "index": 1
+                }
+              ],
+              "exclusion_reason": null
+            },
+            {
+              "id": "edit",
+              "description": "Save another valid edit in the same page",
+              "criterion_refs": [
+                {
+                  "kind": "success",
+                  "index": 1
+                }
+              ],
+              "exclusion_reason": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "L9F",
+      "persona_id": "PER-queue-reconsiderer",
+      "requirement_ids": [
+        "Q1",
+        "Q2"
+      ],
+      "goal": "Cancel a removal without changing the queue, then intentionally remove one episode",
+      "starting_state": "Fresh L9F case in own isolated synthetic browser",
+      "actions": [
+        "Open removal confirmation",
+        "Cancel and inspect retained queue",
+        "Request again and confirm removal"
+      ],
+      "decisions": [
+        "Inspect both episodes and count before removal",
+        "Cancel first and check order and count",
+        "Request removal again and confirm only the intended episode"
+      ],
+      "success_criteria": [
+        "Confirmed removal closes dialog and leaves only River Sounds with count one"
+      ],
+      "recovery_criteria": [
+        "Opening confirmation does not change initial episodes, order or count",
+        "Cancel closes dialog and preserves both episodes in order with count two",
+        "Removal remains possible after cancellation"
+      ],
+      "data_namespace": "pe2-treatment-L9F",
+      "resource_id": "pe2-treatment-browser",
+      "side_effects": "owned_fixture_write",
+      "stop_conditions": [
+        "Stop at sixty total attempted actions or twelve minutes from first UI action",
+        "Stop on real data, external navigation, uncertain execution or expired lease"
+      ],
+      "requirement_coverage": [
+        {
+          "requirement_id": "Q1",
+          "obligations": [
+            {
+              "id": "preview",
+              "description": "Removal confirmation opens without changing queue",
+              "criterion_refs": [
+                {
+                  "kind": "recovery",
+                  "index": 0
+                }
+              ],
+              "exclusion_reason": null
+            },
+            {
+              "id": "cancel",
+              "description": "Cancel closes and preserves both episodes, order and count",
+              "criterion_refs": [
+                {
+                  "kind": "recovery",
+                  "index": 1
+                }
+              ],
+              "exclusion_reason": null
+            }
+          ]
+        },
+        {
+          "requirement_id": "Q2",
+          "obligations": [
+            {
+              "id": "repeat",
+              "description": "Another removal request works after cancel",
+              "criterion_refs": [
+                {
+                  "kind": "recovery",
+                  "index": 2
+                }
+              ],
+              "exclusion_reason": null
+            },
+            {
+              "id": "confirm",
+              "description": "Confirm removes only Morning Birds, retains River Sounds, closes dialog and count is one",
+              "criterion_refs": [
+                {
+                  "kind": "success",
+                  "index": 0
+                }
+              ],
+              "exclusion_reason": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "D3W",
+      "persona_id": "PER-stepfree-walker",
+      "requirement_ids": [
+        "R1",
+        "R2"
+      ],
+      "goal": "Retain the chosen preference through the required outage and retry, then compare the alternative",
+      "starting_state": "Fresh D3W case in own isolated synthetic browser",
+      "actions": [
+        "Choose Avoid stairs and preview",
+        "Use explicit Retry preview without re-entering preference",
+        "Choose Shortest path and preview again"
+      ],
+      "decisions": [
+        "Choose the nondefault preference before preview",
+        "Treat the first simulated outage as expected and retry without re-entry",
+        "Read route name, distance and stairs before switching preference"
+      ],
+      "success_criteria": [
+        "Successful retry shows Riverside ramp, 1.2 km, no stairs for Avoid stairs",
+        "Later Shortest path preview shows Hill steps, 0.8 km, includes stairs without another outage"
+      ],
+      "recovery_criteria": [
+        "First preview shows the required temporary outage and explicit retry without changing preference",
+        "Retry preserves preference, needs no re-entry and clears the outage"
+      ],
+      "data_namespace": "pe2-treatment-D3W",
+      "resource_id": "pe2-treatment-browser",
+      "side_effects": "owned_fixture_write",
+      "stop_conditions": [
+        "Stop at sixty total attempted actions or twelve minutes from first UI action",
+        "Stop on real data, external navigation, uncertain execution or expired lease"
+      ],
+      "requirement_coverage": [
+        {
+          "requirement_id": "R1",
+          "obligations": [
+            {
+              "id": "first",
+              "description": "Nondefault choice persists through required first outage and explicit Retry",
+              "criterion_refs": [
+                {
+                  "kind": "recovery",
+                  "index": 0
+                }
+              ],
+              "exclusion_reason": null
+            }
+          ]
+        },
+        {
+          "requirement_id": "R2",
+          "obligations": [
+            {
+              "id": "retry",
+              "description": "Retry preserves chosen preference and clears error without re-entry",
+              "criterion_refs": [
+                {
+                  "kind": "recovery",
+                  "index": 1
+                }
+              ],
+              "exclusion_reason": null
+            },
+            {
+              "id": "route",
+              "description": "Avoid stairs route identity, distance and stairs are correct",
+              "criterion_refs": [
+                {
+                  "kind": "success",
+                  "index": 0
+                }
+              ],
+              "exclusion_reason": null
+            },
+            {
+              "id": "change",
+              "description": "Subsequent choice change previews correct alternate without another outage",
+              "criterion_refs": [
+                {
+                  "kind": "success",
+                  "index": 1
+                }
+              ],
+              "exclusion_reason": null
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

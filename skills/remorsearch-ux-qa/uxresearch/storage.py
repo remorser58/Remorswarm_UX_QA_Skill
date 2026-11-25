@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import fcntl
+from contextlib import contextmanager
 import os
 import re
 import shutil
@@ -75,17 +76,48 @@ def sync_dir(path):
         os.close(fd)
 
 
+@contextmanager
+def inspection_lock(path, timeout=5):
+    """Share an existing private lock without creating it or changing its mode."""
+    if not 0 <= timeout <= 60:
+        raise EngineError("lock_timeout", "Lock timeout must be between 0 and 60 seconds.")
+    path = safe_path(path)
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    try:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_mode & 0o077:
+            raise EngineError("unsafe_lock", "Inspection requires an existing private regular lock.")
+        end = time.monotonic() + timeout
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                if time.monotonic() >= end:
+                    raise EngineError("lock_busy", "A writer holds the research lock.", 3)
+                time.sleep(min(0.05, max(0, end - time.monotonic())))
+        yield fd
+    finally:
+        os.close(fd)
+
+
 class Store:
-    def __init__(self, root, timeout=5, *, fault=None):
+    def __init__(self, root, timeout=5, *, fault=None, read_only=False):
         self.root = safe_path(root)
         if not 0 <= timeout <= 60:
             raise EngineError("lock_timeout", "Lock timeout must be between 0 and 60 seconds.")
         self.timeout, self.fault = timeout, fault or (lambda _: None)
         self.fd = None
         self.validator = None
+        self.read_only = read_only
+        self.inspection = None
 
     def __enter__(self):
         lock = safe_path(self.root / "engine.lock")
+        if self.read_only:
+            self.inspection = inspection_lock(lock, self.timeout)
+            self.fd = self.inspection.__enter__()
+            return self
         self.fd = os.open(lock, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
         if not stat.S_ISREG(os.fstat(self.fd).st_mode):
             os.close(self.fd)
@@ -105,6 +137,11 @@ class Store:
                 time.sleep(min(0.05, max(0, end - time.monotonic())))
 
     def __exit__(self, *_):
+        if self.inspection is not None:
+            self.inspection.__exit__(*_)
+            self.inspection = None
+            self.fd = None
+            return
         if self.fd is not None:
             fcntl.flock(self.fd, fcntl.LOCK_UN)
             os.close(self.fd)
@@ -138,12 +175,16 @@ class Store:
         return bool(state and name in state["outputs"])
 
     def failure(self, name, value):
+        if self.read_only:
+            raise EngineError("read_only_store", "Inspection cannot publish or invalidate research.")
         # Failure markers invalidate consumption while retaining the previous snapshot.
         atomic(self.root / name, canonical(value))
         if name == "gate_failed.json" and (self.root / "gate.json").exists():
             safe_path(self.root / "gate.json").unlink()
 
     def publish(self, operation, outputs, inputs=None, *, keep=True, invalidates_gate=False, mirror_exclusions=()):
+        if self.read_only:
+            raise EngineError("read_only_store", "Inspection cannot publish or invalidate research.")
         prior = self.state()
         invalidates_personas = invalidates_gate or (
             "gate.json" in outputs and prior and "gate.json" in prior["outputs"]

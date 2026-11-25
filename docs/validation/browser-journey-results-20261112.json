@@ -1,0 +1,615 @@
+{
+  "schema_version": "remorsearch-browser-journey-validation.v1",
+  "date": "2026-11-12",
+  "status": "passed_with_explicit_scope_limits",
+  "base_commit": "dec4dd3829485d9e7febe935d4adee6d90134434",
+  "branch": "rem/browser-journey-20261112",
+  "selected_gap": "Connect saved personas and current task criteria to the existing owned static browser driver, receipt and evidence audit.",
+  "scope": {
+    "owned_static_synthetic_browser": true,
+    "actual_browser_execution": true,
+    "real_user_evidence": false,
+    "peekly_ui_executed": false,
+    "product_ready": false,
+    "public_research_acquired": false,
+    "effectiveness_comparison": false
+  },
+  "preflight": {
+    "origin": "https://github.com/remorser58/Remorsearch_UX_QA_Skill.git",
+    "base_remote_confirmed": true,
+    "original_worktrees_clean": true,
+    "peekly_status_entries": 50,
+    "peekly_status_sha256": "1ae40c4182e84107555366303f747941b1fd8a2081edb8ff197800d08e5e3589",
+    "peekly_diff_sha256": "dfb732f1672427ff23cb524de77437a08fe2b0d869fe9beb35a8c0b9932afe48",
+    "original_root_head_preserved": "611ca999130a993736b97862d155fc7fe9ea93a1",
+    "base_worktree_head_preserved": "dec4dd3829485d9e7febe935d4adee6d90134434",
+    "both_original_worktrees_still_clean": true,
+    "peekly_fingerprints_rechecked_unchanged": true
+  },
+  "runtime": {
+    "node": "22.16.0",
+    "playwright": "1.56.1",
+    "chromium_build": "1194",
+    "node_tar_sha256": "1d7f34ec4c03e12d8b33481e5c4560432d7dc31a0ef3ff5a4d9a8ada7cf6ecc9",
+    "prepared_once": true,
+    "approx_size_mib": 753,
+    "approx_available_disk_gib": 24
+  },
+  "checks": [
+    {
+      "name": "browser-plan-original-red",
+      "tests": 1,
+      "errors": 1,
+      "result": "expected_rejection_before_implementation"
+    },
+    {
+      "name": "browser-unit-intermediate",
+      "tests": 13,
+      "passed": 13,
+      "elapsed_seconds": 1.873,
+      "result": "pass"
+    },
+    {
+      "name": "existing-python-journey",
+      "tests": 39,
+      "passed": 39,
+      "elapsed_seconds": 5.015,
+      "result": "pass"
+    },
+    {
+      "name": "existing-research-journey",
+      "tests": 28,
+      "passed": 28,
+      "elapsed_seconds": 18.386,
+      "result": "pass"
+    },
+    {
+      "name": "bridge-contract-intermediate",
+      "tests": 7,
+      "passed": 7,
+      "result": "pass"
+    },
+    {
+      "name": "actual-browser-initial",
+      "failed_tasks": 1,
+      "passed_tasks": 1,
+      "result": "failed_report_audit"
+    },
+    {
+      "name": "same-evidence-audit-readback",
+      "result": "pass_without_redispatch"
+    },
+    {
+      "name": "actual-browser-research-intermediate",
+      "failed_tasks": 1,
+      "passed_tasks": 1,
+      "result": "failed_report_order_assertion",
+      "wall_seconds": 27.93,
+      "max_rss_bytes": 235372544
+    },
+    {
+      "name": "native-pre-action-red",
+      "test_methods": 3,
+      "failed_normal_subcases": 4,
+      "elapsed_seconds": 0.817,
+      "result": "expected_rejection_before_fix"
+    },
+    {
+      "name": "browser-unit-final",
+      "tests": 15,
+      "passed": 15,
+      "elapsed_seconds": 2.495,
+      "result": "pass",
+      "log": "browser-unit-final.log"
+    },
+    {
+      "name": "reading-budget-after-shortened-router",
+      "tests": 13,
+      "passed": 13,
+      "elapsed_seconds": 0.182,
+      "result": "pass",
+      "log": "reading-budget-green.log"
+    }
+  ],
+  "final_release": {
+    "directory": ".ux-loop/validation/browser-journey-20261112/release-confirmed",
+    "command": [
+      "python3",
+      "scripts/check_release.py",
+      "--output",
+      ".ux-loop/validation/browser-journey-20261112/release-confirmed"
+    ],
+    "ready": true,
+    "checks_passed": 21,
+    "checks": [
+      {
+        "name": "unit-tests",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 185.37,
+        "log": "logs/unit-tests.log"
+      },
+      {
+        "name": "release-files",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 0.05,
+        "log": "logs/release-files.log"
+      },
+      {
+        "name": "bundle-build",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 0.2,
+        "log": "logs/bundle-build.log"
+      },
+      {
+        "name": "bundle-integrity",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 0.09,
+        "log": "logs/bundle-integrity.log"
+      },
+      {
+        "name": "extracted-integrity",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 0.09,
+        "log": "logs/extracted-integrity.log"
+      },
+      {
+        "name": "extracted-runtime-discovery",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 0.2,
+        "log": "logs/extracted-runtime-discovery.log"
+      },
+      {
+        "name": "extracted-research-help",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 0.21,
+        "log": "logs/extracted-research-help.log"
+      },
+      {
+        "name": "extracted-search-source",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 0.14,
+        "log": "logs/extracted-search-source.log"
+      },
+      {
+        "name": "extracted-search-method",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 0.09,
+        "log": "logs/extracted-search-method.log"
+      },
+      {
+        "name": "search-method-body",
+        "passed": true,
+        "reason": "A linked platform method body, including its command, is readable"
+      },
+      {
+        "name": "extracted-smoke",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 2.13,
+        "log": "logs/extracted-smoke.log"
+      },
+      {
+        "name": "extracted-local-journey",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 1.11,
+        "log": "logs/extracted-local-journey.log"
+      },
+      {
+        "name": "extracted-research-journey",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 3.18,
+        "log": "logs/extracted-research-journey.log"
+      },
+      {
+        "name": "node-version",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 0.14,
+        "log": "logs/node-version.log"
+      },
+      {
+        "name": "driver-dependencies",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 0.05,
+        "log": "logs/driver-dependencies.log"
+      },
+      {
+        "name": "web-driver",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 264.51,
+        "log": "logs/web-driver.log"
+      },
+      {
+        "name": "browser-bridge-contract",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 0.19,
+        "log": "logs/browser-bridge-contract.log"
+      },
+      {
+        "name": "extracted-browser-journey",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 34.1,
+        "log": "logs/extracted-browser-journey.log"
+      },
+      {
+        "name": "post-browser-integrity",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 0.08,
+        "log": "logs/post-browser-integrity.log"
+      },
+      {
+        "name": "current-source-match",
+        "passed": true,
+        "reason": "Candidate matches current inputs"
+      },
+      {
+        "name": "validation-inputs-stable",
+        "passed": true,
+        "reason": "Validation source inputs remained unchanged",
+        "added": [],
+        "removed": [],
+        "changed": []
+      }
+    ],
+    "python": "3.14.7",
+    "wall_seconds": 492.4,
+    "user_seconds": 255.49,
+    "system_seconds": 51.16,
+    "max_rss_bytes": 245235712,
+    "unit_tests": {
+      "run": 1417,
+      "passed": 1416,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1,
+      "elapsed_seconds": 184.756,
+      "skip": "ActualPaintCaptures.test_frozen_browser_captures_feed_real_checks requires ERGO_PAINT_CAPTURES."
+    },
+    "web_driver": {
+      "passed": 559,
+      "failed": 0,
+      "optional_groups_skipped": [
+        "SKIP shared browser clients and version handshake -- set REMORSEARCH_BROWSER_WS to a loopback launchServer endpoint",
+        "SKIP typography: Python captured-font analysis -- ERGOQA_PYTHON not configured"
+      ]
+    },
+    "bridge_contract": {
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0
+    },
+    "validation_sha256": "e95b9f999392311f92ae67eb8ccd779eb82f02e5cad97cb0b0b92ab0625cde6c",
+    "log_sha256": {
+      "logs/unit-tests.log": "0b31d406776dab1f7990b82fe88e5e387f7cdb23df51e1baf48d68a3e66e27bf",
+      "logs/release-files.log": "5928d5927c1656f49bb4421a1112846465f0f51d3c91d8691a6f2ab07cf49a78",
+      "logs/bundle-build.log": "bf7bcd5a5c3c94ba23a1ffe4b79bd08429bafbf92aa4c78041740f44ca2b21c5",
+      "logs/bundle-integrity.log": "7b0e4eacaa905ac63e955cc198464807500f3c832ab1c5137476d415f43b5133",
+      "logs/extracted-integrity.log": "7b0e4eacaa905ac63e955cc198464807500f3c832ab1c5137476d415f43b5133",
+      "logs/extracted-runtime-discovery.log": "889f66316e45e6471100692d7de55f0bc898b689b293c4d24ffdbf3a6cad88da",
+      "logs/extracted-research-help.log": "cfff85a6a097bd805d59cba71fae31a70658ec1333e8eabc6d58fe707c2284b4",
+      "logs/extracted-search-source.log": "5648cdc1c4b549d2b1f10f578853499c06c9168bcdc60fec3a42469ea7a6e63b",
+      "logs/extracted-search-method.log": "6efd9f3450d0ac78b43c2deec6fec7c1a8f7233f5b91c9868ddcd5a8805ad7bc",
+      "logs/extracted-smoke.log": "4de776ddac92aae8d803be6673717d16d1af100898038e9c2bd8ca1c1cd744b3",
+      "logs/extracted-local-journey.log": "2e9e430cf35de43ab3d889c5a399b4036d9dd9ac447e1e487b1da148e3843499",
+      "logs/extracted-research-journey.log": "782dfae72d53feb5ed9d9323f6ad9d26aae3197387c8bada63b2e255e310b2d5",
+      "logs/node-version.log": "256a8e08ee35cb8ad36ae16385257192c3dbe7d80cfdeff9eaa886531b2f83bc",
+      "logs/driver-dependencies.log": "71f98944ec132f04be93bf5cfd3b03ab695f9b9d32265b7c115007b1f9edc366",
+      "logs/web-driver.log": "bdf91aaee6c5ab9089d133d586c5c2dfb7ebad2f752df5760fbb263799ef4afb",
+      "logs/browser-bridge-contract.log": "955705ab6f2034383dc9f3eddc4ba2512c370abe710e7e5861729be34dc2ee86",
+      "logs/extracted-browser-journey.log": "593826179f189f0cb0cf25d40604a2f26f8009378797efb99505e6e9559c1c58",
+      "logs/post-browser-integrity.log": "7b0e4eacaa905ac63e955cc198464807500f3c832ab1c5137476d415f43b5133"
+    },
+    "browser_diagnostic": {
+      "sha256": "52c76096f8765ada0acaed4fbd7a57bd6ff3b94fe2d23ab8d1e03a54c67a31e0",
+      "counts": {
+        "blocked": 0,
+        "failed": 1,
+        "inconclusive": 0,
+        "passed": 1,
+        "pending": 0,
+        "running": 0,
+        "skipped": 0
+      },
+      "actual_browser_execution": true,
+      "ui_observed": true,
+      "earlier_failed_checkpoint_preserved_after_recovery": true,
+      "readback_without_redispatch": true,
+      "original_source_unchanged": true,
+      "original_library_unchanged": true,
+      "original_research_unchanged": true,
+      "research_contract": "invented_offline_input",
+      "actual_public_acquisition": false,
+      "peekly_product_executed": false,
+      "real_user_evidence": false,
+      "commands": [
+        {
+          "command": "start",
+          "exit_code": 0,
+          "expected_exit_code": 0
+        },
+        {
+          "command": "run",
+          "exit_code": 1,
+          "expected_exit_code": 1
+        },
+        {
+          "command": "run",
+          "exit_code": 1,
+          "expected_exit_code": 1
+        },
+        {
+          "command": "status",
+          "exit_code": 0,
+          "expected_exit_code": 0
+        }
+      ],
+      "personas": [
+        {
+          "persona_id": "PER-EXPLORE",
+          "revision": 2,
+          "basis": "synthetic",
+          "provenance_mode": "gated_research",
+          "profile_sha256": "89997d26b4681b8bfd813fcdc96f2837e3ec428f5da0c2a7e754a72c7b0088ba",
+          "prd_sha256": "ae4a735a46aeb65c95667e0a522de461b801f8b919bf57a603cda217055164b3"
+        },
+        {
+          "persona_id": "PER-RETURN",
+          "revision": 2,
+          "basis": "synthetic",
+          "provenance_mode": "gated_research",
+          "profile_sha256": "191f474ca5dc8c47dba252190da7c6b54ef53210285b33023144be836f3394e4",
+          "prd_sha256": "ae4a735a46aeb65c95667e0a522de461b801f8b919bf57a603cda217055164b3"
+        }
+      ],
+      "report": ".ux-loop/validation/browser-journey-20261112/release-confirmed/browser-journey-result/work/reports/991737352c38befb.md",
+      "report_json_sha256": "991737352c38befbd44c8e55eb859b630bd455ea26a3f9b88b909ec77dfd35c4",
+      "report_md_sha256": "1ab7224da5aae472d68dcb3f5150c455ec50cfe1c0cc2104db564706fff335cc",
+      "task_scope_passed": false,
+      "product_ready": false,
+      "audit": {
+        "integrity": "consistent",
+        "receipts_checked": 2,
+        "duplicate_observations": 1,
+        "conflicting_observations": 1,
+        "independent_reviewer": false
+      },
+      "native": [
+        {
+          "task": "T-RETURN",
+          "path": ".ux-loop/validation/browser-journey-20261112/release-confirmed/browser-journey-result/work/local-execution/run/evidence/T-RETURN/1/scratch/browser/run.json",
+          "sha256": "847ea3508f31628e6857ea5c9c7277fa0e5beaac36ebff919a059e9ae7a8d808",
+          "actions": 4,
+          "captures": 5,
+          "success": false,
+          "criteria": [
+            {
+              "id": "draft-after-error",
+              "checkpoint": 2,
+              "result": "fail",
+              "property": "value",
+              "snapshot_id": "S-R-uxop-64109c55dc262fcbdbda29df3a530434-002"
+            },
+            {
+              "id": "saved-after-retry",
+              "checkpoint": 4,
+              "result": "pass",
+              "property": "text",
+              "snapshot_id": "S-R-uxop-64109c55dc262fcbdbda29df3a530434-004"
+            }
+          ]
+        },
+        {
+          "task": "T-EXPLORE",
+          "path": ".ux-loop/validation/browser-journey-20261112/release-confirmed/browser-journey-result/work/local-execution/run/evidence/T-EXPLORE/1/scratch/browser/run.json",
+          "sha256": "0c85c38384edbb39828de2492604b1f75f9c1fde92cb333dc6e39666c204f2e6",
+          "actions": 4,
+          "captures": 5,
+          "success": true,
+          "criteria": [
+            {
+              "id": "draft-after-error",
+              "checkpoint": 2,
+              "result": "pass",
+              "property": "value",
+              "snapshot_id": "S-R-uxop-bcaf4c02238733033b736a70baf3ecaf-002"
+            },
+            {
+              "id": "saved-after-retry",
+              "checkpoint": 4,
+              "result": "pass",
+              "property": "text",
+              "snapshot_id": "S-R-uxop-bcaf4c02238733033b736a70baf3ecaf-004"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "independent_review": {
+    "source": {
+      "blockers_remaining": 0,
+      "kind": "Read-only source review at the full gate; final EOF-only diagnostic changes are bound separately below.",
+      "sha256": {
+        "skills/remorsearch-ux-qa/uxpersonas/browser_run.py": "00d73d7840342d8db9082913495306a6c1d845cbd636da5dcdde85f2e66c9295",
+        "skills/remorsearch-ux-qa/uxpersonas/local_run.py": "ba67b34ce12f621404bafa093e2d2ea4dafab7523b9a7fc196ca110503fc160e",
+        "skills/remorsearch-ux-qa/uxpersonas/cli.py": "cdb0902fdbe74a7566c1f244eb6d67a45835e73b5a6e490e2900b94482df5c93",
+        "skills/remorsearch-ux-qa/drivers/web/journey_bridge.mjs": "98ec5c953ac648bb6465de4405d19145acb49d11a595e6b476b43e3364b964bf",
+        "skills/remorsearch-ux-qa/drivers/web/session.mjs": "fb56dc8bd3035456e608d04bdb2250dbd3ed84bc174d987ae5590fd0e5b38d0b",
+        "skills/remorsearch-ux-qa/drivers/web/journey_bridge.test.mjs": "4b0e840d88c153e9cc9cfca2d0f5ecf04cfe858a58129ed643b0df5d2c50b908",
+        "tests/test_browser_journey.py": "7463507cf25ace4a45fb2e8465fec3a8b5b8b3934531f34a3d642d04b3d226ff",
+        "tests/test_browser_journey_admission.py": "86fe4bfe4f8823af634b6398a476d07c6747d5c36a88e767aba918335f5094b8",
+        "skills/remorsearch-ux-qa/examples/journey/browser_fixture.py": "86b968a663ddef359a94c9dbf6cacb17b7dd67c62219a5147f0b792219c7e42d",
+        "skills/remorsearch-ux-qa/examples/journey/run_browser_fixture.py": "1b5ce5eb1a90483356f0dcb1752e60d64e9ce7bbd5359535d3dd82549d8d9efe"
+      }
+    },
+    "saved_evidence": {
+      "scope": "Read-only review of release-final saved evidence; source was byte-identical to final production.",
+      "source_blockers": 0,
+      "saved_evidence_blockers": 0,
+      "reviewer_executed_browser": false,
+      "reviewed_captures": 4,
+      "verified_png_hashes": 6,
+      "verified_native_json_hashes": 12,
+      "tasks": [
+        {
+          "task": "T-RETURN",
+          "action_2": "input retention failed",
+          "action_4": "recovery passed",
+          "outcome": "failed"
+        },
+        {
+          "task": "T-EXPLORE",
+          "action_2": "input retention passed",
+          "action_4": "recovery passed",
+          "outcome": "passed"
+        }
+      ],
+      "readback_preservation_boundary": "Original comparisons passed in diagnostic memory; saved attempts and commands corroborate them, but no independent historical baseline manifest was retained.",
+      "artifact_hashes": {
+        "browser-journey-result/diagnostic.json": "4ab66f1b1196bae244bb7a4de7ec3a391655fa7ed42d1e18517f2e67321d6e5e",
+        "browser-journey-result/work/reports/10dc65bcc41243c1.json": "10dc65bcc41243c1f488d3a228ab3c577b920228b8e2014229aa0546b07c27a2",
+        "browser-journey-result/work/reports/10dc65bcc41243c1.md": "48c49ca2770114671f2b092872a9fe7f6ae896f954409d56c15379da183ba58b",
+        "browser-journey-result/work/local-execution/run/evidence/T-RETURN/1/observation.json": "7d376aa26348170aac33abd539a24f723fb32497f8e978dfe64fdbadf3351fcc",
+        "browser-journey-result/work/local-execution/run/evidence/T-RETURN/1/scratch/browser/run.json": "0a6547b03dca0ac0922829cc01e91f0d47cb215de1d23e0e4f9dd052e2fe5555",
+        "browser-journey-result/work/local-execution/run/evidence/T-EXPLORE/1/observation.json": "3579eca97b11e120b7f9b559041683f4d985ee514895885a51f4f31f0c646d7d",
+        "browser-journey-result/work/local-execution/run/evidence/T-EXPLORE/1/scratch/browser/run.json": "7441a37043ff91370d343d6abac912ad591a0c98d2b15cdcdbb51300d3471ca0"
+      }
+    },
+    "eof_followup": {
+      "blockers_remaining": 0,
+      "read_only": true,
+      "scope": "Independent diff -u and SHA256 confirmed one trailing blank line removed from each of the three files; no executable or scope text changed.",
+      "sha256": {
+        "examples/journey/browser_fixture.py": "59e3b52e1a4c9033ac8bb3563cdd27119ace9d955e5a12c0cef4db43fbee4148",
+        "examples/journey/run_browser_fixture.py": "4cc626b7e7914b637530bc4c8cf956a893a4ccac9ebe9309f01b48706c8d0cdb",
+        "references/persona-qa/browser-run.md": "f18ff8e850b6f58ab77566ac80db52ffa3ff99b368efd9181166bebecd82254f"
+      }
+    }
+  },
+  "remaining": [
+    "general app/backend execution",
+    "actual Peekly task execution",
+    "autonomous semantic journey planning",
+    "representative public research and real participants",
+    "comparative swarm or user effectiveness"
+  ],
+  "artifacts_directory": ".ux-loop/validation/browser-journey-20261112",
+  "initial_full_release": {
+    "directory": ".ux-loop/validation/browser-journey-20261112/release-final",
+    "ready": false,
+    "validation_sha256": "6486923bc06b2b6c1de996d6975f6660bb0eef9c01b31fecdaaf4836861c42d6",
+    "tests": 1417,
+    "failures": 5,
+    "skipped": 1,
+    "failure_scope": "Only SKILL size and initial reading closure budgets; no budgets relaxed.",
+    "web_passed": 559,
+    "bridge_passed": 7,
+    "browser_diagnostic_passed": true,
+    "wall_seconds": 496.8,
+    "preserved": true
+  },
+  "committed_captures": [
+    {
+      "task": "T-RETURN",
+      "after_step": 2,
+      "source": ".ux-loop/validation/browser-journey-20261112/release-final/browser-journey-result/work/local-execution/run/evidence/T-RETURN/1/scratch/browser/S-R-uxop-6cba854aa13c60db51f4b2fe36b33a93-002.png",
+      "destination": "docs/validation/browser-journey-20261112/input-lost.png",
+      "sha256": "52db1523ed41baac777ee4b64c2b0908607c1589cf243426eeec582b67d883f2",
+      "bytes": 45346,
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "task": "T-EXPLORE",
+      "after_step": 2,
+      "source": ".ux-loop/validation/browser-journey-20261112/release-final/browser-journey-result/work/local-execution/run/evidence/T-EXPLORE/1/scratch/browser/S-R-uxop-f17f34475cbfd8c6b70cb597a959e60c-002.png",
+      "destination": "docs/validation/browser-journey-20261112/input-retained.png",
+      "sha256": "b31c14e3a9fb8eb4d0f4b24d6d078dbf6cba19e06ccff33b3813e3bb254b6c41",
+      "bytes": 47206,
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "task": "T-RETURN",
+      "after_step": 4,
+      "source": ".ux-loop/validation/browser-journey-20261112/release-final/browser-journey-result/work/local-execution/run/evidence/T-RETURN/1/scratch/browser/S-R-uxop-6cba854aa13c60db51f4b2fe36b33a93-004.png",
+      "destination": "docs/validation/browser-journey-20261112/recovered.png",
+      "sha256": "5e6b64334379dcd9c8b1e1dbdd8094ca6acd0e6ef386cb62e25f8c3ce8d7f6da",
+      "bytes": 46681,
+      "width": 1920,
+      "height": 1080
+    }
+  ],
+  "verification_limits": {
+    "forced_browser_timeout_injected": false,
+    "live_egress_attack_tested": false,
+    "parser_pngs": "Generated 2x2 bytes; not actual captures.",
+    "rtc_guard_test": "Node VM with fabricated constructors; not an OS sandbox or live network attack.",
+    "readback_preservation": "Verified by diagnostic before/after assertions in memory; independent review corroborated saved state but cannot reconstruct a missing historical baseline manifest."
+  },
+  "post_validation_documentation": {
+    "scope": "After the full gate: final result MD/JSON, three unchanged synthetic PNG copies, and one trailing blank line removed from each of two diagnostic Python files and the browser reference.",
+    "checks": [
+      "engine/test hashes unchanged",
+      "two diagnostic Python ASTs unchanged and exact one-byte EOF-only differences confirmed",
+      "new small delivery bundle verified and differs only by the three EOF-normalized files plus manifest",
+      "result JSON, selected capture hashes, explicit file list and cached diff whitespace verified",
+      "release-files 12 tests and README parity 10 tests passed"
+    ],
+    "receipt": ".ux-loop/validation/browser-journey-20261112/post-report-check.log",
+    "full_gate_boundary": "release-confirmed remains the preserved full-run result for pre-EOF-normalization bytes; final delivery byte changes are separately verified, not claimed to be included in that prior full run."
+  },
+  "delivery_eof_normalization": {
+    "examples/journey/browser_fixture.py": {
+      "validated_sha256": "86b968a663ddef359a94c9dbf6cacb17b7dd67c62219a5147f0b792219c7e42d",
+      "delivery_sha256": "59e3b52e1a4c9033ac8bb3563cdd27119ace9d955e5a12c0cef4db43fbee4148",
+      "only_removed_one_trailing_blank_line": true,
+      "python_ast_unchanged": true
+    },
+    "examples/journey/run_browser_fixture.py": {
+      "validated_sha256": "1b5ce5eb1a90483356f0dcb1752e60d64e9ce7bbd5359535d3dd82549d8d9efe",
+      "delivery_sha256": "4cc626b7e7914b637530bc4c8cf956a893a4ccac9ebe9309f01b48706c8d0cdb",
+      "only_removed_one_trailing_blank_line": true,
+      "python_ast_unchanged": true
+    },
+    "references/persona-qa/browser-run.md": {
+      "validated_sha256": "86bc52f9954b279e43cc968ad0a209c8fdaca412ee2e5018c84494d2a7ac11a2",
+      "delivery_sha256": "f18ff8e850b6f58ab77566ac80db52ffa3ff99b368efd9181166bebecd82254f",
+      "only_removed_one_trailing_blank_line": true,
+      "python_ast_unchanged": null
+    }
+  },
+  "delivery_bundle": {
+    "valid": true,
+    "payload_sha256": "d9170a58050d10fe8b299d9cf8708b0c8e1559ae980432597dfd8905013673c8",
+    "archive_sha256": "e91385d6f7117088dbb3a2e0e7b1cae6b8c3f688f7c3da077aa08e28c37dc1b1",
+    "archive_bytes": 4338875,
+    "changed_from_full_gate_bundle": [
+      "examples/journey/browser_fixture.py",
+      "examples/journey/run_browser_fixture.py",
+      "manifest.remorsearch.json",
+      "references/persona-qa/browser-run.md"
+    ],
+    "file_count": 257,
+    "only_reviewed_eof_changes_and_manifest": true,
+    "directory": ".ux-loop/validation/browser-journey-20261112/delivery-bundle",
+    "payload_file_count": 256,
+    "full_gate_browser_code_unchanged": true
+  }
+}

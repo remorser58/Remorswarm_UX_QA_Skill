@@ -8,9 +8,12 @@ the left hand as an exact mirror. Direction constraints come from Parhi et al.
 Trudeau et al. 2012 (flexion/extension is slower), and OS reachability features
 (the top band of 6.1"+ phones is not one-hand reachable).
 
-The numeric parameters are UNCONFIRMED heuristics: the Bergstrom-Lehtovirta &
-Oulasvirta (CHI 2014) functional-area coefficients could not be retrieved. The
-model reproduces 6 of 8 literature direction constraints (it fails Parhi's SW
+The numeric parameters remain UNCONFIRMED heuristics, not the Bergstrom-Lehtovirta
+& Oulasvirta (CHI 2014) model. Its coefficients were unavailable during the original
+implementation; the 2026-11-19 source review recovered them without replacing this
+model. A migration still requires calibrated inputs and separate validation; see
+docs/human-factors/2026-11-19-reuse-review.md. This model reproduces 6 of 8 literature
+direction constraints (it fails Parhi's SW
 comfort result and marks NW 'out' on Parhi's small screen for thumbs < 106 mm).
 Use it for ordinal comparison and P2/P3 findings only; checks cap severities
 derived from it at P2 unless trace evidence (observed mis-taps, grip-change
@@ -24,6 +27,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from typing import Literal
 
 MODEL_ID = "thumb-reach-v3-uncalibrated"
 SUPPORTED_GRIPS = ("one_hand_right", "one_hand_left", "two_thumbs", "cradle_right", "cradle_left")
@@ -71,6 +75,36 @@ def geometry_for_device(device) -> Geometry:
 def tablet_like(geom: Geometry, p: ReachParams = DEFAULT) -> bool:
     """Handheld tablets and unfolded foldables (HGR-9): side grips, no one-hand thumb model."""
     return min(geom.body_w, geom.body_h) > p.tablet_min_short_side_mm
+
+
+@dataclass(frozen=True)
+class ReachApplicability:
+    kind: Literal["scored", "neutral", "unsupported"]
+    reason: str
+
+
+def applicability(attrs: dict, device, capture: dict | None = None) -> ReachApplicability:
+    """Scope of the grip model, independent of coordinate/raster calibration.
+
+    Coverage uses the oriented profile device. Observations and overlays also
+    bind the recorded device; a catalog or analysis fallback is not a capture.
+    """
+    if (attrs.get("device_id") != device.id
+            or (capture is not None and capture.get("id") != device.id)):
+        return ReachApplicability("unsupported", "profile and capture must identify the same device")
+    if (attrs.get("orientation") != device.orientation
+            or (capture is not None and capture.get("orientation") != device.orientation)):
+        return ReachApplicability("unsupported", "profile and capture must declare the same orientation")
+    if device.input != "touch":
+        return ReachApplicability("unsupported", "reach scoring requires a touch-input device")
+    grip = attrs.get("grip")
+    if grip not in SUPPORTED_GRIPS:
+        return ReachApplicability("unsupported", f"no thumb model for grip {grip!r}")
+    if grip.startswith("cradle"):
+        return ReachApplicability("neutral", f"{grip}: no modeled reach penalty; not a reach assessment")
+    if grip.startswith("one_hand") and tablet_like(geometry_for_device(device)):
+        return ReachApplicability("unsupported", "one-hand thumb model does not apply to tablet-like geometry")
+    return ReachApplicability("scored", "")
 
 
 def _pivot(geom: Geometry, p: ReachParams) -> tuple[float, float]:

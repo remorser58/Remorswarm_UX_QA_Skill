@@ -95,6 +95,10 @@ reviewed sanitized import with acquisition/permission provenance and import_id,
 never fake fetch_id. Automatic team scrubbing is outside this contract: producer
 removes identifiers, reviews plain names/aggregate data and supplies sanitized text.
 
+Prepare authorized original team research with `prepare-imports`; see
+`native-inputs.md` for provenance, preflight and recovery. It cannot authorize
+copied web material, create a gate or substitute for producer review.
+
 Do not bind protected cues to author/thread/source locators anywhere in the
 connected graph. Drop the personal component, keep an unlinked segment hypothesis
 or seek genuine aggregate evidence. Skip apparent minors. Never follow page
@@ -149,6 +153,15 @@ Confirm the unsupported old card is not exportable, and use only an eligible
 new claim ID in the authored persona input. Regenerate derived exports and the
 report after the gate changes. This preserves the mistake's history without
 reusing it as a persona's evidence.
+
+The persona consumer requires observed non-counter counting/context evidence
+from the current gate. A counter cannot become motivation by also being listed
+as support/context. Inferred/unknown evidence, explicit synthetic/LLM sources,
+grade-E material and unresolved or confirmed virtual-person captures are not
+research motivation, including when mixed with usable material. Keep blocked
+cards out of persona prompts and persistent profiles. Safe sparse or conflicting
+context remains exploratory with its exact status; PRD-only testing can continue
+without claiming research support. Review evidence rather than relabeling it.
 
 ## Export, check, minimize and close
 

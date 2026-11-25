@@ -11,7 +11,7 @@ and resumes. Fixture proof cannot replace them. The integrated entry is
 [`product-improvement.md`](product-improvement.md); narrow loop requests retain
 their original scope.
 
-Use Python 3.10+ on Linux or macOS from the skill folder. No third-party Python
+Use Python 3.10+ on Linux or macOS from the skill folder. When `python3` is older, `python3 scripts/find_runtime.py` prints JSON with the chosen `python`, a `node22` entry, `checked` probes and `gaps`; it exits 3 without a supported Python. A missing Node 22 gaps only the bundled web driver. No third-party Python
 packages, Node packages, database, Git executable at runtime, or network are
 required for offline validation. Test records describe the executed environments. Keep
 `uxloop/`, `schemas/`, `scripts/` and `examples/` together inside the skill folder;
@@ -62,6 +62,15 @@ recorded. Checkpoints and the scoped product workspace are locked separately;
 concurrent cooperating writers are blocked.
 
 ### Product evidence intake
+
+`fill` removes hand-computed bookkeeping from the host-authored draft. The literal `@auto` is accepted only at structural fields: browser-run `scenario_digest`; bundle run `scenario_id`/`surface_ref`; run-bound payload `run_id`, `scenario_digest`, `code_revision`, `kind`; steps/accessibility/visual-report payload fields mirrored from their owning run or visual check; `artifacts[].sha256`; and `fixes[]` `before_revision`, `after_revision`, `changed_paths`, computed in round/fix order from the read-only `--workspace` by applying each patch in memory (workspace required for those).
+
+```sh
+python3 scripts/ux_loop.py fill DRAFT.json --evidence-root EVIDENCE \
+  [--workspace PRODUCT] --out packet.json
+```
+
+The host still authors context, inspected sources, constraints, conflicts, acknowledgements, intent decisions, grants, actors, reasons, timestamps, capture-time run revisions, outcomes, severity, statuses, accessibility/visual results and review records. `@auto` in any of those, an ambiguous or missing owner, a missing artifact, a concrete hash that would need rewriting, a patch that does not apply, a concrete revision that contradicts the computed chain, a missing workspace, or an unsafe path or output collision is a refusal: exit 2, nothing written. On success it writes only the sentinel payloads and the new packet, then runs `validate`, printing JSON `written`, `filled`, `valid`, `errors`. Exit 0 is valid; exit 1 means written but invalid, which is not acceptance. A draft without sentinels is preserved byte for byte with `filled: []`. Fill never records an applied fix; `improve` still applies and replays under the usual gates.
 
 First prepare a `ux-loop.v1` JSON packet following
 [`references/loop/provider-contract.md`](provider-contract.md). A live packet must

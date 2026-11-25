@@ -144,6 +144,9 @@ actual application receipt. A change remains unaccepted until the final gate.
 `design_write`/`test_data_write` fix adapters are intentionally not implemented and
 return blocked even with permission; they never claim to have performed a write.
 
+For React + Vite UI fixes (Base UI, Motion, Safe Area, OpenGraph, Skeleton,
+TanStack/Zustand/ky), look up `references/loop/react-design-system.md` by section.
+
 ## 5. Same-scenario replay and stop decision
 
 After actual code changes and an external rebuild, use fresh isolated sessions

@@ -1,0 +1,4 @@
+# Optional execution runtime. The default CLI remains standard-library only.
+# No model provider, hosted service, account or API key is installed/configured.
+langgraph==1.2.20
+langgraph-checkpoint-sqlite==3.1.3

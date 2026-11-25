@@ -7,6 +7,8 @@ starts no subagents.
 
 ## 0. Current request takes precedence
 
+With no explicit choice, saved config or host mapping, inherit the current session: start subagents with no model or effort argument and record `source: session`. Ask only when the user asks to choose or change. The benchmark below is optional reference, not a default recommendation.
+
 Apply model, effort and role assignments explicitly supplied in the current
 conversation before any saved choice or harness default. Mixed-provider teams
 are allowed. Use the exact identifiers and effort options exposed by the host;
@@ -34,7 +36,7 @@ Read `${XDG_CONFIG_HOME:-~/.config}/remorsearch-ux-qa/config.json` if it exists:
 ```json
 {
   "version": 1,
-  "source": "harness | user",
+  "source": "session | harness | user",
   "host": "claude-code | codex | other",
   "roles": {
     "operator": {"model": "inherit | haiku | sonnet | opus | fable | <model id>", "effort": "inherit | low | medium | high | xhigh | max", "agent_type": "remorsearch-operator | null"},
@@ -83,7 +85,7 @@ choice made here then has no effect; say so instead of asking.
 
 ## 3. Ask once
 
-Only when no saved choice and no harness mapping exist. Use the host's selection
+Only when the user asked to choose or change models. Use the host's selection
 prompt (in Claude Code, the `AskUserQuestion` tool); if the host has none, ask
 with a numbered list. Before asking, say that ergonomics mode may start one agent
 per simulated profile (16 in the default sample), so the choice multiplies.
@@ -93,7 +95,7 @@ options; the host adds a free-text "Other".
 
 | Option | Tell the user |
 | --- | --- |
-| Sonnet, max effort (Recommended) | Best reports in the benchmark: highest quality and fewest false alarms on fixed screens. The slowest, about 5 minutes per screen. |
+| Sonnet, max effort | Best reports in the benchmark: highest quality and fewest false alarms on fixed screens. The slowest, about 5 minutes per screen. |
 | Opus, high effort | Found about as many defects, about 2.6 times faster, at a similar measured cost. Its reports scored lower (3.6 of 5 against 4.1). |
 | Sonnet, high effort | Fastest. It reached every goal but raised the most false alarms on fixed screens, so keep the judge pass. |
 | Same as this session | No extra configuration. |
@@ -144,7 +146,7 @@ write secrets or tokens to this file.
   effort apply. The host may list new definitions only from the next session.
 - Otherwise pass the saved model for each call. Where the call also takes an
   effort, pass that too.
-- Skip both when the source is `harness`.
+- Skip both when the source is `harness` or `session`.
 - If a model is unavailable, use only a fallback the user has already allowed;
   otherwise record the blocked role and continue independent work.
 - Record in every report the model and effort each role actually ran with,

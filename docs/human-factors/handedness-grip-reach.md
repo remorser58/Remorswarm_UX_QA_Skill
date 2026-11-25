@@ -4,6 +4,11 @@ SLUG: `handedness-grip-reach` · Date: 2026-09-28 · Scope: phones (5–7"), tab
 
 ## How to read this brief
 
+**2026-11-19 update:** the original access limitations below are historical. The author
+copy's functional-area coefficients and validation section have now been read; see
+[reuse review](2026-11-19-reuse-review.md). This closes the retrieval gap, not the model's
+device calibration or validation gap. The current heuristic remains unchanged.
+
 **Evidence-access tags** (every number carries one):
 
 - **[FT]**: full text was read in this session.
@@ -11,7 +16,7 @@ SLUG: `handedness-grip-reach` · Date: 2026-09-28 · Scope: phones (5–7"), tab
 - **[2nd]**: taken from a secondary summary (blog, news, magazine) and less reliable.
 - **UNCONFIRMED**: could not be verified. Do not hard-code it as fact.
 
-Most publisher hosts (ACM DL, ScienceDirect, UXmatters, PMC, arXiv, NN/g, W3C, sizekorea.kr) were blocked by the egress proxy in this session. Only microsoft.com (Parhi 2006 PDF), developer.apple.com (HIG JSON), developer.android.com and github.com could be fetched. Many values are therefore [AB] or [2nd]. The Bergstrom-Lehtovirta & Oulasvirta (2014) model coefficients, which are the most important missing piece, could **not** be read.
+During the original September review, several publisher hosts were inaccessible, so references still tagged [AB] or [2nd] remain limited to those sources. The November update supersedes that access limitation for Bergstrom-Lehtovirta & Oulasvirta (2014) only.
 
 **Evidence rule for the QA system.** Every reach or grip finding in this domain is **inferred** from geometry plus a persona profile. It is never *observed*: an automation driver taps pixel-perfectly and has no thumb. The findings that count as **observed** are trace events such as mis-taps, repeated attempts, accidental system-gesture exits and unintended activations. Synthetic personas give coverage, not prevalence. The base rates below are literature context and must not be recomputed from persona counts.
 
@@ -166,13 +171,11 @@ Device body and screen dimensions come from a **device table** maintained by the
 
 **Parameters and sources**
 
-- Bergstrom-Lehtovirta & Oulasvirta 2014 (CHI) [AB; model details via secondary summaries]:
-  - n = 20.
-  - Inputs: hand size as finger span *s* (thumb tip to index tip), device surface size, and index-finger distance *d* from the device edge.
-  - The functional area is bounded by a **parabolic/quadratic curve** whose range depends on *d*; mean R² = .958.
-  - The model can also be used inversely to infer grips from a layout.
-  - A blog reports that the test device was an iPhone 5c (124.4 × 59.2 mm) [2nd].
-  - **Coefficients: UNCONFIRMED (paper not accessible here).**
+- Bergstrom-Lehtovirta & Oulasvirta 2014 (CHI) [FT; Equation 5 and validation]:
+  - 20 participants traced maximum thumb reach on an iPad Mini. The experimental setup constrained right-hand index placement and permitted left-hand support.
+  - Inputs: finger span *s*, index-finger distance *d* from the edge, and the device surface and grip coordinate system. Equation 5 is `y = ay(x + h)² + s − d(1 + ak) − bk` with `ay = −0.013`, `h = −15.996`, `ak = −0.257`, and `bk = 64.655`.
+  - Mean R² = 0.949 for averaged trajectories; reported cross-validation means were R² = 0.6799 and RMSE = 16.024 mm. The averaged fit is not an individual prediction result.
+  - The inverse model estimates feasible grips for a layout, not grip prevalence, comfort or tap success.
 - Parhi, Karlson & Bederson 2006 (MobileHCI) [FT]:
   - Setup: 20 right-handed participants (17 men, 3 women), aged 19–42, standing. HP iPAQ h4155 (71 × 114 mm body; 240 × 320 px screen, 0.24 mm pitch ≈ 57.6 × 76.8 mm). Thumb length 99–125 mm (μ 115, σ 5.75). Hand width 75–97 mm (μ 88).
   - All 9 regions of the 3×3 grid were tapped.
@@ -552,7 +555,7 @@ Inputs: body_w, body_h (mm); screen rect in body (sx0, sy0, sw, sh) (mm);
 
 Implementation: `ergoqa/hf/reach.py` (`thumb-reach-v3-uncalibrated`); unit tests in `tests/test_ergo_models.py` cover the mirror identity and the direction constraints above.
 
-**Preferred replacement.** Implement the Bergstrom-Lehtovirta & Oulasvirta 2014 quadratic functional-area model. Its inputs are finger span *s*, index-finger distance *d* from the edge and the device surface. Use it as the boundary between `out` and not-`out` once the paper's coefficients are obtained. Keep ρ_near and the angular term for the cramped and down-across effects, which the functional-area boundary does not express.
+**Research comparator, not a replacement gate.** Compare the published functional-area boundary with measured, held-out maximum-reach traces before considering any change to `out`. Require measured finger span, grip placement and a calibrated device coordinate transform; leave the comparator unavailable if inputs are missing. Evaluate comfort and repeated tap performance separately. The current heuristic and its severity thresholds do not change.
 
 ### 4.2 Parameters (all UNCONFIRMED heuristics unless noted)
 
@@ -608,11 +611,11 @@ On this device class both top corners are `out` for both hands. On smaller phone
 
 ### 4.5 Calibration protocol (recommended before relying on P1)
 
-1. Obtain B-L 2014 (netlab.tkk.fi/~oulasvir/pubs/paper2117.pdf, blocked here) and port the model.
+1. Reproduce Equation 5 in an offline comparison using measured physical inputs and documented axes. Predeclare evaluation conditions and the allowable boundary error before looking at held-out traces.
 2. Collect thumb-sweep data using the Otten 2013 / Le 2018 method: hold securely, then sweep maximum and comfortable areas without re-gripping.
    - Stratify by hand-length tercile × sex, both hands.
    - Use at least 2 current phone classes (~6.1" and ~6.9") and 1 foldable cover screen.
-   - Use Korean adults for Korean-market personas. B-L used n = 20, which gives a floor.
+   - Include Korean adults for Korean-market validation; choose the sample size for the predeclared precision and subgroup coverage. The paper's 20 participants do not establish a sample-size floor.
 3. Fit the pivot (e_x, g), ρ and θ limits per device class. Report cross-validated cell agreement.
 4. Cross-check against task-level outcomes (grip-shift counts, time) in moderated sessions.
 
@@ -688,7 +691,7 @@ Evidence labels:
    - Parhi: 9.2 mm discrete, 9.6 mm serial.
 4. **Korean left-handedness** ranges from 3.9% (KoGES, aged 40–69, 2001–02) to 7% (Gallup 2025, aged 13+). The ambidextrous category is 7.9–8.4% where offered and absent in Gallup. Criteria differ (self-label vs task inventory).
 5. **Korean hand anthropometry by sex and age is UNCONFIRMED.** The only figure found is a secondary "18.5 cm hand length, ages 20–39" from the 8th Size Korea survey. Thumb-length landmark definitions differ across sources (Parhi ~115 mm vs Size Korea ~81 mm vs Otten 72.8 mm), so L cannot be copied across sources.
-6. **The B-L 2014 coefficients were not accessible.** The §4 geometry is an explicitly uncalibrated heuristic. It fails Parhi's SW comfort result (T6) and misclassifies NW as `out` for thumbs under 106 mm (T5).
+6. **Obtaining B-L 2014's coefficients does not calibrate §4.** Its geometry remains an uncalibrated heuristic. It fails Parhi's SW comfort result (T6) and misclassifies NW as `out` for thumbs under 106 mm (T5).
 7. **Old devices.** Most reach studies used 3.5–6" devices (2006–2018). Extrapolation to 6.9" phones and foldables is untested.
 8. **Excluded claims.** Controller-geometry claims (thumbstick spacing, EMG percentages attributed to a "University of Michigan Human Factors Lab 2023"), a blog's "comfortable reach 64–76 mm" and the "80% of remote use on 4 buttons" were found only in unverifiable web content and are excluded.
 9. **Unknown usage rates.** No usage-rate data for OS Reachability or one-handed mode were found, and none for left-handed HUD settings in games.
@@ -700,7 +703,7 @@ Evidence labels:
 Access key: FT = full text read here; AB = abstract or snippet; 2nd = secondary.
 
 1. Parhi, P., Karlson, A. K., Bederson, B. B. (2006). *Target Size Study for One-Handed Thumb Use on Small Touchscreen Devices.* MobileHCI. https://www.microsoft.com/en-us/research/wp-content/uploads/2006/01/parhi-mobileHCI06.pdf [FT]
-2. Bergstrom-Lehtovirta, J., Oulasvirta, A. (2014). *Modeling the Functional Area of the Thumb on Mobile Touchscreen Surfaces.* CHI, 1991–2000. https://dl.acm.org/doi/10.1145/2556288.2557354 ; PDF http://www.netlab.tkk.fi/~oulasvir/pubs/paper2117.pdf ; project page https://old.hiit.fi/thumb_functional_area.html [AB; model form via secondary summaries incl. https://arxiv.org/html/2208.08734v1 and https://3osman.com/2016/05/10/how-far-can-your-thumb-reach/]
+2. Bergstrom-Lehtovirta, J., Oulasvirta, A. (2014). *Modeling the Functional Area of the Thumb on Mobile Touchscreen Surfaces.* CHI, 1991–2000. https://dl.acm.org/doi/10.1145/2556288.2557354 ; author PDF https://www.netlab.tkk.fi/~oulasvir/pubs/paper2117.pdf [FT; Equation 5 and validation verified November 19].
 3. Hoober, S. (2013). *How Do Users Really Hold Mobile Devices?* UXmatters. https://www.uxmatters.com/mt/archives/2013/02/how-do-users-really-hold-mobile-devices.php [AB]
 4. Hoober, S. (2017). *Design for Fingers, Touch, and People,* Parts 1–3. UXmatters. https://www.uxmatters.com/mt/archives/2017/03/design-for-fingers-touch-and-people-part-1.php · https://www.uxmatters.com/mt/archives/2017/05/design-for-fingers-touch-and-people-part-2.php · https://www.uxmatters.com/mt/archives/2017/07/design-for-fingers-touch-and-people-part-3.php [2nd]
 5. Hoober, S. (c. 2015). *How We Hold Our Gadgets.* A List Apart. https://alistapart.com/article/how-we-hold-our-gadgets/ [2nd]

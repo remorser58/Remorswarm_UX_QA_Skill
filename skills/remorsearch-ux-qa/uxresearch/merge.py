@@ -119,11 +119,11 @@ def privacy_scan(value, *, skip=frozenset()):
 def load_imports(doc, run, resolver, issues):
     # Shape/type errors outrank otherwise-well-formed privacy process failures.
     adjusted = copy.deepcopy(doc)
-    for item in adjusted.get("imports", []) if isinstance(adjusted, dict) and isinstance(adjusted.get("imports"), list) else []:
+    for index, item in enumerate(adjusted.get("imports", []) if isinstance(adjusted, dict) and isinstance(adjusted.get("imports"), list) else []):
         sanit = item.get("sanitization") if isinstance(item, dict) else None
         if isinstance(sanit, dict) and (sanit.get("review_attestation") is None or sanit.get("review_attestation") is False):
             sanit["review_attestation"] = True
-            issues.append(problem("unreviewed_import", "imports", "Sanitized imports need producer review."))
+            issues.append(problem("unreviewed_import", f"imports[{index}].sanitization.review_attestation", "Sanitized imports need producer review."))
     errors = resolver.validate(adjusted, "ux-sanitized-imports.v1.schema.json")
     if errors:
         raise EngineError("schema", "Import metadata fails its schema.", location=errors[0])
@@ -131,7 +131,7 @@ def load_imports(doc, run, resolver, issues):
         raise EngineError("run_id", "Imports belong to a different run.")
     result = {}
     brief = read_json(run.path / "brief.json") if (run.path / "brief.json").exists() else {}
-    for item in doc["imports"]:
+    for index, item in enumerate(doc["imports"]):
         path = item["artifact_ref"]
         if Path(path).is_absolute() or ".." in Path(path).parts:
             raise EngineError("unsafe_import", "Import artifacts must be safe run-relative text files.")
@@ -148,14 +148,18 @@ def load_imports(doc, run, resolver, issues):
             raise EngineError("raw_import", "Imports must be reviewed sanitized text, not raw exports.", 1)
         import re
         if re.search(r"(?im)^\s*(?:full[ _]?name|name|row[ _]?id|reverse[ _]?map|이름)\s*[:=]",text) or privacy_scan(text) or privacy_scan(item):
-            issues.append(problem("import_identifiers", "imports", "Sanitized import still has identifier patterns."))
+            issues.append(problem("import_identifiers", f"imports[{index}]", "Sanitized import still has identifier patterns."))
         if envelope.scan(text)["risk"] != "none":
-            issues.append(problem("import_injection", "imports", "Import has unreviewed instruction markers."))
+            issues.append(problem("import_injection", f"imports[{index}]", "Import has unreviewed instruction markers."))
         acq = item["acquisition"]
         if acq["product"] != brief.get("product", {}).get("name"):
             raise EngineError("import_product", "Import acquisition names another product.")
         if acq["period_start"] > acq["period_end"] or acq["period_end"] > run.now_iso()[:10]:
             raise EngineError("import_period", "Import period is invalid.")
+        if any(timestamp(value) > timestamp(run.now_iso()) for value in
+               (acq["exported_at"], item["sanitization"]["reviewed_at"])):
+            raise EngineError("import_time", "Import export and review timestamps cannot be in the future.",
+                              next_step="Record when the actual export and producer/owner review happened; do not invent dates.")
         if acq["kind"] == "store_console_export" and (acq["app_id"] not in acq["permission_ref"] or acq["app_id"] not in str(brief.get("product", {}).get("url", ""))):
             raise EngineError("import_permission", "Console permission must identify the authorized own app.")
         result[item["import_id"]] = (item, text)

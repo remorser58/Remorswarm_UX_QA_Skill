@@ -1,0 +1,32 @@
+{
+  "experiment": "PE-2",
+  "prepared_at_utc": "2026-11-11T01:13:42.540238+00:00",
+  "base_commit": "328bc2037d68b1fc3f9de6bb774d3b330ad77e25",
+  "phase": "before evaluator dispatch; hidden contents not read by coordinator",
+  "public_manifest_sha256": "f2a5d318e7e1408a39f5db37c550a3df445ca57326066ec2ae0f2fce6133703a",
+  "hidden_answer_key_sha256": "d0f2c62f41f43a067e5351dd6945e29baf580c50f868b92816cef6f59bed19f6",
+  "hidden_oracle_trace_manifest_sha256": "8331368139d04e3249c5af9025f8bc90e4ea1ccfc2e5c8c7296cebcfac370e88",
+  "frozen_files": {
+    "skills/remorsearch-ux-qa/uxpersonas/swarm.py": "06d347799776293d302074b4f5364ba3be08b4219feafa23c8f11ae61eb645ba",
+    "skills/remorsearch-ux-qa/uxpersonas/cli.py": "c818a6ea512bbf34988278b2a616dbc76c4671ec532b989c3844c71e250ac6cb",
+    "skills/remorsearch-ux-qa/references/persona-qa/persona-library-swarm.md": "d2ab7a2f38b554ed132f3fb2eb6bd10bd8a80b1a32b573e73664303a77d4836b",
+    "tests/test_persona_receipt_starter.py": "15c1b971aea48d489ad76d0ed184273225cda407b4d70f689f03af45923efc1d",
+    "docs/validation/experiments/persona-workflow-pe2-preregistration-20261111.md": "707f03255d31505d052e8f7afe4e4aedb4f2b4c33802edadfe92bb08c61ec319",
+    "benchmarks/persona-effectiveness-pe2/persona-input.json": "ea69a55db30ec4a2c86bb130d3b372359e52b0a669967373ee3ac13a7d88a4a1",
+    "benchmarks/persona-effectiveness-pe2/persona-plan.json": "e76f797ceaddbae23c51f4a87e48dbbfd1e3b94ef160c3d6900c75e20d86accc"
+  },
+  "preparation": {
+    "profiles_imported": 3,
+    "unchanged_reimport_revisions": [
+      1,
+      1,
+      1
+    ],
+    "separate_reuse_calls": 3,
+    "task_count": 6,
+    "max_parallel": 1,
+    "max_attempts": 1,
+    "source": "Public PRD only; no observed real participants or source permission claims"
+  },
+  "author_verification": "All six oracle expectations checked in actual isolated headless browser before freeze; 5 operational tests; action-61 blocking and failed-action timestamp/count checked; 12-minute expiry not wall-wait-tested. Public workflow table added before dispatch; app/tooling bytes unchanged."
+}

@@ -19,17 +19,39 @@ dpr` from the device catalog (`ergoqa/devices.py`), never a nominal dp/pt size.
 
 ## Reach and handedness
 
+Reach uses an explicit viewport origin inside the display, in the snapshot's
+orientation. A full driver-controlled emulation may establish zero offset;
+a real capture needs independent landmarks locating the viewport. Screenshot
+dimensions alone do not locate it. With missing or incompatible alignment,
+RH-01/RH-02 and GM-02 are inconclusive; size/spacing checks remain independent.
+For GM-02, a verified viewport-only clip uses the center of the visible rectangle;
+the center of a fully visible control is unchanged. Unverified partial, ancestor,
+or unsupported clips are inconclusive. The point is a model input, not proof
+that an input hit or activated the control; target-size checks keep the authored box.
+Even with known alignment the thumb model is uncalibrated.
+The reach heatmap additionally needs a hash-bound PNG and a
+`screenshot.viewport_raster_reference` identifying independent evidence that
+the entire PNG is the CSS viewport, at CSS or device scale. A CSS origin alone
+does not locate viewport pixels on a letterboxed or cropped image.
+
 | ID | Basis | Rule | Severity |
 | --- | --- | --- | --- |
 | RH-01 | model | Thumb reach difficulty `D` for the profile's grip (`thumb-reach-v3-uncalibrated`: polar model around a thumb-base pivot, left hand mirrored; zones natural 0 / mild <0.4 / stretch 0.4–1 / out 1). Evaluated for primary, game-control and on-path targets at the **easiest point of the target** (inset 3 mm), not its centre. Tablets and unfolded foldables (short side > 120 mm) never use the one-hand model; their two-thumb pivots sit at mid-height of the sides (HGR-9). | Primary/game control: out → P2, stretch → P2 (D ≥ 0.6) else P3, small target in the cramped near-palm zone → P3. Other on-path controls (fields, tabs): out → P3 only. Never above P2 from the model alone. |
 | RH-02 | model | Destructive action declared `irreversible` (no confirmation or undo), not on the task path, sits in the natural zone. A destructive link that opens a confirmation dialog is not flagged. | P3 |
 | GM-02 (reach) | model | Landscape two-thumb games, gameplay controls (not secondary controls named pause, menu, settings, options, help, close, back or their Korean equivalents): travel from the nearest thumb rest point (assumed 25 × 22 mm inset from lower corners) and top-band placement (Apple HIG: frequent controls near thumbs, secondary controls such as pause and menus at the top, so those are not flagged; a scripted run's tap counts do not decide this). | top band → P2; travel > 35 mm → P3 |
 
-Sources: Parhi, Karlson & Bederson 2006 [paper]; Bergstrom-Lehtovirta &
-Oulasvirta 2014 (coefficients not retrieved); Trudeau et al. 2012/2014 [snippet];
+Sources: Parhi, Karlson & Bederson 2006 [paper]; [Bergstrom-Lehtovirta &
+Oulasvirta 2014](https://www.netlab.tkk.fi/~oulasvir/pubs/paper2117.pdf) [paper];
+Trudeau et al. 2012/2014 [snippet];
 Xiong & Muraki 2016 [snippet]; Hoober 2013 grip shares [snippet]. Thumb length L
 uses Parhi's landmark (US mean 115 mm); Korean values are scaled by hand length
 and are assumptions until calibrated (handedness-grip-reach.md §4.5).
+
+The 2014 paper's Equation 5 is a research comparator only. It models maximum
+reach for measured grip geometry; the paper reports a mean cross-validation
+RMSE of 16.024 mm. RH-01 does not implement that equation, and its current
+heuristic does not establish comfortable reach, success probability or
+measured reach for a synthetic persona.
 
 The differential condition (`profile_specific`) shows whether a reach finding is
 left- or right-hand specific. Korea has low left-handedness (5.8 % left + 7.9 %
@@ -83,6 +105,10 @@ layer only adds text and typed measurement fields: pass/fail, severity, tiers,
 counts and thresholds stay computed exactly as above.
 
 ## Gaze and attention
+
+If a one-hand GZ-02 observation lacks the shared display frame needed for
+thumb occlusion, it retains the angular band but cannot pass on that band
+alone. Independently established angular failures remain findings.
 
 | ID | Basis | Rule | Severity |
 | --- | --- | --- | --- |

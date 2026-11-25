@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 import _paths  # noqa: E402,F401  (puts the skill folder on sys.path)
 
 from ergoqa import bench, checks, params, swarm  # noqa: E402
-from ergoqa.devices import get_device  # noqa: E402
+from ergoqa.devices import get_device, rotate  # noqa: E402
 from ergoqa.hf import reach  # noqa: E402
 from ergoqa.profiles import _finalise, sample_profiles, touch_sigma_multiplier  # noqa: E402
 
@@ -49,10 +49,88 @@ def ctx(elements, prof=None, device_id="galaxy-s24", previous=None, step=None, f
     prof = prof or profile(device_id=device_id)
     device = get_device(device_id)
     snap = {"snapshot_id": "S-1", "step_index": 1, "surface": {"kind": "web", "url": "http://x/a"},
-            "device": {"id": device_id, "viewport_css": list(device.viewport_css), "orientation": device.orientation},
-            "elements": elements, "focus_point": focus}
+            "device": {"id": device_id, "viewport_css": list(device.viewport_css), "orientation": device.orientation, "dpr": device.dpr},
+            "elements": elements, "focus_point": focus,
+            "viewport_alignment": {"basis": "emulated-full-viewport", "origin_css": [0, 0]}}
     return checks.Context(run=run or {"run_id": "R-1", "steps": []}, snapshot=snap, previous=previous, step=step, profile=prof,
                           device=device, scenario=None, conspicuity=None, path_element_ids=set(path_ids))
+
+
+class CaptureAlignment(unittest.TestCase):
+    def context(self, y, viewport_h=852, alignment=None):
+        prof = profile(device_id="iphone-15", grip="one_hand_right")
+        prof["attributes"]["thumb_length_mm"] = 102.6  # hypothetical functional reach, not measured anatomy
+        a = el("apply", "button", (200, y, 44, 44), text="Apply", interactive=True, roles=("primary",))
+        b = el("delete", "button", (246, y, 44, 44), text="Delete", interactive=True, roles=("destructive",))
+        out = ctx([a, b], prof, "iphone-15")
+        out.snapshot["device"].update(viewport_css=[393, viewport_h], dpr=3)
+        if alignment is None:
+            out.snapshot.pop("viewport_alignment")
+        else:
+            out.snapshot["viewport_alignment"] = alignment
+        return out
+
+    def test_reach_is_invariant_under_aligned_crop_but_not_an_actual_target_move(self):
+        emulated = {"basis": "emulated-full-viewport", "origin_css": [0, 0]}
+        observed = {"basis": "observed-landmarks", "origin_css": [0, 24], "reference": "synthetic top-edge landmark"}
+        full = self.context(300, alignment=emulated)
+        crop = self.context(276, viewport_h=828, alignment=observed)
+        moved = self.context(276, alignment=emulated)
+
+        def primary(context):
+            return next(o for o in checks.check_reach(context) if o.check_id == "RH-01")
+
+        self.assertEqual((primary(full).measurement["zone"], primary(full).measurement["value"]), ("natural", 0.0))
+        self.assertEqual(primary(crop).extra["point_mm"], primary(full).extra["point_mm"])
+        self.assertEqual(primary(crop).measurement["value"], primary(full).measurement["value"])
+        self.assertEqual(primary(crop).measurement["viewport_alignment"], observed)
+        self.assertEqual(primary(moved).measurement["zone"], "stretch")
+        self.assertAlmostEqual(primary(moved).measurement["value"], 0.443, places=3)
+        # Only point-based position changes; hit sizes and neighbor gaps are lengths.
+        self.assertEqual(checks._box_mm(full, full.elements[0]["box"]), checks._box_mm(crop, crop.elements[0]["box"]))
+        self.assertEqual([o.measurement for o in checks.check_touch_accuracy(full)],
+                         [o.measurement for o in checks.check_touch_accuracy(crop)])
+
+    def test_missing_unverified_and_out_of_display_are_not_scored(self):
+        unproven = {"basis": "unknown"}
+        impossible = {"basis": "observed-landmarks", "origin_css": [0, 24], "reference": "synthetic"}
+        for alignment, reason in ((None, "missing_viewport_alignment"), (unproven, "unverified_viewport_alignment"),
+                                  (impossible, "incompatible_display_bounds_or_pitch")):
+            with self.subTest(alignment=alignment):
+                result = checks.check_reach(self.context(276, alignment=alignment))
+                self.assertEqual({o.check_id for o in result}, {"RH-01", "RH-02"})
+                for obs in result:
+                    self.assertIsNone(obs.measurement["value"])
+                    self.assertIsNone(obs.severity)
+                    self.assertEqual(obs.extra["verdict"], "inconclusive")
+                    self.assertEqual(obs.measurement["viewport_alignment"]["reason"], reason)
+
+    def test_explicit_dpr_conflict_cannot_authorize_emulated_reach(self):
+        full = self.context(300, alignment={"basis": "emulated-full-viewport", "origin_css": [0, 0]})
+        full.snapshot["device"]["dpr"] = 1  # iPhone 15 catalog pitch is 3.
+        for obs in checks.check_reach(full):
+            self.assertIsNone(obs.measurement["value"])
+            self.assertEqual(obs.extra["verdict"], "inconclusive")
+
+    def test_landscape_game_origin_uses_the_capture_axes(self):
+        emulated = {"basis": "emulated-full-viewport", "origin_css": [0, 0]}
+        observed = {"basis": "observed-landmarks", "origin_css": [0, 24], "reference": "synthetic landscape landmark"}
+        full = self.context(52, alignment=emulated)
+        crop = self.context(28, alignment=observed)
+        for c, h in ((full, 393), (crop, 369)):
+            c.device = rotate(c.device)
+            c.attrs["grip"] = "two_thumbs"
+            c.attrs["orientation"] = "landscape"
+            c.elements[0]["roles"] = ["game_control"]
+            c.snapshot["device"].update(viewport_css=[852, h], orientation="landscape")
+        a = next(o for o in checks.check_reach(full) if o.check_id == "GM-02")
+        b = next(o for o in checks.check_reach(crop) if o.check_id == "GM-02")
+        self.assertEqual(a.extra["point_mm"], b.extra["point_mm"])
+        self.assertEqual(a.measurement["value"], b.measurement["value"])
+        # Portrait bounds mislabeled as landscape cannot establish the mapping.
+        crop.snapshot["device"].update(viewport_css=[393, 828])
+        unknown = next(o for o in checks.check_reach(crop) if o.check_id == "GM-02")
+        self.assertEqual(unknown.extra["verdict"], "inconclusive")
 
 
 class Occlusion(unittest.TestCase):
@@ -100,6 +178,77 @@ class TabletReach(unittest.TestCase):
 
 
 class Denominators(unittest.TestCase):
+    def test_missing_thumb_uses_nearest_persona_reference(self) -> None:
+        from ergoqa import profiles, snapshot
+
+        button = el("pay", "button", (10, 60, 60, 48), text="결제",
+                    interactive=True, roles=("primary",), tag="button")
+        cases = [(8, 10), (31, 25), (50, 25), (72, 75), (93, 95)]
+        used = []
+        for requested, reference in cases:
+            prof = profile(f"EP-{requested}")
+            prof["attributes"]["hand_percentile"] = requested
+            prof["attributes"]["thumb_length_mm"] = None
+            self.assertEqual(profiles.validate_profile(prof), [])
+            self.assertEqual(snapshot.validate_profile(prof), [])
+            obs = next(o for o in checks.check_reach(ctx([button], prof)) if o.check_id == "RH-01")
+            value = obs.measurement["thumb_input"]
+            self.assertEqual(value["basis"], "synthetic_nearest_hand_percentile")
+            self.assertEqual(value["reference_percentile"], reference)
+            self.assertEqual(value["mm"], profiles.thumb_length_for_percentile(reference))
+            self.assertIsNone(prof["attributes"]["thumb_length_mm"])
+            used.append(value["mm"])
+        self.assertLess(used[0], used[-1])
+        self.assertNotIn(params.THUMB_LENGTH_MM["all"][0], used)
+
+    def test_thumb_without_size_uses_stable_synthetic_stratum(self) -> None:
+        from ergoqa import profiles
+
+        prof = profile("EP-stable")
+        attrs = prof["attributes"]
+        del attrs["thumb_length_mm"], attrs["hand_percentile"]
+        first = profiles.resolve_thumb_input(prof)
+        attrs["age_band"] = "60s"
+        self.assertEqual(profiles.resolve_thumb_input(prof), first)
+        self.assertEqual(first["basis"], "synthetic_assigned_hand_percentile")
+        self.assertIn(first["reference_percentile"], (25, 75))
+        self.assertEqual(profiles.validate_profile(prof), [])
+        attrs["thumb_length_mm"] = 99
+        profiles._finalise(prof, get_device(attrs["device_id"]))
+        self.assertEqual(profiles.resolve_thumb_input(prof), {"mm": 99.0, "basis": "provided_profile"})
+        for invalid in (False, 0, float("nan"), float("inf"), "99"):
+            attrs["thumb_length_mm"] = invalid
+            self.assertTrue(profiles.validate_profile(prof))
+
+    def test_explicit_inconclusive_is_not_coverage_or_comparison(self) -> None:
+        known = profile("EP-known", grip="one_hand_right")
+        unknown = profile("EP-unknown", grip="one_hand_right", age_band="60s")
+        button = el("pay", "button", (10, 60, 60, 48), text="결제",
+                    interactive=True, roles=("primary",), tag="button")
+        reach_obs = next(o for o in checks.check_reach(ctx([button], known)) if o.check_id == "RH-01")
+        observed = reach_obs.to_dict(0)
+        observed.update(selectors=["#pay"], context_selectors=[])
+        self.assertFalse(observed["passed"])
+        inconclusive = {**observed, "id": "OB-unknown", "profile_id": "EP-unknown",
+                        "measurement": {}, "passed": None, "severity": None,
+                        "extra": {"verdict": "inconclusive"}}
+        analysis = {"scenario_id": "SC-1", "run_id": observed["run_id"],
+                    "profiles_evaluated": ["EP-known", "EP-unknown"],
+                    "observations": [observed, inconclusive]}
+        finding = swarm.aggregate([analysis], [known, unknown])[0]
+        self.assertEqual(finding["tested_profiles"], ["EP-known"])
+        self.assertEqual(finding["coverage_label"].split()[0], "1/1")
+        self.assertEqual(finding["profile_specific"], {})
+
+        # An actual observation at the same anchor still counts, even if a
+        # different snapshot of that profile at that anchor was inconclusive.
+        assessment = {**observed, "id": "OB-assessed", "profile_id": "EP-unknown",
+                      "passed": True, "severity": None}
+        analysis["observations"].append(assessment)
+        finding = swarm.aggregate([analysis], [known, unknown])[0]
+        self.assertEqual(finding["tested_profiles"], ["EP-known", "EP-unknown"])
+        self.assertIn("age_band", finding["profile_specific"])
+
     def test_tested_profiles_include_non_triggering_applicable_profiles(self) -> None:
         young = profile("EP-Y")
         old = profile("EP-O", age_band="60s", presbyopia=True)

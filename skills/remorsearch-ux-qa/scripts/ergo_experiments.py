@@ -147,6 +147,10 @@ def pool_for(device_id: str, orientation: str) -> list[dict[str, Any]]:
             if grip["grip"].startswith("one_hand"):
                 attrs["context"]["free_hands"] = 1
             # _finalise fills derived values only when they are empty.
+            # default_profile already derived the baseline size. An explicit
+            # synthetic hand-size condition needs its own derived reach input.
+            if "hand_percentile" in cond:
+                attrs["thumb_length_mm"] = 0
             attrs["motor"]["touch_sigma_multiplier"] = 1.0
             attrs["cognition"]["reading_wpm_ko"] = 0
             attrs["reaction_time_ms"] = 0

@@ -1,0 +1,104 @@
+{
+  "scope": "Synthetic local Workshop Planner evidence only; no research content or live user data.",
+  "transformation": "Findings/summary bytes retained. Public action traces retain action, command, ok and text; screenshot paths become basenames only for selected copied PNGs, all screenshot source digests are retained; verbose failed-action error strings become reason codes. Private paths, lease tokens and task state are not exported. Public adjudication.md removes one trailing blank line; its original source digest is recorded.",
+  "files": {
+    "answer-key.json": {
+      "sha256": "6eb1b9df13cee710971d1398e169358d995834741662827dbcc183507434fe7d",
+      "bytes": 278
+    },
+    "condition-q/actions.minimized.jsonl": {
+      "sha256": "e8e0560d0deae4ba2a08bb99d2c7a6dd16bc92a8df3277fd39b2daff5e437eec",
+      "bytes": 24890
+    },
+    "condition-q/evidence/13-1794357901108.png": {
+      "sha256": "8a5c2a3bf64a3964afcb89c2353b3bb9661b34652733ee21eeeaa96508d3c9df",
+      "bytes": 32336
+    },
+    "condition-q/evidence/15-1794357901211.png": {
+      "sha256": "5f681659c1c4d3ae93b69a9b630978b5076e57f6f1a6a904c53b7afe8b1a48b4",
+      "bytes": 32064
+    },
+    "condition-q/evidence/31-1794357940340.png": {
+      "sha256": "5b025056ea5ddd85f6a08664f16e0cfacb4f5323f2b28c062ccbc63a1b0f6d12",
+      "bytes": 41937
+    },
+    "condition-q/evidence/33-1794357940442.png": {
+      "sha256": "90e51dadacd3cbfc520d07a33a42de79c922ef7d5e4e5b5a7d29844f5be2bf4c",
+      "bytes": 43800
+    },
+    "condition-q/evidence/37-1794357959398.png": {
+      "sha256": "3aee1eef45261f32e936d5d54607eab4716df3463a629c43466988c56126cb03",
+      "bytes": 49607
+    },
+    "condition-q/evidence/38-1794357959434.png": {
+      "sha256": "97e1127ef42c5700951db33a996929f2a7d99ccfe51e9ac700a70c3580c70d23",
+      "bytes": 50578
+    },
+    "condition-q/findings.json": {
+      "sha256": "b27f18f280507bf6c14193449933ef7cdae9abbdd9271fd65648a5b7c7040aa1",
+      "bytes": 8372
+    },
+    "condition-q/summary.md": {
+      "sha256": "0690c5ae56cae8d34e40cf0f3448390ba27c0352bae241400f19e483063a20b1",
+      "bytes": 1687
+    },
+    "condition-r/actions.minimized.jsonl": {
+      "sha256": "d9b07b6f0382ad29417af56eb89606c765ff01560be4341ff59d07bb25624904",
+      "bytes": 18340
+    },
+    "condition-r/evidence/13-1794357989375.png": {
+      "sha256": "3aee1eef45261f32e936d5d54607eab4716df3463a629c43466988c56126cb03",
+      "bytes": 49607
+    },
+    "condition-r/evidence/14-1794357989407.png": {
+      "sha256": "97e1127ef42c5700951db33a996929f2a7d99ccfe51e9ac700a70c3580c70d23",
+      "bytes": 50578
+    },
+    "condition-r/evidence/32-1794358080351.png": {
+      "sha256": "2ea8b289d569ecaf5da71599c4310f0e542de7b29b751686a3dcb6c49a39e0a9",
+      "bytes": 32630
+    },
+    "condition-r/evidence/34-1794358080469.png": {
+      "sha256": "1073a4b41dcfecc297765f792ee92fd2cfede338d6337a64010a43b88d5b9713",
+      "bytes": 32198
+    },
+    "condition-r/evidence/39-1794358115108.png": {
+      "sha256": "bc7ad1a8983a72ccee8ba275a537f30de4bd6e7dfdc06ac3c938a739c0e3c70b",
+      "bytes": 39372
+    },
+    "condition-r/evidence/42-1794358115252.png": {
+      "sha256": "38d0532fd503b9b117bf25b30d8432942778f3b01e181e3e3f04880010ab4aef",
+      "bytes": 43469
+    },
+    "condition-r/findings.json": {
+      "sha256": "fdd00d5aa4957700e7213cb2c64fda72028a00846eee75aff52bb87feb3558cd",
+      "bytes": 2901
+    },
+    "condition-r/summary.md": {
+      "sha256": "3430a8c00a983ac6db87799e461f9b4401b0780784a8e23eb33c6054765a1309",
+      "bytes": 5225
+    },
+    "adjudication.json": {
+      "sha256": "cd0900db9129b673485bec6787be1728fd91c9302a731d793c4a687d7fa4b75a",
+      "bytes": 6700
+    },
+    "adjudication.md": {
+      "sha256": "7ed37faea2b497bc3044ba6342658e9576fedad4da3f5349c762341020510d34",
+      "bytes": 6897
+    },
+    "README.md": {
+      "sha256": "0eb8a81330ac63a175ef5db5416fa1114914958de86d9b547308337b36747e7b",
+      "bytes": 4952
+    }
+  },
+  "source_hashes": {
+    "condition-q/findings.json": "b27f18f280507bf6c14193449933ef7cdae9abbdd9271fd65648a5b7c7040aa1",
+    "condition-q/summary.md": "0690c5ae56cae8d34e40cf0f3448390ba27c0352bae241400f19e483063a20b1",
+    "condition-q/original-actions.jsonl": "e322932c8f14e61a74966a88a94ff32ef549031f070f58a60f708acf26ed3ada",
+    "condition-r/findings.json": "fdd00d5aa4957700e7213cb2c64fda72028a00846eee75aff52bb87feb3558cd",
+    "condition-r/summary.md": "3430a8c00a983ac6db87799e461f9b4401b0780784a8e23eb33c6054765a1309",
+    "condition-r/original-actions.jsonl": "9fa46dceced9179fa718ea31f79fffe167b3f6ed5be7c076cc01ba97b8aafa92",
+    "answer-key.json": "6eb1b9df13cee710971d1398e169358d995834741662827dbcc183507434fe7d",
+    "adjudication.md": "7b66b269124372d7eedd5823f16877365002ae93927425884e527e2f8b92bf7b"
+  }
+}

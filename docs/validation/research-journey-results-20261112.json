@@ -1,0 +1,247 @@
+{
+  "schema_version": "remorsearch-research-journey-validation.v1",
+  "date_kst": "2026-11-12",
+  "branch": "rem/research-journey-20261112",
+  "base_commit": "d34a69fe706fcc68f637bcafdbbd71c6f80ab87a",
+  "remote_ancestry_verified": [
+    "21681e17d83357736df448e93b94ba96b539f4bf",
+    "0f623f1055b269249ea77ebec8493b2e203efa8f"
+  ],
+  "protocol": {
+    "path": "docs/validation/research-journey-protocol-20261112.md",
+    "sha256": "5fec197366a4f247e3d59e5210e478972a5b316156aa829172fb803e59434dea",
+    "fixed_before_new_tests_and_product_edits": true
+  },
+  "selected_gap": "Saved gated-research personas could not reach current owned local QA execution and report.",
+  "implementation": "Explicit reviewed roots, read-only current research validation, exact persisted personas and scope, existing adapter/receipt/recovery, distinct provenance in MD/JSON report.",
+  "runtime": {
+    "os": "macOS 27.2",
+    "os_build": "26B123",
+    "kernel": "Darwin",
+    "architecture": "arm64",
+    "logical_cpus": 14,
+    "ram_bytes": 38654705664,
+    "python": "3.14.7",
+    "python_path": "/opt/homebrew/bin/python3",
+    "measurement": "/usr/bin/time -l",
+    "rss_unit": "bytes",
+    "rss_is_process_tree_sum": false,
+    "heavy_runs_serial": true,
+    "max_owned_concurrent_callers": 2,
+    "executor_model_inferred_from_ui": false
+  },
+  "measurements": [
+    {
+      "id": "first-red",
+      "exit_code": 1,
+      "elapsed_seconds": 0.4,
+      "maximum_rss_bytes": 37191680,
+      "log_sha256": "349cb50a5d8646aaad25a61278507431cbeec1b6a1b739be30fb8ede6f14ca03",
+      "result": "unsupported Python; failed test"
+    },
+    {
+      "id": "first-feature-red",
+      "exit_code": 1,
+      "elapsed_seconds": 0.45,
+      "maximum_rss_bytes": 47857664,
+      "log_sha256": "50db7c5187ac5838f6ddf96bb3c5d4fcf39a7f96f7705ee2d2dfc240a255f0a8",
+      "result": "missing CLI option; failed test"
+    },
+    {
+      "id": "baseline-scope-rejection",
+      "exit_code": 0,
+      "elapsed_seconds": 0.45,
+      "maximum_rss_bytes": 48988160,
+      "log_sha256": "ffcf84083c10fd7f0d4887d760695633be7e0c82dda684b682e2ebd372277b4c",
+      "result": "probe confirmed CLI exit 2 persona_scope"
+    },
+    {
+      "id": "first-green",
+      "exit_code": 0,
+      "elapsed_seconds": 1.49,
+      "maximum_rss_bytes": 48480256,
+      "log_sha256": "1fd1b9d659ef723c2ab65046a63eee1b63822771059854f9a0f5cb5902f94807",
+      "result": "1 test passed"
+    },
+    {
+      "id": "targeted-01",
+      "exit_code": 0,
+      "elapsed_seconds": 57.87,
+      "maximum_rss_bytes": 51150848,
+      "log_sha256": "acdcef1997bc532c8f797b1b6caaae7d78a0cb51aded41c1c0ff6e0894996633",
+      "result": "144 tests passed"
+    },
+    {
+      "id": "source-diagnostic",
+      "exit_code": 1,
+      "elapsed_seconds": 0.11,
+      "maximum_rss_bytes": 39223296,
+      "log_sha256": "2d9b0888a003ae7e128a591a90779a3995fbf4967d28857246092654217e20cc",
+      "result": "missing owned output parent; no product execution"
+    },
+    {
+      "id": "source-diagnostic-02",
+      "exit_code": 0,
+      "elapsed_seconds": 2.59,
+      "maximum_rss_bytes": 44630016,
+      "log_sha256": "78186849764e71729645c1f0d80f0ff9411dbd839580ee145cdd39d58e912d3d",
+      "result": "structured diagnostic passed; product passed 0"
+    },
+    {
+      "id": "targeted-final",
+      "exit_code": 0,
+      "elapsed_seconds": 22.17,
+      "maximum_rss_bytes": 51773440,
+      "log_sha256": "6743be6b1b31d3a7a4d7bd9d3458261a17c1ccfd2c92362fba80dbb782c62916",
+      "result": "182 tests passed"
+    },
+    {
+      "id": "reading-budget-fixed",
+      "exit_code": 0,
+      "elapsed_seconds": 0.2,
+      "maximum_rss_bytes": 40550400,
+      "log_sha256": "2cdda908213d0a0d7774143b5df561d74882fe9ec38d15651be0f72d387ed932",
+      "result": "13 tests passed"
+    },
+    {
+      "id": "release-01",
+      "exit_code": 1,
+      "elapsed_seconds": 180.4,
+      "maximum_rss_bytes": 161333248,
+      "log_sha256": "18895f4da119eb6815a0f4b92caedd2534177864bbd593e94c22a9d3ef333d23",
+      "result": "five reading-budget assertions failed; browser unverified"
+    },
+    {
+      "id": "release-02",
+      "exit_code": 1,
+      "elapsed_seconds": 176.39,
+      "maximum_rss_bytes": 158121984,
+      "log_sha256": "919ed58501a8fbff9bef62d33c4f682038f2a2dedb484c688383606cedb0693d",
+      "result": "15 passed release checks; browser skipped, ready false"
+    }
+  ],
+  "regression": {
+    "new_tests": 28,
+    "targeted_initial_passed": 144,
+    "targeted_final_passed": 182,
+    "reading_budget_passed": 13,
+    "full_tests_run": 1397,
+    "full_tests_passed": 1396,
+    "full_tests_failed": 0,
+    "full_tests_errors": 0,
+    "full_tests_skipped": 1,
+    "full_suite_seconds": 169.105,
+    "existing_skip": "test_ergo_painted_state.ActualPaintCaptures.test_frozen_browser_captures_feed_real_checks",
+    "existing_skip_reason": "No authorized real browser capture input supplied",
+    "original_quality_limits_changed": false,
+    "skill_bytes": 8089,
+    "skill_max_bytes": 8192,
+    "initial_reading_bytes": 41941,
+    "initial_reading_max_bytes": 42000
+  },
+  "release": {
+    "path": "dist/research-journey-release-02/validation.json",
+    "sha256": "c1594a31198ffa3c5174892927e7b04cab47c1fbd803850a610893217563250b",
+    "checks_passed": 15,
+    "checks_failed_excluding_skip": 0,
+    "checks_skipped": 1,
+    "skipped_check": "web-driver",
+    "exit_code": 1,
+    "ready": false,
+    "published": false,
+    "inputs_stable_during_run": true,
+    "post_run_source_finalization": [
+      "docs/validation/research-journey-results-20261112.md",
+      "docs/validation/research-journey-results-20261112.json"
+    ],
+    "final_source_review_receipt": "local-audit/final-review.json"
+  },
+  "artifacts": [
+    {
+      "path": "dist/research-journey-release-02/logs/unit-tests.log",
+      "bytes": 93834,
+      "sha256": "f57408feb63b40acada29fdf2d1afd65f4371ceb26305dae74d47d9a0656a0fd"
+    },
+    {
+      "path": "dist/research-journey-release-02/bundle/remorsearch-ux-qa.zip",
+      "bytes": 4234156,
+      "sha256": "1f9f5254b7b3bc4d2f34692db64c864fdba1836a93aea0525bab5436232cf66d"
+    },
+    {
+      "path": "dist/research-journey-release-02/local-journey-result/diagnostic.json",
+      "sha256": "6253756712e3ce3d6c0b1d89d6ea76bebfea4d95099578437b13a62bdd2dcc36"
+    },
+    {
+      "path": "dist/research-journey-release-02/research-journey-result/diagnostic.json",
+      "sha256": "4fedfc2cb176a432bcefb2fc1b28b2c3dff3d9fee92a50379c3dccf64292d0d4"
+    }
+  ],
+  "extracted_diagnostics": {
+    "launcher": "scripts/remorsearch.py",
+    "empty_workspace_start": true,
+    "commands": [
+      "start",
+      "run",
+      "run",
+      "status"
+    ],
+    "expected_and_actual_exit_codes": [
+      0,
+      1,
+      1,
+      0
+    ],
+    "prd_seconds": 0.98,
+    "research_seconds": 2.81,
+    "personas_each": 2,
+    "counts_each": {
+      "failed": 1,
+      "inconclusive": 1,
+      "passed": 0,
+      "pending": 0,
+      "blocked": 0,
+      "running": 0,
+      "skipped": 0
+    },
+    "research_contract": "invented_offline_input",
+    "diagnostic_checks_passed": true,
+    "original_research_unchanged": true,
+    "original_library_unchanged": true,
+    "product_qa_passed": false,
+    "actual_public_acquisition": false,
+    "ui_observed": false,
+    "real_user_evidence": false
+  },
+  "preservation": {
+    "original_worktrees_checked": 5,
+    "original_files_checked": 3295,
+    "heads_status_content_mode_size_inventory_unchanged": true,
+    "prior_registrations": 15,
+    "prior_registrations_retained": 15,
+    "external_worktree_contents_checked": false,
+    "ignored_artifacts_exhaustively_checked": false,
+    "existing_processes_signalled_or_restarted": false,
+    "other_products_modified": false,
+    "pre_delivery_receipt": "local-audit/before-delivery-preservation.json",
+    "post_delivery_receipt": "local-audit/after-delivery-preservation.json",
+    "helper_initial_refusal": "Relative helper path was not normalized; guard aborted before scan. Owned helper path normalized without changing scope guard."
+  },
+  "boundaries": {
+    "actual_public_source_authenticity_verified": false,
+    "new_public_collection": false,
+    "remote_source_changes_detected": false,
+    "semantic_goal_fit_automated": false,
+    "actual_ui_observed": false,
+    "web_driver_verified": false,
+    "actual_users_or_effect_validated": false,
+    "installed_host_model_behavior_tested": false,
+    "os_or_network_sandbox": false,
+    "descendant_workers_supported": false,
+    "real_accounts_accessed": false,
+    "models_called": false,
+    "settings_or_permissions_changed": false,
+    "installed_or_deployed": false,
+    "public_source_access_gates_changed": false
+  },
+  "delivery_receipt": "local-audit/git-delivery.json"
+}

@@ -920,8 +920,8 @@ export function extractSnapshot(args) {
     return g;
   };
 
-  // Gaze uses the viewport/overflow intersection, while target-size and reach
-  // retain the authored bounding box. Non-rectangular clipping stays unknown.
+  // Keep the authored target for size checks and the viewport/overflow
+  // intersection for checks that require it. Non-rectangular clipping stays unknown.
   const visibleBoxOf = (el) => {
     const r = geo(el).r;
     let x0 = Math.max(VX0, r.left), y0 = Math.max(VY0, r.top);
@@ -1466,6 +1466,7 @@ export function extractSnapshot(args) {
     candidates: candidates.length + spots.size,
     truncated: candidates.length > cap,
     viewport: { w: vw, h: vh },
+    noVisualTransform: !!vvp && vvp.scale === 1 && vvp.offsetLeft === 0 && vvp.offsetTop === 0,
     scroll: { x: round2(window.scrollX), y: round2(window.scrollY), width: se ? se.scrollWidth : null, height: se ? se.scrollHeight : null },
     visual: vvp ? { offset_x: round2(vvp.offsetLeft), offset_y: round2(vvp.offsetTop), width: round2(vvp.width), height: round2(vvp.height), scale: round2(vvp.scale) } : null,
     active,

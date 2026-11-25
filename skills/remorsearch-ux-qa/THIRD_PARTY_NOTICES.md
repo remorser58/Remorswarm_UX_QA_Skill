@@ -73,16 +73,45 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ## Installed separately by the user (not included)
 
+- **LangGraph 1.2.20** and **langgraph-checkpoint-sqlite 3.1.3** (MIT,
+  Copyright LangChain, Inc.), https://github.com/langchain-ai/langgraph.
+  The optional agent runtime imports StateGraph and AsyncSqliteSaver.
+  Packages and transitive dependencies are separately installed through
+  `requirements-agent.txt`; no upstream code is vendored. Preserve their
+  installed license files. No LangSmith hosted service is enabled.
 - **Playwright** (Apache License 2.0) and its Chromium build, installed with
   `npm install` in `drivers/web/` for the live web driver.
-- **Aside** (optional browser research tool), installed and licensed by its own
-  distributor.
+- **Aside** (optional browser research tool and documented CLI REPL transport
+  for separately authorized owned Pro contexts), installed and licensed by its
+  own distributor. Remorsearch's adapter is original code; no Aside source,
+  binary, credentials or guide text is bundled. Aside is not the OSS graph engine.
 - Other browser tools that an agent host provides, such as Claude in Chrome,
   Playwright MCP or Chrome DevTools MCP, are used through the host. They are not
   part of this folder.
 
+## Included synthetic seed data
+
+`uxpersonas/data/korea-seeds.v1.json` contains a minimized adaptation of the first
+32 adult records from NVIDIA Corporation's **Nemotron-Personas-Korea** (2026),
+licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+Source: https://huggingface.co/datasets/nvidia/Nemotron-Personas-Korea
+Revision: `ada0f5b53a38bb5a30cce09358adde883c1ab63a`.
+The dataset viewer returned this revision on 2026-11-18 UTC. The seed file records
+the request, retrieval time and response SHA-256.
+
+Changes: retained age, province, occupation, education level and family type;
+removed narratives and identifiers; derived local IDs from UUID hashes.
+All records are synthetic. This bounded convenience slice is not a representative
+Korean population sample. Grip, reach, vision, motor conditions and product
+behaviors are not observed from these rows. This attribution implies no NVIDIA
+endorsement. The original CC BY terms apply to the adapted data, not to the
+independently authored Remorsearch implementation.
+
 ## Studied as references only (no code included)
 
+- **OpenAI Swarm / Agents SDK**: examined for runtime selection, not imported.
+  https://github.com/openai/swarm recommends Agents SDK for production;
+  https://github.com/openai/openai-agents-python carries the MIT license.
 - **MiroFish** (github.com/666ghj/MiroFish, AGPL-3.0): the ergonomics mode borrows
   the structure of seed → personas → parallel agents → report → interviews. No
   MiroFish code is used.
@@ -90,8 +119,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   MiroFish; reviewed, not used.
 - **OMO** (sisyphuslabs/omo): its goal, checkpoint and continuation design was
   inspected for the loop mode; no OMO code or installation is redistributed.
-- **Nemotron-Personas-Korea** (NVIDIA, CC BY 4.0): persona records may be linked
-  at run time by the user; no dataset rows are included in this folder.
 - **insane-research** (github.com/fivetaku/insane-research, MIT License, Copyright
   (c) 2026 fivetaku). Ideas used in `references/research/audience-pipeline.md` and
   `references/research/source-grading.md`: phase contracts; claim status computed

@@ -1,0 +1,161 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Optional semver bump before releasing
+        required: false
+        default: none
+        type: choice
+        options:
+          - none
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    name: Check if release is needed
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Evaluate release trigger
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref }}
+          BUMP_KIND: ${{ inputs.bump }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "${BUMP_KIND:-none}" != "none" ]; then
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          TAG="v$(tr -d '[:space:]' < VERSION)"
+          if [[ "$REF_NAME" == refs/tags/v* ]] || ! gh release view "$TAG" >/dev/null 2>&1; then
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Release $TAG already exists on $GITHUB_REPOSITORY; skipping." >> "$GITHUB_STEP_SUMMARY"
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  verify:
+    name: Verify release payload
+    needs: gate
+    if: needs.gate.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run full Python test suite
+        run: PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s tests -p 'test_*.py'
+      - name: Run Node tests
+        run: node --test skills/remorsearch-ux-qa/drivers/web/journey_bridge.test.mjs tests/scale_browser_guardrails.test.mjs tests/scale_browser_legacy_seed.test.mjs tests/scale_browser_lifecycle.test.mjs tests/scale_browser_action_deadline.test.mjs tests/scale_browser_scroll.test.mjs benchmarks/persona-effectiveness/tests/runner.test.cjs benchmarks/persona-effectiveness-pe2/tests/runner.test.cjs
+      - name: Run smoke diagnostics
+        run: |
+          python skills/remorsearch-ux-qa/scripts/smoke_loop.py
+          python skills/remorsearch-ux-qa/examples/research/run_fixture.py
+          python scripts/release_files.py
+      - name: Validate tag matches VERSION
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          EXPECTED="v$(tr -d '[:space:]' < VERSION)"
+          if [ "${GITHUB_REF_NAME}" != "$EXPECTED" ]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match VERSION ($EXPECTED)" >&2
+            exit 1
+          fi
+
+  publish:
+    name: Build and publish GitHub Release
+    needs: [gate, verify]
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' && needs.gate.outputs.should_release == 'true'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Optional semver bump on manual dispatch
+        if: github.event_name == 'workflow_dispatch' && inputs.bump != 'none'
+        run: |
+          python - <<'PY'
+          import json, os, pathlib, sys
+          bump = os.environ["BUMP_KIND"]
+          ver = pathlib.Path("VERSION").read_text(encoding="utf-8").strip()
+          major, minor, patch = (int(x) for x in ver.split("."))
+          if bump == "major":
+              next_ver = f"{major + 1}.0.0"
+          elif bump == "minor":
+              next_ver = f"{major}.{minor + 1}.0"
+          else:
+              next_ver = f"{major}.{minor}.{patch + 1}"
+          for target in ("VERSION", "skills/remorsearch-ux-qa/VERSION", "skills/react-design-system/VERSION"):
+              pathlib.Path(target).write_text(next_ver + "\n", encoding="utf-8")
+          for manifest in (".claude-plugin/plugin.json", ".claude-plugin/marketplace.json"):
+              p = pathlib.Path(manifest)
+              data = json.loads(p.read_text(encoding="utf-8"))
+              if "version" in data:
+                  data["version"] = next_ver
+              if "plugins" in data and data["plugins"]:
+                  data["plugins"][0]["version"] = next_ver
+              p.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+          print(f"Bumped {ver} -> {next_ver}")
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          NEXT_VER="$(tr -d '[:space:]' < VERSION)"
+          git add VERSION skills/remorsearch-ux-qa/VERSION skills/react-design-system/VERSION .claude-plugin/plugin.json .claude-plugin/marketplace.json
+          git commit -m "chore(release): bump version to v${NEXT_VER}"
+          git push origin HEAD:main
+        env:
+          BUMP_KIND: ${{ inputs.bump }}
+
+      - name: Build and verify deterministic release assets
+        run: |
+          TAG="v$(tr -d '[:space:]' < VERSION)"
+          echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
+          python scripts/build_release_assets.py --output dist/release --tag "$TAG" --commit "$(git rev-parse HEAD)"
+          python scripts/build_insane_search_bundle.py --verify dist/release/bundle
+          (cd dist/release && sha256sum -c SHA256SUMS.txt)
+
+      - name: Publish GitHub Release if tag not already released
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Release $RELEASE_TAG already exists; skipping publish. Bump VERSION or run workflow_dispatch with bump=patch|minor|major to publish a new release." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          gh release create "$RELEASE_TAG" \
+            dist/release/remorsearch-ux-qa.zip \
+            dist/release/react-design-system.zip \
+            dist/release/release-manifest.json \
+            dist/release/SHA256SUMS.txt \
+            --target "$(git rev-parse HEAD)" \
+            --title "Remorswarm UX QA $RELEASE_TAG" \
+            --generate-notes \
+            --latest
+          echo "Published $RELEASE_TAG with verified assets." >> "$GITHUB_STEP_SUMMARY"

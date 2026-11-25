@@ -2,12 +2,13 @@
 from __future__ import annotations
 
 import fcntl
+import json
 import os
 from contextlib import contextmanager
 from pathlib import Path
 
 from .contracts import require_packet
-from .io import ContractError, GateStop, atomic_json, digest, load_json, now, timestamp
+from .io import ContractError, GateStop, atomic_bytes, digest, load_json, now, timestamp
 
 PHASES = ("research", "plan", "browser", "fix", "replay", "decision")
 STATUSES = {"running", "interrupted", "blocked", "unknown", "failed", "iteration_limit", "complete"}
@@ -52,10 +53,17 @@ def event(state: dict, phase: str, status: str, reason: str, *, completed_gate: 
         state["accepted_fix_ids"] = []
 
 
-def save(path: Path, state: dict) -> None:
+def checkpoint_bytes(state: dict) -> bytes:
     value = {k: v for k, v in state.items() if k != "checksum"}
     value["checksum"] = digest(value)
-    atomic_json(path, value)
+    return (json.dumps(value, indent=2, ensure_ascii=False, allow_nan=False) + "\n").encode("utf-8")
+
+
+def save(path: Path, state: dict) -> None:
+    raw = checkpoint_bytes(state)
+    if len(raw) > 8 * 1024 * 1024:
+        raise ContractError("Checkpoint would exceed the 8 MiB read limit; existing checkpoint preserved")
+    atomic_bytes(path, raw)
 
 
 def load(path: Path) -> dict:
@@ -68,8 +76,25 @@ def load(path: Path) -> dict:
     required = {"schema_version", "packet", "phase", "status", "iteration", "run_id", "workspace",
                 "evidence_root", "permissions", "permission_events", "events", "applied_fixes",
                 "accepted_fix_ids", "pending_intent", "reason", "prioritized_findings"}
-    if set(value) not in (required, required | {"intent_decisions"}) or value["schema_version"] != "ux-loop-checkpoint.v1":
+    optional = {"intent_decisions", "rollback_events", "pending_rollback"}
+    if (not required <= set(value) or set(value) - required - optional
+            or value["schema_version"] != "ux-loop-checkpoint.v1"):
         raise ContractError("Unsupported or malformed checkpoint")
+    history = value.get("rollback_events", [])
+    if not isinstance(history, list) or any(not isinstance(row, dict) for row in history):
+        raise ContractError("Invalid rollback history")
+    reverted = set()
+    applied_ids = {row["fix_id"] for row in value["applied_fixes"]}
+    for row in history:
+        ids = row.get("fix_ids")
+        if (not isinstance(ids, list) or not ids or any(not isinstance(fid, str) for fid in ids)
+                or len(ids) != len(set(ids)) or not set(ids) <= applied_ids or reverted & set(ids)):
+            raise ContractError("Invalid or repeated rollback selection")
+        reverted.update(ids)
+    if value.get("pending_rollback") is not None and not isinstance(value["pending_rollback"], dict):
+        raise ContractError("Invalid pending rollback")
+    if (history or value.get("pending_rollback")) and value["status"] == "complete":
+        raise ContractError("Rollback cannot preserve a completed decision")
     if "intent_decisions" in value and (not isinstance(value["intent_decisions"], list) or
             any(not isinstance(x, dict) for x in value["intent_decisions"])):
         raise ContractError("Malformed operator intent decision ledger")
@@ -87,6 +112,9 @@ def load(path: Path) -> dict:
             raise ContractError("Intent decision recorded before it was made")
         seen_decisions.add(decision["id"])
     require_packet(value["packet"])
+    if value.get("pending_rollback") is not None:
+        from .rollback import validate_pending
+        validate_pending(value)
     if value["phase"] not in PHASES or value["status"] not in STATUSES or type(value["iteration"]) is not int:
         raise ContractError("Invalid checkpoint phase/status/iteration")
     if not 1 <= value["iteration"] <= value["packet"]["goal"]["max_iterations"]:

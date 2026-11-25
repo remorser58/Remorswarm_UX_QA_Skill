@@ -1,0 +1,13 @@
+{
+  "faults": {
+    "B7N": "Pause resets edited seat limit; title remains",
+    "D5Q": "Back without applying appends previewed materials",
+    "P8R": "Sort changes selected room by position"
+  },
+  "clean": [
+    "K4M",
+    "T2V",
+    "H9S"
+  ],
+  "expected_core_actions": 46
+}
