@@ -12,6 +12,7 @@ import hashlib
 import json
 import math
 import random
+import sys
 from typing import Any, Iterable
 
 from . import params
@@ -142,6 +143,40 @@ def thumb_length_for_percentile(percentile: int, sex: str | None = None) -> floa
     return round(mean + z.get(int(percentile), 0.0) * sd, 1)
 
 
+_THUMB_REFERENCE_PERCENTILES = (1, 5, 10, 25, 75, 90, 95, 99)
+
+
+def _finite_number(value: Any) -> bool:
+    return (type(value) is int or (type(value) is float and math.isfinite(value)))
+
+
+def resolve_thumb_input(profile: dict[str, Any]) -> dict[str, Any]:
+    """Resolve the reach model's functional tip-to-base length without editing a profile."""
+    attrs = profile["attributes"]
+    supplied = attrs.get("thumb_length_mm")
+    if supplied is not None:
+        if not _finite_number(supplied) or not 1 <= supplied <= sys.float_info.max:
+            raise ValueError("attributes.thumb_length_mm must be a finite number >= 1")
+        return {"mm": float(supplied), "basis": "provided_profile"}
+    requested = attrs.get("hand_percentile")
+    if requested is None:
+        # No size to match: assign a spread of stable synthetic conditions, not
+        # an estimate of real anatomy based on the persona's demographics.
+        bit = hashlib.sha256(profile["profile_id"].encode("utf-8")).digest()[0] & 1
+        reference = (25, 75)[bit]
+        basis = "synthetic_assigned_hand_percentile"
+    else:
+        if not _finite_number(requested) or not 0 <= requested <= 100:
+            raise ValueError("attributes.hand_percentile must be in [0, 100]")
+        # Do not use the pooled mean as a reference. Break equidistant ties
+        # toward the smaller hand, without using age, gender or occupation.
+        reference = min(_THUMB_REFERENCE_PERCENTILES, key=lambda p: (abs(p - requested), p))
+        basis = "synthetic_nearest_hand_percentile"
+    return {"mm": thumb_length_for_percentile(reference), "basis": basis,
+            "reference_model": "functional-tip-to-base-percentile.v1",
+            "requested_percentile": requested, "reference_percentile": reference}
+
+
 def _base_profile(index: int, rng: random.Random, device_id: str, input_kind: str, orientation: str) -> dict[str, Any]:
     age_band = _weighted(rng, params.AGE_BAND_SHARE_KR)
     left = params.LEFT_SHARE_BY_AGE_KR.get(age_band, params.HANDEDNESS_SHARE_KR["left"])
@@ -163,7 +198,7 @@ def _base_profile(index: int, rng: random.Random, device_id: str, input_kind: st
             "age_band": age_band,
             "handedness": handedness,
             "grip": _grip_for(handedness, input_kind, rng),
-            "thumb_length_mm": thumb_length_for_percentile(percentile),
+            "thumb_length_mm": 0,  # Generated profile: derive after scenario overrides.
             "hand_percentile": percentile,
             "device_id": device_id,
             "orientation": orientation,
@@ -203,8 +238,11 @@ def _finalise(profile: dict[str, Any], device: Any) -> dict[str, Any]:
         attrs["context"]["free_hands"] = 1
     if attrs["handedness"] == "left" and grip in ("one_hand_right", "cradle_right", "mouse_right"):
         pass  # a left-hander using the right hand is allowed (e.g. mouse); keep explicit
-    percentile = int(attrs.get("hand_percentile", 50))
-    attrs["thumb_length_mm"] = thumb_length_for_percentile(percentile)
+    if type(attrs.get("thumb_length_mm")) in (int, float) and attrs["thumb_length_mm"] == 0:
+        # Internal generator sentinel. Do not overwrite an authored dimension;
+        # absent/null external input is resolved with provenance when evaluated.
+        percentile = int(attrs.get("hand_percentile", 50))
+        attrs["thumb_length_mm"] = thumb_length_for_percentile(percentile)
     vision = attrs["vision"]
     if not vision.get("viewing_distance_mm"):
         vision["viewing_distance_mm"] = int(getattr(device, "viewing_distance_mm", 0) or params.DEFAULT_VIEWING_DISTANCE_MM.get(getattr(device, "form_factor", "phone"), 350))
@@ -411,10 +449,15 @@ def validate_profile(profile: Any) -> list[str]:
         errors.append("attributes.orientation must be portrait or landscape")
     if not isinstance(attrs.get("device_id"), str):
         errors.append("attributes.device_id is required")
-    for key in ("thumb_length_mm", "reaction_time_ms"):
-        value = attrs.get(key)
-        if not isinstance(value, (int, float)) or isinstance(value, bool) or value <= 0:
-            errors.append(f"attributes.{key} must be a positive number")
+    rt = attrs.get("reaction_time_ms")
+    if not _finite_number(rt) or rt <= 0:
+        errors.append("attributes.reaction_time_ms must be a positive number")
+    supplied = attrs.get("thumb_length_mm")
+    if supplied is not None and (not _finite_number(supplied) or not 1 <= supplied <= sys.float_info.max):
+        errors.append("attributes.thumb_length_mm must be a finite number >= 1")
+    percentile = attrs.get("hand_percentile")
+    if percentile is not None and (not _finite_number(percentile) or not 0 <= percentile <= 100):
+        errors.append("attributes.hand_percentile must be in [0, 100]")
     vision = attrs.get("vision")
     if not isinstance(vision, dict) or vision.get("cvd") not in CVD:
         errors.append("attributes.vision.cvd must be one of " + ", ".join(CVD))

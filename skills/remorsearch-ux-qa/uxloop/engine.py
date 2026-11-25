@@ -8,7 +8,7 @@ from pathlib import Path
 from .contracts import index, merge_packet, require_packet
 from .evidence import Evidence
 from .io import ContractError, GateStop, code_snapshot, digest, now, timestamp
-from .patching import finish_intent, plan_intent
+from .patching import finish_intent, plan_intent, rollback_snapshot
 from .product_context import context_binding, context_summary, load_context, prewrite_gate, verify_intent_review, record_operator_decisions
 from .storage import PHASES, event, load, lock, save
 
@@ -143,6 +143,7 @@ def apply_fixes(state: dict, evidence: Evidence, checkpoint: Path) -> None:
         state["applied_fixes"].append({"fix_id": fix["id"], "at": now(), "iteration": state["iteration"],
                                        "after_revision": fix["after_revision"],
                                        "authorization_event": state["permissions"][capability]["id"],
+                                       "rollback_snapshot": rollback_snapshot(state["pending_intent"]),
                                        "intent_decision_ids": decision_ids})
         state["pending_intent"] = None
         event(state, "fix", "running", f"Applied {fix['id']}; acceptance awaits full same-scenario replay")
@@ -238,6 +239,11 @@ def run(packet: dict | None, checkpoint: Path, workspace: Path | None = None,
                   completed_gate=state["status"] == "complete")
         permissions(state, grants or [], revokes or [], actor, reason)
         save(checkpoint, state)
+        if state.get("pending_rollback") or state.get("rollback_events"):
+            event(state, state["phase"], "blocked",
+                  "Rollback invalidated this goal; reconcile pending rollback, then prepare a new baseline")
+            save(checkpoint, state)
+            return state
         evidence = Evidence(state["packet"], evidence_root)
         if state["status"] == "iteration_limit":
             return state
@@ -304,6 +310,7 @@ def run(packet: dict | None, checkpoint: Path, workspace: Path | None = None,
 
 
 def report(state: dict) -> dict:
+    from .rollback import improvement_rows
     packet = state["packet"]
     complete = state["status"] == "complete"
     records = packet["bundle"]["records"]
@@ -326,7 +333,12 @@ def report(state: dict) -> dict:
             "max_iterations": packet["goal"]["max_iterations"], "code_scope": packet["goal"]["code_paths"],
             "permissions": state["permissions"], "permission_events": state["permission_events"],
             "historical_bundle_permissions": packet["bundle"]["permissions"],
-            "prioritized_findings": state["prioritized_findings"], "applied_fixes": state["applied_fixes"],
+            "prioritized_findings": state["prioritized_findings"],
+            "applied_fixes": [{k: v for k, v in row.items() if k != "rollback_snapshot"}
+                              for row in state["applied_fixes"]],
+            "improvements": improvement_rows(state),
+            "rollback_events": state.get("rollback_events", []),
+            "pending_rollback": state.get("pending_rollback") is not None,
             "accepted_fix_ids": state["accepted_fix_ids"] if complete else [],
             "pending_write_intent": state["pending_intent"] is not None,
             "product_context": context_summary(state),

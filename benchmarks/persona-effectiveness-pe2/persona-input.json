@@ -1,0 +1,128 @@
+{
+  "schema_version": "ux-persona-library-input.v1",
+  "product_id": "everyday-pe2",
+  "mode": "prd_hypothesis",
+  "review_days": 7,
+  "context": {
+    "prd_path": "benchmarks/persona-effectiveness-pe2/PRD.md",
+    "prd_sha256": "583710b6dc0d394698582dfb40730bf6e682daaa30696bd530dc48328bfc70fe",
+    "requirements": [
+      {
+        "id": "P1",
+        "source_anchor": "PRD Plant care note",
+        "excerpt": "The user records how often a fern needs water. The default interval is 7 days; initially nothing is saved. A whole-number interval from 1 through 14 is valid, inclusive. Empty, nonnumeric, fractional, zero and out-of-range input must not save. Submission of invalid input gives actionable validation. A user must be able to correct invalid input to a valid value and successfully save without reloading, losing the entered correction, or being trapped by an earlier error. A successful save removes obsolete error text and visibly confirms Fern and the submitted interval. Further valid edits can be saved in the same page. The core recovery check is an invalid submission followed by correction and resubmission; use representative inputs rather than exhaustively testing integers."
+      },
+      {
+        "id": "P2",
+        "source_anchor": "PRD Plant care note",
+        "excerpt": "The user records how often a fern needs water. The default interval is 7 days; initially nothing is saved. A whole-number interval from 1 through 14 is valid, inclusive. Empty, nonnumeric, fractional, zero and out-of-range input must not save. Submission of invalid input gives actionable validation. A user must be able to correct invalid input to a valid value and successfully save without reloading, losing the entered correction, or being trapped by an earlier error. A successful save removes obsolete error text and visibly confirms Fern and the submitted interval. Further valid edits can be saved in the same page. The core recovery check is an invalid submission followed by correction and resubmission; use representative inputs rather than exhaustively testing integers."
+      },
+      {
+        "id": "Q1",
+        "source_anchor": "PRD Listening queue",
+        "excerpt": "Initially the ordered queue contains Morning Birds, then River Sounds, with a count of 2. The user may remove Morning Birds. Selecting removal opens a confirmation dialog without changing the queue. Cancel closes the dialog and preserves both episodes, their order, and count. A subsequent removal request must still be possible after cancellation. Confirm removal closes the dialog, removes only Morning Birds, retains River Sounds and changes the count to 1. The core check includes both cancel and a later confirmed removal. There is no add, playback, undo, or reorder feature in scope."
+      },
+      {
+        "id": "Q2",
+        "source_anchor": "PRD Listening queue",
+        "excerpt": "Initially the ordered queue contains Morning Birds, then River Sounds, with a count of 2. The user may remove Morning Birds. Selecting removal opens a confirmation dialog without changing the queue. Cancel closes the dialog and preserves both episodes, their order, and count. A subsequent removal request must still be possible after cancellation. Confirm removal closes the dialog, removes only Morning Birds, retains River Sounds and changes the count to 1. The core check includes both cancel and a later confirmed removal. There is no add, playback, undo, or reorder feature in scope."
+      },
+      {
+        "id": "R1",
+        "source_anchor": "PRD Park walk plan",
+        "excerpt": "The user chooses between Shortest path and Avoid stairs. Default is Shortest path, with no initial preview. In each newly loaded page the first preview intentionally produces a temporary simulated outage and an explicit Retry preview action. This outage itself is required, not a defect. Neither the failed attempt nor retry may change the chosen preference. Retry succeeds without requiring re-entry. Avoid stairs must yield Riverside ramp, 1.2 km, no stairs. Shortest path must yield Hill steps, 0.8 km, includes stairs. A successful retry clears the outage message. The user can then change preference and preview the other route without another outage. The core check includes a nondefault choice before the initial preview, recovery with retry, and an ordinary subsequent choice change."
+      },
+      {
+        "id": "R2",
+        "source_anchor": "PRD Park walk plan",
+        "excerpt": "The user chooses between Shortest path and Avoid stairs. Default is Shortest path, with no initial preview. In each newly loaded page the first preview intentionally produces a temporary simulated outage and an explicit Retry preview action. This outage itself is required, not a defect. Neither the failed attempt nor retry may change the chosen preference. Retry succeeds without requiring re-entry. Avoid stairs must yield Riverside ramp, 1.2 km, no stairs. Shortest path must yield Hill steps, 0.8 km, includes stairs. A successful retry clears the outage message. The user can then change preference and preview the other route without another outage. The core check includes a nondefault choice before the initial preview, recovery with retry, and an ordinary subsequent choice change."
+      }
+    ]
+  },
+  "personas": [
+    {
+      "persona_id": "PER-care-corrector",
+      "label": "Care-note author correcting an invalid interval",
+      "goals": [
+        "Recover from invalid input and save the corrected interval, then save another valid edit"
+      ],
+      "behaviors": [
+        "Submit a representative invalid interval before correcting it",
+        "Read validation, entered correction and saved confirmation",
+        "Make a further valid edit without reloading"
+      ],
+      "contexts": [
+        "Synthetic scenario derived only from the public Plant care note requirements"
+      ],
+      "assumptions": [
+        "PRD hypothesis, not an observed real person or research finding",
+        "The session is synthetic and remains on the same page during each task"
+      ],
+      "unknowns": [
+        "Real-world frequency and user preferences",
+        "Whether this authored scenario improves defect detection"
+      ],
+      "requirement_ids": [
+        "P1",
+        "P2"
+      ],
+      "claim_ids": []
+    },
+    {
+      "persona_id": "PER-queue-reconsiderer",
+      "label": "Listener who reconsiders a removal",
+      "goals": [
+        "Cancel a removal without changing the queue, then intentionally remove one episode"
+      ],
+      "behaviors": [
+        "Inspect both episodes and count before removal",
+        "Cancel first and check order and count",
+        "Request removal again and confirm only the intended episode"
+      ],
+      "contexts": [
+        "Synthetic scenario derived only from the public Listening queue requirements"
+      ],
+      "assumptions": [
+        "PRD hypothesis, not an observed real person or research finding",
+        "The session is synthetic and remains on the same page during each task"
+      ],
+      "unknowns": [
+        "Real-world frequency and user preferences",
+        "Whether this authored scenario improves defect detection"
+      ],
+      "requirement_ids": [
+        "Q1",
+        "Q2"
+      ],
+      "claim_ids": []
+    },
+    {
+      "persona_id": "PER-stepfree-walker",
+      "label": "Walker choosing the no-stairs option",
+      "goals": [
+        "Retain the chosen preference through the required outage and retry, then compare the alternative"
+      ],
+      "behaviors": [
+        "Choose the nondefault preference before preview",
+        "Treat the first simulated outage as expected and retry without re-entry",
+        "Read route name, distance and stairs before switching preference"
+      ],
+      "contexts": [
+        "Synthetic scenario derived only from the public Park walk plan requirements"
+      ],
+      "assumptions": [
+        "PRD hypothesis, not an observed real person or research finding",
+        "The session is synthetic and remains on the same page during each task"
+      ],
+      "unknowns": [
+        "Real-world frequency and user preferences",
+        "Whether this authored scenario improves defect detection"
+      ],
+      "requirement_ids": [
+        "R1",
+        "R2"
+      ],
+      "claim_ids": []
+    }
+  ]
+}

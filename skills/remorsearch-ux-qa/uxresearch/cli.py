@@ -286,7 +286,7 @@ def main(argv: list[str] | None = None, *, clock=None, sleeper=None, jitter=None
         _emit(dict(command=args.command, result="fail", exit_code=exc.exit_code, files=[], issues=[exc.issue], warnings=[]))
         return exc.exit_code
     except RunError as exc:
-        if args.command in {"merge", "gate", "plan", "report-check", "export-audience", "persona-starter", "export-personas", "persona-intake", "minimize"}:
+        if args.command in {"merge", "gate", "plan", "report-check", "export-audience", "persona-starter", "export-personas", "persona-intake", "minimize", "prepare-imports"}:
             _emit(dict(command=args.command, result="fail", exit_code=2, files=[], issues=[dict(code="policy", location="run", reason="Reader policy or run files are invalid.", next_step="Correct the run inputs.")], warnings=[]))
             return 2
         _emit({"status": "refused", "reason": str(exc)})

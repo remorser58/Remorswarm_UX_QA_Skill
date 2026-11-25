@@ -1,0 +1,643 @@
+{
+  "schema_version": "remorsearch-scale-validation.v1",
+  "date": "2026-11-13",
+  "baseline": "7fd5d8dc731747ebd97a24946dc3f68324dd5e46",
+  "branch": "rem/scalable-swarm-20261113",
+  "mode": "fixture",
+  "exit_code": 0,
+  "actual_model_calls": 0,
+  "actual_browser_calls_in_scale_stages": 0,
+  "product_ready": false,
+  "real_user_evidence": false,
+  "generated_pngs_not_browser_captures": true,
+  "local_evidence": ".ux-loop/validation/scale-final",
+  "whole_process": {
+    "wall_seconds": 168.91,
+    "user_seconds": 143.49,
+    "system_seconds": 20.59,
+    "max_rss_bytes": 75759616
+  },
+  "stages": [
+    {
+      "sessions": 8,
+      "concurrency": 8,
+      "elapsed_seconds": 1.152,
+      "process_peak_rss_bytes": 47202304,
+      "authored_model_calls": 32,
+      "tool_and_close_calls": 24,
+      "counts": {
+        "complete": 8,
+        "queued": 0,
+        "running": 0,
+        "blocked": 0,
+        "uncertain": 0,
+        "cancelled": 0
+      },
+      "outcomes": {
+        "passed": 6,
+        "failed": 2,
+        "inconclusive": 0
+      },
+      "peak_provider_callbacks": {
+        "fixture-a": 4,
+        "fixture-b": 4
+      },
+      "unique_contexts": 8,
+      "readback_added_calls": 0,
+      "original_library_unchanged": true,
+      "settled_microusd": 0,
+      "reserved_microusd": 0,
+      "plan_sha256": "a9b3c61b82358d72affbcff55000a15f20a28bb54bada1d7dd493051de571cef",
+      "report_sha256": "b3b7242cd6fa0a090a6d35c07abb68e689baf1fed653efb26edf9b2c89ee09f3",
+      "event_chain_head": "00e0b5359b43698ec41100f1b06f8009ace2ec2c1eeb4f578c16df3e2c7dd75f"
+    },
+    {
+      "sessions": 32,
+      "concurrency": 16,
+      "elapsed_seconds": 5.287,
+      "process_peak_rss_bytes": 51003392,
+      "authored_model_calls": 128,
+      "tool_and_close_calls": 96,
+      "counts": {
+        "complete": 32,
+        "queued": 0,
+        "running": 0,
+        "blocked": 0,
+        "uncertain": 0,
+        "cancelled": 0
+      },
+      "outcomes": {
+        "passed": 24,
+        "failed": 8,
+        "inconclusive": 0
+      },
+      "peak_provider_callbacks": {
+        "fixture-a": 8,
+        "fixture-b": 8
+      },
+      "unique_contexts": 32,
+      "readback_added_calls": 0,
+      "original_library_unchanged": true,
+      "settled_microusd": 0,
+      "reserved_microusd": 0,
+      "plan_sha256": "12a39d550781496bdf992f4a7e3817952850069e115ebb8f99d3627265849a7e",
+      "report_sha256": "4817f4c8fe215c2cd9ca5a9152736aa5b76aa2e78d7963b546da0e8d41561181",
+      "event_chain_head": "5c21cdf521a07f211e66b69acee5478c5ee4115283a4e5e4d7d2e7732176add3"
+    },
+    {
+      "sessions": 100,
+      "concurrency": 16,
+      "elapsed_seconds": 23.649,
+      "process_peak_rss_bytes": 59785216,
+      "authored_model_calls": 400,
+      "tool_and_close_calls": 300,
+      "counts": {
+        "complete": 100,
+        "queued": 0,
+        "running": 0,
+        "blocked": 0,
+        "uncertain": 0,
+        "cancelled": 0
+      },
+      "outcomes": {
+        "passed": 75,
+        "failed": 25,
+        "inconclusive": 0
+      },
+      "peak_provider_callbacks": {
+        "fixture-a": 8,
+        "fixture-b": 8
+      },
+      "unique_contexts": 100,
+      "readback_added_calls": 0,
+      "original_library_unchanged": true,
+      "settled_microusd": 0,
+      "reserved_microusd": 0,
+      "plan_sha256": "a012c278f14ccf302c17abbc956502a861691dc122d534a89f50b4ce9e38b22b",
+      "report_sha256": "779cd3be260e889ae9567afc381e643e99821384ba0051bad820e1ad3b521527",
+      "event_chain_head": "139102c3dc10f64a9550b40dbd6f7cf4580295b3c13bc4915c47127391613364"
+    },
+    {
+      "sessions": 300,
+      "concurrency": 16,
+      "elapsed_seconds": 138.59,
+      "process_peak_rss_bytes": 75743232,
+      "authored_model_calls": 1200,
+      "tool_and_close_calls": 900,
+      "counts": {
+        "complete": 300,
+        "queued": 0,
+        "running": 0,
+        "blocked": 0,
+        "uncertain": 0,
+        "cancelled": 0
+      },
+      "outcomes": {
+        "passed": 225,
+        "failed": 75,
+        "inconclusive": 0
+      },
+      "peak_provider_callbacks": {
+        "fixture-a": 8,
+        "fixture-b": 8
+      },
+      "unique_contexts": 300,
+      "readback_added_calls": 0,
+      "original_library_unchanged": true,
+      "settled_microusd": 0,
+      "reserved_microusd": 0,
+      "plan_sha256": "f283c71ef68913041db27b019bc8bc6cb0046dcc66948b43c46ecc47f1006c52",
+      "report_sha256": "791b824f5652932a5d3fd0410d3a0458a7223abf93e5caa773f38e34b6fe82ef",
+      "event_chain_head": "b421e6a613f8ecc11724f2d1a803b328d1ce764ed8ad8bbacf02f3643a1fcd45"
+    }
+  ],
+  "interpretation": {
+    "memory": "Cumulative coordinator-process peak, not per-stage incremental or aggregate remote/browser memory",
+    "elapsed": "Includes preparation, execution and readback; not provider throughput",
+    "failures": "Expected authored input-loss cases, preserved after later recovery",
+    "diversity": "Distinct authored identities/contexts; not representative behavioral diversity"
+  },
+  "engine_manifest": {
+    "agent_run.py": "ef01dc997314fe967b2c841a991c3d419ceedfdea85c2b88436760aed5ab0106",
+    "library.py": "7410ef074eb26eee7dcabaf5f92eada6dbe2d5203f09704415fd045619ceda1c",
+    "scale_entry.py": "316896921c63b138c7a12e906019ba31d165bd127c769fccae5297de7fa3affc",
+    "scale_report.py": "00d273acc72aec3891989d5ff98a27248817b17b242c3fa241eb1e984261be6b",
+    "scale_run.py": "2c9657cfe34dd2d9069cbe85ae46317fb9c4ad25d25fed6441744dd17c25921a",
+    "swarm.py": "f58aff928afb62c5a555986f3f7bdfb4828feb715dcb775c265705c1271c56df",
+    "swarm_providers.py": "727a69aee751233d5ba0d413093217db64d76cad6758026ee959718d618d48b7",
+    "swarm_queue.py": "f22721ef5635b264ff9f1db5140291886ccba930d6ba0895c58325dce2c1140b"
+  },
+  "earlier_validation": {
+    "scope": "Before outbound capture-path projection correction; retained historical evidence, not the final runtime",
+    "local_evidence": ".ux-loop/validation/scale-initial",
+    "exit_code": 0,
+    "whole_process": {
+      "wall_seconds": 175.67,
+      "user_seconds": 146.28,
+      "system_seconds": 23.02,
+      "max_rss_bytes": 75808768
+    },
+    "stages": [
+      {
+        "sessions": 8,
+        "concurrency": 8,
+        "elapsed_seconds": 1.131,
+        "process_peak_rss_bytes": 47448064,
+        "authored_model_calls": 32,
+        "tool_and_close_calls": 24,
+        "counts": {
+          "complete": 8,
+          "queued": 0,
+          "running": 0,
+          "blocked": 0,
+          "uncertain": 0,
+          "cancelled": 0
+        },
+        "outcomes": {
+          "passed": 6,
+          "failed": 2,
+          "inconclusive": 0
+        },
+        "peak_provider_callbacks": {
+          "fixture-a": 4,
+          "fixture-b": 4
+        },
+        "unique_contexts": 8,
+        "readback_added_calls": 0,
+        "original_library_unchanged": true,
+        "settled_microusd": 0,
+        "reserved_microusd": 0,
+        "plan_sha256": "deb5985372d09989b92001e83323774425af1ef7371571042d3468b0c503c01c",
+        "report_sha256": "8be0e9c2550080a825322e7689dd1f5aad97be92e5690fd53f0694082e145962",
+        "event_chain_head": "3b73d139240caf81a5e3b6f284d602f70634dcab8977e90d738cfebd84b0d214"
+      },
+      {
+        "sessions": 32,
+        "concurrency": 16,
+        "elapsed_seconds": 5.248,
+        "process_peak_rss_bytes": 51412992,
+        "authored_model_calls": 128,
+        "tool_and_close_calls": 96,
+        "counts": {
+          "complete": 32,
+          "queued": 0,
+          "running": 0,
+          "blocked": 0,
+          "uncertain": 0,
+          "cancelled": 0
+        },
+        "outcomes": {
+          "passed": 24,
+          "failed": 8,
+          "inconclusive": 0
+        },
+        "peak_provider_callbacks": {
+          "fixture-a": 8,
+          "fixture-b": 8
+        },
+        "unique_contexts": 32,
+        "readback_added_calls": 0,
+        "original_library_unchanged": true,
+        "settled_microusd": 0,
+        "reserved_microusd": 0,
+        "plan_sha256": "21164e940fae56251f9cec53053b12f3c41b8390aabec3b6e48cd1b954e443d4",
+        "report_sha256": "280ac6e00d131f6bcc2a823990aa2589202ace413f1bdd9496928e87e08a7535",
+        "event_chain_head": "7abe2c91bc5c8863f3ae2a7df8a219d77a17af69ba7b76fc44ad749a33f3fed8"
+      },
+      {
+        "sessions": 100,
+        "concurrency": 16,
+        "elapsed_seconds": 23.555,
+        "process_peak_rss_bytes": 60669952,
+        "authored_model_calls": 400,
+        "tool_and_close_calls": 300,
+        "counts": {
+          "complete": 100,
+          "queued": 0,
+          "running": 0,
+          "blocked": 0,
+          "uncertain": 0,
+          "cancelled": 0
+        },
+        "outcomes": {
+          "passed": 75,
+          "failed": 25,
+          "inconclusive": 0
+        },
+        "peak_provider_callbacks": {
+          "fixture-a": 8,
+          "fixture-b": 8
+        },
+        "unique_contexts": 100,
+        "readback_added_calls": 0,
+        "original_library_unchanged": true,
+        "settled_microusd": 0,
+        "reserved_microusd": 0,
+        "plan_sha256": "bf3b266659de1a6a975cf11bf0182a2326005b170445ec4d8df5811f4a05b59f",
+        "report_sha256": "4e0b66a7cf9cf5ed2a4930c88b3fe8771650168c29ed0480b38f3410783c8886",
+        "event_chain_head": "9bf6d8178558c460d07303cdd20c7d86abb34f472da5b80a8f670a9ccc6a46b3"
+      },
+      {
+        "sessions": 300,
+        "concurrency": 16,
+        "elapsed_seconds": 145.515,
+        "process_peak_rss_bytes": 75792384,
+        "authored_model_calls": 1200,
+        "tool_and_close_calls": 900,
+        "counts": {
+          "complete": 300,
+          "queued": 0,
+          "running": 0,
+          "blocked": 0,
+          "uncertain": 0,
+          "cancelled": 0
+        },
+        "outcomes": {
+          "passed": 225,
+          "failed": 75,
+          "inconclusive": 0
+        },
+        "peak_provider_callbacks": {
+          "fixture-a": 8,
+          "fixture-b": 8
+        },
+        "unique_contexts": 300,
+        "readback_added_calls": 0,
+        "original_library_unchanged": true,
+        "settled_microusd": 0,
+        "reserved_microusd": 0,
+        "plan_sha256": "3996259537f51f05ee8ac5209bd9dcdc884e39e9b9c43ea9a55b719385ef1bd8",
+        "report_sha256": "0c7ef3b52f361a4eee086d9a07f23b6e82fd6f73a3c086b5e0b2af0bae9f3aa1",
+        "event_chain_head": "1ebb8e71f1680093458a96949c65de6ff26d5149e2ec5600aad8caafbdac3ace"
+      }
+    ]
+  },
+  "initial_release_attempt": {
+    "changed_inputs": {
+      "added": [],
+      "changed": [
+        "docs/validation/scalable-swarm-results-20261113.md",
+        "skills/remorsearch-ux-qa/SKILL.md"
+      ],
+      "name": "validation-inputs-stable",
+      "passed": false,
+      "reason": "Validation source inputs changed or could not be safely fingerprinted; rerun all checks",
+      "removed": []
+    },
+    "checks": 24,
+    "failed_checks": [
+      "unit-tests",
+      "current-source-match",
+      "validation-inputs-stable"
+    ],
+    "ready": false,
+    "sha256": "13eb73401d84c00784420443e5987f13de4716d38494219fd7baa79df1b4ac63",
+    "local_evidence": ".ux-loop/validation/release-final",
+    "exit_code": 1,
+    "unit": {
+      "tests": 1544,
+      "seconds": 206.083,
+      "subtest_failures": 4,
+      "skipped": 1
+    },
+    "reading_budget": {
+      "observed_bytes": 42038,
+      "cap_bytes": 42000,
+      "correction": "Removed duplicated introduction; mandatory evidence rule and thresholds preserved"
+    },
+    "focused_recheck": {
+      "tests": 13,
+      "seconds": 0.197,
+      "passed": true
+    }
+  },
+  "release_verification": {
+    "bridge": {
+      "failed": 0,
+      "passed": 7,
+      "tests": 7
+    },
+    "browser": {
+      "failed": 0,
+      "passed": 559,
+      "skips": [
+        "SKIP shared browser clients and version handshake -- set REMORSEARCH_BROWSER_WS to a loopback launchServer endpoint",
+        "SKIP typography: Python captured-font analysis -- ERGOQA_PYTHON not configured"
+      ]
+    },
+    "bundle_zip_sha256": "e7a62b28076d8bfdd65e3297b920e3b225103a4462c631b15f98c4fff2d856f8",
+    "checks": [
+      {
+        "exit_code": 0,
+        "log": "logs/unit-tests.log",
+        "name": "unit-tests",
+        "passed": true,
+        "seconds": 210.52
+      },
+      {
+        "exit_code": 0,
+        "log": "logs/release-files.log",
+        "name": "release-files",
+        "passed": true,
+        "seconds": 0.04
+      },
+      {
+        "exit_code": 0,
+        "log": "logs/bundle-build.log",
+        "name": "bundle-build",
+        "passed": true,
+        "seconds": 0.13
+      },
+      {
+        "exit_code": 0,
+        "log": "logs/bundle-integrity.log",
+        "name": "bundle-integrity",
+        "passed": true,
+        "seconds": 0.08
+      },
+      {
+        "exit_code": 0,
+        "log": "logs/extracted-integrity.log",
+        "name": "extracted-integrity",
+        "passed": true,
+        "seconds": 0.07
+      },
+      {
+        "exit_code": 0,
+        "log": "logs/extracted-runtime-discovery.log",
+        "name": "extracted-runtime-discovery",
+        "passed": true,
+        "seconds": 0.2
+      },
+      {
+        "exit_code": 0,
+        "log": "logs/extracted-research-help.log",
+        "name": "extracted-research-help",
+        "passed": true,
+        "seconds": 0.21
+      },
+      {
+        "exit_code": 0,
+        "log": "logs/extracted-search-source.log",
+        "name": "extracted-search-source",
+        "passed": true,
+        "seconds": 0.09
+      },
+      {
+        "exit_code": 0,
+        "log": "logs/extracted-search-method.log",
+        "name": "extracted-search-method",
+        "passed": true,
+        "seconds": 0.09
+      },
+      {
+        "name": "search-method-body",
+        "passed": true,
+        "reason": "A linked platform method body, including its command, is readable"
+      },
+      {
+        "exit_code": 0,
+        "log": "logs/extracted-smoke.log",
+        "name": "extracted-smoke",
+        "passed": true,
+        "seconds": 1.89
+      },
+      {
+        "exit_code": 0,
+        "log": "logs/extracted-local-journey.log",
+        "name": "extracted-local-journey",
+        "passed": true,
+        "seconds": 1.02
+      },
+      {
+        "exit_code": 0,
+        "log": "logs/extracted-research-journey.log",
+        "name": "extracted-research-journey",
+        "passed": true,
+        "seconds": 2.92
+      },
+      {
+        "exit_code": 0,
+        "log": "logs/extracted-swarm-help.log",
+        "name": "extracted-swarm-help",
+        "passed": true,
+        "seconds": 0.21
+      },
+      {
+        "exit_code": 0,
+        "log": "logs/extracted-scale-fixture.log",
+        "name": "extracted-scale-fixture",
+        "passed": true,
+        "seconds": 1.45
+      },
+      {
+        "exit_code": 0,
+        "log": "logs/extracted-swarm-status.log",
+        "name": "extracted-swarm-status",
+        "passed": true,
+        "seconds": 0.25
+      },
+      {
+        "exit_code": 0,
+        "log": "logs/node-version.log",
+        "name": "node-version",
+        "passed": true,
+        "seconds": 0.09
+      },
+      {
+        "exit_code": 0,
+        "log": "logs/driver-dependencies.log",
+        "name": "driver-dependencies",
+        "passed": true,
+        "seconds": 0.02
+      },
+      {
+        "exit_code": 0,
+        "log": "logs/web-driver.log",
+        "name": "web-driver",
+        "passed": true,
+        "seconds": 264
+      },
+      {
+        "exit_code": 0,
+        "log": "logs/browser-bridge-contract.log",
+        "name": "browser-bridge-contract",
+        "passed": true,
+        "seconds": 0.14
+      },
+      {
+        "exit_code": 0,
+        "log": "logs/extracted-browser-journey.log",
+        "name": "extracted-browser-journey",
+        "passed": true,
+        "seconds": 32.73
+      },
+      {
+        "exit_code": 0,
+        "log": "logs/post-browser-integrity.log",
+        "name": "post-browser-integrity",
+        "passed": true,
+        "seconds": 0.05
+      },
+      {
+        "name": "current-source-match",
+        "passed": true,
+        "reason": "Candidate matches current inputs"
+      },
+      {
+        "added": [],
+        "changed": [],
+        "name": "validation-inputs-stable",
+        "passed": true,
+        "reason": "Validation source inputs remained unchanged",
+        "removed": []
+      }
+    ],
+    "input_errors_after": [],
+    "input_errors_before": [],
+    "installed_fixture": {
+      "actual_browser_calls": 0,
+      "actual_model_calls": 0,
+      "mode": "fixture",
+      "product_ready": false,
+      "stages": [
+        {
+          "actual_browser_calls": 0,
+          "actual_model_calls": 0,
+          "authored_model_calls": 32,
+          "budget": {
+            "ceiling": 0,
+            "charged_or_settled": 0,
+            "currency": "USD",
+            "exceeded_by": 0,
+            "guarantee": "reviewed_caps_and_prices; provider_billing_not_independently_verified",
+            "remaining": 0,
+            "reserved": 0,
+            "uncertain_reserved": 0,
+            "unit": "micro_USD"
+          },
+          "concurrency": 4,
+          "counts": {
+            "blocked": 0,
+            "cancelled": 0,
+            "complete": 8,
+            "queued": 0,
+            "running": 0,
+            "uncertain": 0
+          },
+          "elapsed_seconds": 1.284,
+          "event_chain_head": "45ed58b9e1382391ec0adb0d5b60d3498457081b046a44a88d78e62efd8a7780",
+          "generated_pngs_not_browser_captures": true,
+          "mode": "fixture",
+          "original_library_unchanged": true,
+          "outcomes": {
+            "failed": 2,
+            "inconclusive": 0,
+            "passed": 6
+          },
+          "peak_provider_callbacks": {
+            "fixture-a": 2,
+            "fixture-b": 2
+          },
+          "plan_sha256": "e5a62431ddbeb17c25bdf85b34c54dd5e134f5c04799fda7c3ca65937771253d",
+          "process_peak_rss_bytes": 47431680,
+          "product_ready": false,
+          "readback_added_calls": 0,
+          "real_user_evidence": false,
+          "report_sha256": "7aadaa6bebc65a8b1d8203f4b5b9a930eacb01592227500ee138b2c629274ef3",
+          "sessions": 8,
+          "tool_and_close_calls": 24,
+          "unique_contexts": 8
+        }
+      ]
+    },
+    "python": "3.14.7",
+    "ready": true,
+    "unit": {
+      "seconds": 209.891,
+      "skipped": 1,
+      "tests": 1544
+    },
+    "validation_json_sha256": "c02fa08f7be81b92810f39b6b472da86c1357f2fe841393772a308c04e63d3b7",
+    "local_evidence": ".ux-loop/validation/release-verified",
+    "exit_code": 0,
+    "scope": "Local package, offline regression and owned headless browser diagnostics; not live small-model or user-effect evidence",
+    "command_resources": {
+      "wall_seconds": 516.67,
+      "user_seconds": 265.96,
+      "system_seconds": 55.38,
+      "max_rss_bytes": 239271936
+    },
+    "runtime": {
+      "python": "3.14.7",
+      "node": "22.16.0",
+      "playwright": "1.56.1",
+      "langgraph": "1.2.20",
+      "langgraph_checkpoint_sqlite": "3.1.3"
+    },
+    "unit_skip_reason": "ERGO_PAINT_CAPTURES not supplied; one existing real-capture painted-state case",
+    "post_gate_evidence_only_files": [
+      "docs/validation/scalable-swarm-results-20261113.md",
+      "docs/validation/scalable-swarm-results-20261113.json"
+    ]
+  },
+  "publication_checks": {
+    "packaged_source_unchanged": true,
+    "runtime_manifest_unchanged": true,
+    "recorded_stages_match_raw_results": true,
+    "raw_gate_hash_matches": true,
+    "authorized_origin_matches": true,
+    "baseline_ancestry": true,
+    "git_diff_cached_check": {
+      "exit_code": 2,
+      "scope": "Only an additional blank line at EOF; no trailing spaces or functional change",
+      "files": [
+        "docs/validation/scalable-swarm-protocol-20261113.md",
+        "skills/remorsearch-ux-qa/examples/agents/scale_fixture.py",
+        "skills/remorsearch-ux-qa/uxpersonas/scale_report.py",
+        "tests/test_scale_report.py"
+      ],
+      "disposition": "Nonblocking formatting notes retained to keep the validated source bytes unchanged"
+    }
+  }
+}

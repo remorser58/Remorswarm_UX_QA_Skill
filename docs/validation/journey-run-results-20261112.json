@@ -1,0 +1,411 @@
+{
+  "schema_version": "ux-journey-run-validation.v1",
+  "date_kst": "2026-11-12",
+  "branch": "rem/journey-run-report-20261112",
+  "base": "21681e17d83357736df448e93b94ba96b539f4bf",
+  "peekly_ancestor": "0f623f1055b269249ea77ebec8493b2e203efa8f",
+  "remote_baselines_reverified": true,
+  "scope": "owned synthetic local Python execution; no real UI or user-effect evidence",
+  "host": {
+    "os": "macOS 27.2 (26B123)",
+    "architecture": "arm64",
+    "logical_cpus": 14,
+    "physical_memory_bytes": 38654705664,
+    "python": "3.14.7"
+  },
+  "fixed_criteria": "docs/validation/journey-run-protocol-20261112.md",
+  "unit_tests": {
+    "run": 1369,
+    "passed": 1368,
+    "failed": 0,
+    "skipped": 1,
+    "seconds_reported_by_unittest": 174.891,
+    "skip_reason": "existing ERGO_PAINT_CAPTURES-dependent test, unchanged"
+  },
+  "new_local_run_tests": 34,
+  "targeted_journey_tests": 58,
+  "release": {
+    "path": "dist/journey-run-release-20261112-03",
+    "exit_code": 1,
+    "ready": false,
+    "published": false,
+    "passed_checks": 14,
+    "skipped_checks": 1,
+    "checks": [
+      {
+        "name": "unit-tests",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 175.47,
+        "log": "logs/unit-tests.log"
+      },
+      {
+        "name": "release-files",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 0.04,
+        "log": "logs/release-files.log"
+      },
+      {
+        "name": "bundle-build",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 0.18,
+        "log": "logs/bundle-build.log"
+      },
+      {
+        "name": "bundle-integrity",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 0.13,
+        "log": "logs/bundle-integrity.log"
+      },
+      {
+        "name": "extracted-integrity",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 0.07,
+        "log": "logs/extracted-integrity.log"
+      },
+      {
+        "name": "extracted-runtime-discovery",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 0.18,
+        "log": "logs/extracted-runtime-discovery.log"
+      },
+      {
+        "name": "extracted-research-help",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 0.24,
+        "log": "logs/extracted-research-help.log"
+      },
+      {
+        "name": "extracted-search-source",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 0.13,
+        "log": "logs/extracted-search-source.log"
+      },
+      {
+        "name": "extracted-search-method",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 0.13,
+        "log": "logs/extracted-search-method.log"
+      },
+      {
+        "name": "search-method-body",
+        "passed": true,
+        "reason": "A linked platform method body, including its command, is readable"
+      },
+      {
+        "name": "extracted-smoke",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 2.11,
+        "log": "logs/extracted-smoke.log"
+      },
+      {
+        "name": "extracted-local-journey",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 1.1,
+        "log": "logs/extracted-local-journey.log"
+      },
+      {
+        "name": "web-driver",
+        "passed": false,
+        "skipped": true,
+        "reason": "--skip-web requested; release validation is incomplete"
+      },
+      {
+        "name": "current-source-match",
+        "passed": true,
+        "reason": "Candidate matches current inputs"
+      },
+      {
+        "name": "validation-inputs-stable",
+        "passed": true,
+        "reason": "Validation source inputs remained unchanged",
+        "added": [],
+        "removed": [],
+        "changed": []
+      }
+    ]
+  },
+  "package": {
+    "path": "dist/journey-run-release-20261112-03/bundle/remorsearch-ux-qa.zip",
+    "bytes": 4209432,
+    "sha256": "c9444bf456453f90095839c0fb42040897e15d3f76c0c4be59d154de9442c80a",
+    "post_execution_integrity_valid": true,
+    "shipped_payload_sha256": "eaf2fb7050ef107eb8f7b21c4b1b10b3fb38ff03efad9acbf8316c932e3be581",
+    "shipped_file_count": 248
+  },
+  "installed_diagnostic": {
+    "launcher": "scripts/remorsearch.py",
+    "commands": [
+      {
+        "command": "start",
+        "exit_code": 0,
+        "expected_exit_code": 0
+      },
+      {
+        "command": "run",
+        "exit_code": 1,
+        "expected_exit_code": 1
+      },
+      {
+        "command": "run",
+        "exit_code": 1,
+        "expected_exit_code": 1
+      },
+      {
+        "command": "status",
+        "exit_code": 0,
+        "expected_exit_code": 0
+      }
+    ],
+    "diagnostic_checks_passed": true,
+    "product_qa_passed": false,
+    "synthetic_known_defect": true,
+    "counts": {
+      "blocked": 0,
+      "failed": 1,
+      "inconclusive": 1,
+      "passed": 0,
+      "pending": 0,
+      "running": 0,
+      "skipped": 0
+    },
+    "original_library_unchanged": true,
+    "ui_observed": false,
+    "real_user_evidence": false,
+    "product_ready": false,
+    "sample_observations": [
+      {
+        "goal": "Load the candidate",
+        "persona": "PER-EXPLORE",
+        "status": "inconclusive",
+        "attempts": 1,
+        "binding": {
+          "persona_id": "PER-EXPLORE",
+          "prd_sha256": "07c84162262cf73636569b6e45221c60b55cae727a1bcca028963d7ad92377dc",
+          "profile_sha256": "6a671edef5b020b6787bdf66388250aea810793efe390716695049e0627a1cad",
+          "revision": 1
+        },
+        "criteria": [
+          {
+            "evidence_ids": [
+              "execution"
+            ],
+            "index": 0,
+            "kind": "success",
+            "observation": "Candidate loaded",
+            "status": "passed"
+          },
+          {
+            "evidence_ids": [],
+            "index": 0,
+            "kind": "recovery",
+            "observation": "Browser recovery was not observed",
+            "status": "not_run"
+          }
+        ],
+        "artifacts": [
+          {
+            "id": "execution",
+            "kind": "execution_log",
+            "path": "evidence/T-EXPLORE/1/observation.json",
+            "sha256": "cec9686ba9612c6d183038c84e9850ff29ae09c454c30e71b996c41e014c0f98"
+          }
+        ]
+      },
+      {
+        "goal": "Keep earlier items after rejected input",
+        "persona": "PER-RETURN",
+        "status": "failed",
+        "attempts": 1,
+        "binding": {
+          "persona_id": "PER-RETURN",
+          "prd_sha256": "07c84162262cf73636569b6e45221c60b55cae727a1bcca028963d7ad92377dc",
+          "profile_sha256": "778c4733de823d9c21b122ce9bb239902c044a69da5efd160bfb32a988adacdd",
+          "revision": 1
+        },
+        "criteria": [
+          {
+            "evidence_ids": [
+              "execution"
+            ],
+            "index": 0,
+            "kind": "success",
+            "observation": "Earlier item lost after rejected input",
+            "status": "failed"
+          },
+          {
+            "evidence_ids": [],
+            "index": 0,
+            "kind": "recovery",
+            "observation": "Browser recovery was not observed",
+            "status": "not_run"
+          }
+        ],
+        "artifacts": [
+          {
+            "id": "execution",
+            "kind": "execution_log",
+            "path": "evidence/T-RETURN/1/observation.json",
+            "sha256": "84fadbc07d74f0ba494fb61200b6b20cfc1d1ebacefb6ca4e6b627a0e1377094"
+          }
+        ]
+      }
+    ],
+    "coverage": {
+      "all_declared_requirements_passed": false,
+      "basis": "declared_obligations_not_semantic_completeness",
+      "obligations": {
+        "declared": 4,
+        "excluded": 0,
+        "failed": 1,
+        "not_run": 2,
+        "passed": 1
+      },
+      "requirement_assignments": {
+        "excluded": 0,
+        "failed": 1,
+        "incomplete": 1,
+        "mapped": 2,
+        "passed": 0,
+        "unassessed": 0
+      }
+    }
+  },
+  "preservation": {
+    "existing_in_root_worktrees": 4,
+    "tracked_files": 2598,
+    "protected_state_files": 17,
+    "worktrees_unchanged": true,
+    "protected_state_files_unchanged": true,
+    "outside_root_worktrees_not_inspected": 10,
+    "before_sha256": "4c78adeaa2907edce6ce87013f9ede780ddaceb3cf7ef6c181dc3782cf821643",
+    "after_sha256": "84df55200ade9d33b4e41c2a8c0c8c8a0bccfc8044c34d451fde861c4704a56d"
+  },
+  "measurement_method": "/usr/bin/time -l; elapsed seconds and macOS maximum RSS bytes for each invocation, not an aggregate sum or isolated-adapter peak",
+  "measurements": {
+    "first-red": {
+      "elapsed_seconds": 0.35,
+      "max_rss_bytes": 40861696,
+      "log_sha256": "aca7391f4552a058cf8bcf30d202aa94c555092fb3a44fdd9798bd369c87c144"
+    },
+    "first-implementation": {
+      "elapsed_seconds": 0.44,
+      "max_rss_bytes": 41041920,
+      "log_sha256": "b42f8112d279c0a3610bb320164b722ffd4c548f5f17b9d9b3c593a4dd566e12"
+    },
+    "targeted-01": {
+      "elapsed_seconds": 4.53,
+      "max_rss_bytes": 46186496,
+      "log_sha256": "d2052b61a575d5cdfca610196932de1261f1f7caea8105efb478c0aa2ba909e2"
+    },
+    "targeted-02": {
+      "elapsed_seconds": 4.64,
+      "max_rss_bytes": 45694976,
+      "log_sha256": "e8fdb5947d08de06c81b0c435f2493380300afd983afb45c85aad554de9037fa"
+    },
+    "targeted-03": {
+      "elapsed_seconds": 5.12,
+      "max_rss_bytes": 45088768,
+      "log_sha256": "654f969124fdb91eefaec788359cbde8711d62fbc2d6433960ab1a4325394170"
+    },
+    "targeted-final": {
+      "elapsed_seconds": 5.14,
+      "max_rss_bytes": 44990464,
+      "log_sha256": "e3f8aacb51ebc66d44cf4329e458f592780a676d886c6ca801ec32d80c9162e3"
+    },
+    "targeted-boundary-final": {
+      "elapsed_seconds": 5.26,
+      "max_rss_bytes": 45318144,
+      "log_sha256": "82394e5a6efaff4c15c1344e3ccf6e8c6552936e7a445e828a1d57625b5b9410"
+    },
+    "readme-package-regression": {
+      "elapsed_seconds": 0.3,
+      "max_rss_bytes": 29753344,
+      "log_sha256": "7316d98d3ad72ecfa3723baa8cea323d6b0428df1f50b89fc7950611b2b85329"
+    },
+    "copy-scope-first-red": {
+      "elapsed_seconds": 0.29,
+      "max_rss_bytes": 40058880,
+      "log_sha256": "0e6c7aa6ecd53ce88a07b8b97c6ebfca769d663aadf343a3a2638c445f1b7042"
+    },
+    "source-diagnostic": {
+      "elapsed_seconds": 0.84,
+      "max_rss_bytes": 39993344,
+      "log_sha256": "d81a4a4f154902a5962e99387d79cbd5e6f3397f3c51a60430decd08056cb41d"
+    },
+    "source-loop-smoke": {
+      "elapsed_seconds": 1.51,
+      "max_rss_bytes": 31080448,
+      "log_sha256": "3bc713e775d0bf6e8616d52aafba4928634394ca93beca893c116b96b86d8ced"
+    },
+    "source-research-fixture": {
+      "elapsed_seconds": 0.56,
+      "max_rss_bytes": 51232768,
+      "log_sha256": "84ab6fccaebbe605c069fbffc781596b20afcc1e88bbe0b18f5335586726320e"
+    },
+    "release-01": {
+      "elapsed_seconds": 178.47,
+      "max_rss_bytes": 147783680,
+      "log_sha256": "54cd2a1ccb5013ac5cb52748f9f3ea03c2bfc3975f28876e79dc5aba2013706f"
+    },
+    "release-02": {
+      "elapsed_seconds": 177.29,
+      "max_rss_bytes": 157204480,
+      "log_sha256": "58c725bd7d36afa1795e045414f87683683f80333b0abe0e66c64c96d4beb258"
+    },
+    "release-03": {
+      "elapsed_seconds": 180.13,
+      "max_rss_bytes": 155205632,
+      "log_sha256": "27752da41aca2df9cb90642b261fa78234ba186aeff57dc87dfaefefba71bfee"
+    },
+    "extracted-final": {
+      "elapsed_seconds": 1.13,
+      "max_rss_bytes": 40271872,
+      "log_sha256": "d2d2bb1d448ec2f1ec60b29e9abe563c251980c1cdf8e828a5aa7991bcfa9b05"
+    },
+    "post-execution-integrity": {
+      "elapsed_seconds": 0.08,
+      "max_rss_bytes": 22167552,
+      "log_sha256": "904c94189eac9d3fdc2cec7406dc14e5893a1a04aba2c9cd880b3e6615bafc9c"
+    }
+  },
+  "validated_files_sha256": {
+    "PRD.md": "6009f5346c50d0ed907b691b2b9dd90463582bfedcab0420fd7f997c2570cbf3",
+    "README.md": "61d6a4612e5a988729be4c36b048809148bbbd8598683a915210b2ee9b3cce1b",
+    "README.ko.md": "1aa3756515a147ebe35b10231bd6dab3205c77e1b15fb90ab031b59931d4a364",
+    "docs/release.md": "ff4afb1435fae98973f7063ac20d278bfefe4486b54144a33452b23955f05b36",
+    "scripts/check_release.py": "da42859b3e100d963c2f9db496af5bea86412da87a9a6391649e57f27b7ec2ed",
+    "skills/remorsearch-ux-qa/uxpersonas/cli.py": "a96c8b5b15edaf4daa9da75054ec57dcaa4b8d8f58e92210a7b0e77ff011d003",
+    "skills/remorsearch-ux-qa/uxpersonas/workspace.py": "7d09786ad658aecaa9a61516e26b8820812e55acba91734069d4618a2824b75e",
+    "skills/remorsearch-ux-qa/uxpersonas/local_run.py": "41213faecf7308420075736310c6f921161ec09e2f1e43ebec971fbec4b5d371",
+    "skills/remorsearch-ux-qa/references/persona-qa/start.md": "90130a25e005ae10398c8b0993d500aa466a3b263c71f23637aeb5493ea4ae43",
+    "skills/remorsearch-ux-qa/references/persona-qa/local-run.md": "ce875119144fcc9d60a7f442e1688cc9df59db99eaaa66d33a473d502f326960",
+    "skills/remorsearch-ux-qa/examples/journey/fixture.py": "f0d5265819309cfe5256d804b485c16f2e3b99a118b96a11e9799ccb15c4d611",
+    "skills/remorsearch-ux-qa/examples/journey/run_fixture.py": "b57865699d3c5f4d3498d0d9febf828e47eac3452231374aff867943032dfbbf",
+    "tests/test_journey_run.py": "dcbf117efb3f1b566a0cb2653a4f2007cba68dae570efdc33d9c13ef72851f2e",
+    "tests/test_release_files.py": "31b6e4d2773ed9a688389d274289ec96d78dcae4c9d6406cf18f2b752a67f215",
+    "docs/validation/journey-run-protocol-20261112.md": "de9c8569fae39c3721fc3de0de6651f7ee9303b771289ac4de46448de380b741"
+  },
+  "finalization": "Result MD/JSON are finalized after checks. Executable, test, installed-reference and package bytes are unchanged from the final validation; hashes bind them independently of this report.",
+  "local_raw_artifact_root": ".ux-loop/validation/journey-run",
+  "limitations": [
+    "Only explicitly reviewed single Python adapters; no OS/network sandbox or descendant worker cleanup.",
+    "Existing in-scope PRD-hypothesis personas only in this adapter; research gates are not bypassed.",
+    "Hard interruption or unconfirmed cleanup requires inspection; no automatic repeat or saved-PID signalling.",
+    "Core observations cannot satisfy the existing screenshot-and-log pass gate.",
+    "No actual browser, installed host skill, real-account service or actual-user effect validation.",
+    "Mac Python 3.14.7 was executed; other Python/OS combinations were not executed here.",
+    "Existing Peekly results were preserved, not rerun or relabelled.",
+    "Browser release check skipped by explicit user constraint; release remains non-ready."
+  ]
+}

@@ -30,7 +30,9 @@ SCRIPT = REPO / "scripts" / "release_files.py"
 # the loop smoke the README tells a user to run, the pinned driver install, and the
 # demo fixtures that smoke reads.
 RUN_TIME_FILES = (
+    "VERSION",
     "SKILL.md",
+    "scripts/update_skill.py",
     "references/insane-search/SOURCE.md",
     "references/insane-search/references/public-api.md",
     "references/insane-search/PROVENANCE.json",
@@ -39,6 +41,22 @@ RUN_TIME_FILES = (
     "drivers/web/package-lock.json",
     "examples/loop/packet.json",
     "uxloop/io.py",
+    "uxpersonas/local_run.py",
+    "uxpersonas/browser_run.py",
+    "uxpersonas/model_router.py",
+    "uxpersonas/scale_browser_host.py",
+    "uxpersonas/research_access.py",
+    "scripts/live_scale_browser.py",
+    "drivers/web/scale_browser_cdp.mjs",
+    "references/persona-qa/agent-run.md",
+    "examples/journey/fixture.py",
+    "examples/journey/run_fixture.py",
+    "examples/journey/research_fixture.py",
+    "examples/journey/browser_fixture.py",
+    "examples/journey/run_browser_fixture.py",
+    "references/persona-qa/local-run.md",
+    "references/persona-qa/browser-run.md",
+    "drivers/web/journey_bridge.mjs",
     "drivers/web/fixtures/inspect.html",
     "drivers/web/selftest.mjs",
 )

@@ -22,6 +22,7 @@ from typing import Any, Callable, Iterable
 
 from . import params
 from .hf import cognition, game, gaze, perception, pointing, reach
+from .profiles import resolve_thumb_input
 from .snapshot import is_number, validate_adaptation, validate_native_state
 
 SEVERITY_ORDER = {"P0": 0, "P1": 1, "P2": 2, "P3": 3}
@@ -419,21 +420,24 @@ def _box_mm(ctx: Context, box: dict[str, float]) -> tuple[float, float]:
     return css_px_to_mm(ctx.device, box["w"], "x"), css_px_to_mm(ctx.device, box["h"], "y")
 
 
-def _point_mm(ctx: Context, x: float, y: float) -> tuple[float, float]:
+def _lengths_mm(ctx: Context, x: float, y: float) -> tuple[float, float]:
+    """Independent axis lengths in mm; never apply a coordinate origin."""
     from .devices import css_px_to_mm
     return css_px_to_mm(ctx.device, x, "x"), css_px_to_mm(ctx.device, y, "y")
 
 
 def _display_mm(ctx: Context) -> tuple[float, float]:
     vw, vh = ctx.viewport
-    return _point_mm(ctx, vw, vh)
+    return _lengths_mm(ctx, vw, vh)
 
 
 # ---------------------------------------------------------------- reach
 
-def _easiest_point(ctx: Context, box: dict[str, float], geom: Any, grip: str, thumb: float) -> tuple[float, float]:
+def _easiest_point(ctx: Context, box: dict[str, float], geom: Any, grip: str, thumb: float, mapped_device: Any) -> tuple[float, float]:
     """Point (display mm) inside the target, inset from its edges, with the lowest reach difficulty."""
-    x0, y0 = _point_mm(ctx, box["x"], box["y"])
+    from .devices import css_to_display_mm_point
+
+    x0, y0 = css_to_display_mm_point(mapped_device, box["x"], box["y"])
     w_mm, h_mm = _box_mm(ctx, box)
     inset_x = min(params.REACH_TARGET_INSET_MM, w_mm / 2)
     inset_y = min(params.REACH_TARGET_INSET_MM, h_mm / 2)
@@ -448,20 +452,52 @@ def _easiest_point(ctx: Context, box: dict[str, float], geom: Any, grip: str, th
     return best[1]
 
 
+def _gm02_target_point(element: dict[str, Any], viewport: tuple[float, float]) -> tuple[tuple[float, float], str] | None:
+    """A model point, not a hit test: score only known viewport-edge clipping."""
+    raw = element.get("box")
+    if not isinstance(raw, dict) or not all(is_number(raw.get(k)) for k in "xywh"):
+        return None
+    x, y, w, h = (raw[k] for k in "xywh")
+    left, top = max(0.0, x), max(0.0, y)
+    right, bottom = min(viewport[0], x + w), min(viewport[1], y + h)
+    if right <= left or bottom <= top:
+        return None
+    complete = (left, top, right, bottom) == (x, y, x + w, y + h)
+    geometry = element.get("visible_geometry")
+    if geometry is None and "visible_box" not in element:
+        return (pointing.centre(raw), "authored_fully_in_viewport") if complete else None
+    if geometry != "measured":
+        return None  # ancestor/nonrectangular clipping is not a verified hit region
+    visible = element.get("visible_box")
+    if not isinstance(visible, dict) or not all(is_number(visible.get(k)) for k in "xywh"):
+        return None
+    if min(visible["w"], visible["h"]) <= 0:
+        return None
+    # Compare with the plain viewport intersection, allowing the recorder's
+    # rounding of coordinates and lengths to hundredths of a CSS pixel.
+    observed = (visible["x"], visible["y"], visible["w"], visible["h"])
+    expected = (left, top, right - left, bottom - top)
+    if not all(math.isclose(a, b, rel_tol=0, abs_tol=0.02) for a, b in zip(observed, expected)):
+        return None
+    if complete:
+        return pointing.centre(raw), "authored_fully_in_viewport"
+    return ((left + right) / 2, (top + bottom) / 2), "measured_viewport_visible_center"
+
+
 def check_reach(ctx: Context) -> list[Observation]:
     """Reach/grip checks (HGR-3/5/11). Model-only severities are capped at P2."""
-    if not ctx.is_touch:
+    from .devices import css_to_display_mm_point, display_mapping
+
+    if reach.applicability(ctx.attrs, ctx.device, ctx.snapshot.get("device", {})).kind != "scored":
         return []
     grip = ctx.attrs.get("grip")
     orientation = ctx.snapshot.get("device", {}).get("orientation", "portrait")
     landscape_game = orientation == "landscape" and grip == "two_thumbs"
-    if grip not in reach.SUPPORTED_GRIPS or grip.startswith("cradle"):
-        return []
     out: list[Observation] = []
     geom = reach.geometry_for_device(ctx.device)
-    if reach.tablet_like(geom) and grip.startswith("one_hand"):
-        return []  # HGR-9: nobody operates a tablet with the holding thumb; the phone model does not apply
-    thumb = float(ctx.attrs.get("thumb_length_mm") or params.THUMB_LENGTH_MM["all"][0])
+    mapped, alignment = display_mapping(ctx.snapshot, ctx.device)
+    thumb_input = resolve_thumb_input(ctx.profile)
+    thumb = thumb_input["mm"]
     for element in ctx.elements:
         roles = _roles(element)
         is_game = "game_control" in roles
@@ -470,34 +506,53 @@ def check_reach(ctx: Context) -> list[Observation]:
             continue
         if not (roles & {"primary", "destructive", "game_control"} or on_path):
             continue
-        cx, cy = pointing.centre(element["box"])
-        pt = _point_mm(ctx, cx, cy)
         label = element.get("name") or element.get("text") or element.get("selector")
         base = (ctx.run["run_id"], ctx.profile["profile_id"], ctx.snapshot.get("snapshot_id"), ctx.snapshot.get("step_index"))
-        if not (landscape_game and is_game):
+        game_control = landscape_game and is_game
+        destructive_off_path = "destructive" in roles and not on_path
+        if game_control and _secondary_control(element) and "timed" not in roles:
+            continue
+        model = "landscape-thumb-rest-v1" if game_control else reach.MODEL_ID
+        metric = "thumb_travel_mm" if game_control else "reach_difficulty"
+        gm02_point = _gm02_target_point(element, ctx.viewport) if game_control and mapped is not None else None
+        if mapped is None or (game_control and gm02_point is None):
+            check_id = "GM-02" if game_control else "RH-02" if destructive_off_path else "RH-01"
+            extra = {"verdict": "inconclusive"}
+            if mapped is None:
+                reason = "뷰포트의 실제 또는 에뮬레이션 화면 내 위치를 확인할 수 없어 엄지 도달 위치를 판정하지 않았습니다."
+            else:
+                reason = "게임 조작의 뷰포트 내 표시 영역을 확인할 수 없어 엄지 이동 거리를 판정하지 않았습니다."
+                extra["reason"] = "target_geometry_unverified"
+            out.append(Observation(
+                check_id, *base, [element["id"]], element_key(element),
+                {"name": metric, "value": None, "unit": "mm" if game_control else "0-1", "viewport_alignment": alignment},
+                False, None, reason, model, extra,
+            ))
+            continue
+        if not game_control:
             # Users tap wherever the target is easiest to reach, so a full-width bottom
             # button is scored at its reachable end, not its centre (cross-review 2026-09-28).
-            pt = _easiest_point(ctx, _target_box(element), geom, grip, thumb)
-        if landscape_game and is_game:
+            pt = _easiest_point(ctx, _target_box(element), geom, grip, thumb, mapped)
+        else:
+            point_css, point_basis = gm02_point
+            pt = css_to_display_mm_point(mapped, *point_css)
             cost = reach.landscape_control_cost(pt[0], pt[1], geom, *params.LANDSCAPE_REST_INSET_MM)
             far = cost["travel_mm"] > params.LANDSCAPE_TRAVEL_MAX_MM
             # Apple HIG: frequent controls near the thumbs, secondary controls (pause, menus)
             # at the top. Only controls the play uses repeatedly are held to the thumb rule.
             # A scripted run's tap count reflects the script, not real play, so gameplay
             # controls are frequent unless they are secondary (pause, menu, settings).
-            if _secondary_control(element) and "timed" not in roles:
-                continue
             failed = cost["top_band"] or far
             severity = ("P2" if cost["top_band"] else "P3") if failed else None
             out.append(Observation(
                 "GM-02", *base, [element["id"]], element_key(element),
                 {"name": "thumb_travel_mm", "value": cost["travel_mm"], "unit": "mm", "threshold": params.LANDSCAPE_TRAVEL_MAX_MM, "comparator": "<=",
-                 "top_band": cost["top_band"], "thumb": cost["thumb"]},
+                 "top_band": cost["top_band"], "thumb": cost["thumb"], "viewport_alignment": alignment},
                 not failed, severity,
                 f"게임 조작 '{label}'은(는) {cost['thumb']} 엄지 휴지 위치에서 {cost['travel_mm']:.0f}mm"
                 + (" 떨어진 상단 영역에 있습니다(자주 쓰는 조작은 엄지 근처, 상단은 보조 메뉴용: Apple HIG)." if cost["top_band"] else " 떨어져 있습니다."),
-                "landscape-thumb-rest-v1",
-                {"point_mm": [round(pt[0], 1), round(pt[1], 1)]},
+                model,
+                {"point_mm": [round(pt[0], 1), round(pt[1], 1)], "point_basis": point_basis},
             ))
             continue
         score = reach.reach_score(pt[0], pt[1], geom, grip, thumb)
@@ -506,13 +561,14 @@ def check_reach(ctx: Context) -> list[Observation]:
                  "screen_mm": [round(geom.screen_w, 1), round(geom.screen_h, 1)], "calibration": "uncalibrated"}
         if grip.startswith("one_hand"):
             extra["asymmetry_L_minus_R"] = round(reach.asymmetry(pt[0], pt[1], geom, thumb), 3)
-        if "destructive" in roles and not on_path:
+        if destructive_off_path:
             # Risk of accidental activation matters when there is no confirmation or undo
             # (declared irreversible); a destructive link that opens a confirm dialog is fine.
             failed = score["zone"] == "natural" and not score["cramped"] and "irreversible" in roles
             out.append(Observation(
                 "RH-02", *base, [element["id"]], element_key(element),
-                {"name": "reach_difficulty", "value": difficulty, "unit": "0-1", "threshold": params.REACH_EASY_MAX, "comparator": ">"},
+                {"name": "reach_difficulty", "value": difficulty, "unit": "0-1", "threshold": params.REACH_EASY_MAX, "comparator": ">",
+                 "thumb_input": thumb_input, "viewport_alignment": alignment},
                 not failed, "P3" if failed else None,
                 f"파괴적 동작 '{label}'이(가) {grip} 파지에서 가장 편한 엄지 영역에 있습니다.",
                 reach.MODEL_ID, extra,
@@ -535,9 +591,11 @@ def check_reach(ctx: Context) -> list[Observation]:
         out.append(Observation(
             "RH-01", *base, [element["id"]], element_key(element),
             {"name": "reach_difficulty", "value": difficulty, "unit": "0-1", "threshold": params.REACH_HARD, "comparator": "<",
-             "grip": grip, "zone": score["zone"]},
+             "grip": grip, "zone": score["zone"], "thumb_input": thumb_input, "viewport_alignment": alignment},
             severity is None, severity,
-            f"'{label}'은(는) {grip} 파지·엄지 {thumb:.0f}mm 기준 {zone_ko} 위치입니다(난이도 {difficulty:.2f}"
+            f"'{label}'은(는) {grip} 파지·엄지 {thumb:.1f}mm"
+            + (f" (합성 참조 P{thumb_input['reference_percentile']})" if "reference_percentile" in thumb_input else "")
+            + f" 기준 {zone_ko} 위치입니다(난이도 {difficulty:.2f}"
             + (", 손바닥 가까운 좁은 영역" if score["cramped"] else "") + ").",
             reach.MODEL_ID, extra,
         ))
@@ -616,7 +674,8 @@ def check_target_size(ctx: Context) -> list[Observation]:
 
 
 def _box_mm_rect(ctx: Context, box: dict[str, float]) -> dict[str, float]:
-    x, y = _point_mm(ctx, box["x"], box["y"])
+    # Touch accuracy uses relative displacements between targets.
+    x, y = _lengths_mm(ctx, box["x"], box["y"])
     w, h = _box_mm(ctx, box)
     return {"x": x, "y": y, "w": w, "h": h}
 
@@ -730,7 +789,7 @@ def check_touch_accuracy(ctx: Context) -> list[Observation]:
             bad_rect = _box_mm_rect(ctx, bad["box"])
             p_bad_base = pointing.dual_gaussian_neighbour_probability(rect, bad_rect, 1.0)
             p_bad = pointing.dual_gaussian_neighbour_probability(rect, bad_rect, k)
-            gap_mm = _point_mm(ctx, pointing.box_gap(element["box"], bad["box"]), 0)[0]
+            gap_mm = _lengths_mm(ctx, pointing.box_gap(element["box"], bad["box"]), 0)[0]
             if gap_mm > 20 and p_bad < 1e-4:
                 continue
             irreversible = "irreversible" in _roles(bad)
@@ -811,7 +870,7 @@ def check_game_controls(ctx: Context) -> list[Observation]:
         w_mm, h_mm = _box_mm(ctx, box)
         side = min(w_mm, h_mm)
         edge_css = min(box["x"], box["y"], vw - (box["x"] + box["w"]), vh - (box["y"] + box["h"]))
-        edge_mm = _point_mm(ctx, max(0.0, edge_css), 0)[0]
+        edge_mm = _lengths_mm(ctx, max(0.0, edge_css), 0)[0]
         severity = None
         reasons = []
         serial = not _secondary_control(element) or "timed" in _roles(element) or _tap_count(ctx.run, element) >= 2
@@ -1127,7 +1186,14 @@ def check_gaze(ctx: Context) -> list[Observation]:
         scale = _notice_scale(ctx)
         grip = ctx.attrs.get("grip", "")
         geom = reach.geometry_for_device(ctx.device) if ctx.is_touch else None
-        thumb = float(ctx.attrs.get("thumb_length_mm") or params.THUMB_LENGTH_MM["all"][0])
+        thumb_input = resolve_thumb_input(ctx.profile) if geom is not None and grip.startswith("one_hand") else None
+        from .devices import css_to_display_mm_point, display_mapping
+
+        mapped, alignment = display_mapping(ctx.snapshot, ctx.device) if thumb_input is not None else (None, {})
+        before_mapped, before_alignment = display_mapping(ctx.previous, ctx.device) if thumb_input is not None else (None, {})
+        # The last action's viewport point can only be used in the new snapshot's
+        # frame if both alignments describe the same display and did not shift.
+        same_alignment = mapped is not None and before_mapped is not None and mapped.viewport_offset_css == before_mapped.viewport_offset_css
         feedback = []
         for element in ctx.elements:
             roles = _roles(element)
@@ -1185,13 +1251,21 @@ def check_gaze(ctx: Context) -> list[Observation]:
             salient, sal = _salient_change(ctx, element, new=prior is None)
             band = gaze.notice_band(theta, salient, scale)
             occluded = False
-            if geom is not None and grip.startswith("one_hand"):
-                occluded = reach.occluded_by_thumb(_point_mm(ctx, focus["x"], focus["y"]), _point_mm(ctx, *centre_css), geom, grip, thumb, params.OCCLUSION_WEDGE_DEG)
+            if thumb_input is not None:
+                feedback_geometry.update(thumb_input=thumb_input, viewport_alignment=alignment,
+                                         action_viewport_alignment=before_alignment)
+                if same_alignment:
+                    occluded = reach.occluded_by_thumb(css_to_display_mm_point(mapped, focus["x"], focus["y"]),
+                                                       css_to_display_mm_point(mapped, *centre_css), geom, grip,
+                                                       thumb_input["mm"], params.OCCLUSION_WEDGE_DEG)
+                else:
+                    occluded = None  # Do not claim a clear or an occluded path without a shared frame.
             feedback.append((element, roles, prior, theta, salient, sal, band, occluded, near_css, feedback_geometry))
         # Redundant feedback: when another new, salient message appears where the user is
         # looking (likely noticed, not occluded), a far secondary label is not missed feedback.
-        # Redundancy requires the same attention-anchor assumption and point.
-        noticed = [f for f in feedback if f[6] == "likely" and f[4] and not f[7]]
+        # Redundancy requires the same attention anchor and a clear path.
+        # Unknown thumb occlusion is not a clear path.
+        noticed = [f for f in feedback if f[6] == "likely" and f[4] and f[7] is False]
         for element, roles, prior, theta, salient, sal, band, occluded, near_css, feedback_geometry in feedback:
             critical = bool(roles & {"error_message", "critical_message"}) or element.get("role") == "alert"
             redundant = any(n[0] is not element and n[9]["anchor_basis"] == feedback_geometry["anchor_basis"]
@@ -1203,19 +1277,21 @@ def check_gaze(ctx: Context) -> list[Observation]:
                 severity = "P2" if critical else "P3"
             elif band == "uncertain" and critical:
                 severity = "P3"
+            inconclusive = occluded is None and severity is None and not redundant
             sal = {**sal, "redundant_with_noticed_feedback": redundant}
             out.append(Observation(
                 "GZ-02", *base, [element["id"]], element_key(element),
                 {"name": "feedback_eccentricity_deg", "value": round(theta, 1), "unit": "deg",
                  "threshold": [round(v * scale, 1) for v in params.NOTICE_BANDS_DEG["salient" if salient else "non_salient"]],
                  "comparator": "band", "band": band, "salient": salient, "occluded_by_thumb": occluded, "persona_scale": scale, "nearest_feedback_css": list(near_css), **feedback_geometry, **sal},
-                severity is None, severity,
+                severity is None and not inconclusive, severity,
                 f"{'초점이 이동한 입력 칸' if feedback_geometry['anchor_basis'] == 'observed_programmatic_focus_relocation' else '조작 지점'}에서 {theta:.0f}° 떨어진 곳에 {'새' if prior is None else '바뀐'} 메시지 '{(element.get('text') or element.get('name') or '')[:30]}'"
                 + f" ({'돌출' if salient else '비돌출'} 변화, 인지 가능성: {band})" + (", 한 손 파지 엄지에 가려질 위치" if occluded else "")
                 + (". 입력 칸 근처로 주의가 이동한다고 가정했으며 실제 시선은 측정하지 않았습니다." if feedback_geometry['anchor_basis'] == 'observed_programmatic_focus_relocation'
                    else ". 마지막 입력 위치에서 계산했습니다.")
-                + " 눈의 화면 투영점은 화면 중심으로 가정했습니다.",
-                gaze.MODEL_ID,
+                + " 눈의 화면 투영점은 화면 중심으로 가정했습니다."
+                + (" 엄지 가림을 확인할 수 없어 종합 판정을 보류했습니다." if inconclusive else ""),
+                gaze.MODEL_ID, extra={"verdict": "inconclusive"} if inconclusive else {},
             ))
     # GZ-03: banner-blindness proxy on desktop/web.
     if getattr(ctx.device, "form_factor", "phone") in ("desktop", "laptop"):
@@ -1457,7 +1533,7 @@ def check_text_size(ctx: Context) -> list[Observation]:
         size = element.get("font_size_px")
         if not text or not size or not _present(element):
             continue
-        size_mm = _point_mm(ctx, 0, float(size))[1]
+        size_mm = _lengths_mm(ctx, 0, float(size))[1]
         angle = perception.visual_angle_arcmin(size_mm, viewing)
         metrics = element.get("font_metrics")
         valid_metrics = isinstance(metrics, dict) and not validate_font_metrics(metrics)
@@ -1465,7 +1541,7 @@ def check_text_size(ctx: Context) -> list[Observation]:
         metric_angles = {}
         if matched:
             heights = {"displayed_body": metrics["body_height_px"], **metrics["probes"]}
-            metric_angles = {key: round(perception.visual_angle_arcmin(_point_mm(ctx, 0, height)[1], viewing), 3)
+            metric_angles = {key: round(perception.visual_angle_arcmin(_lengths_mm(ctx, 0, height)[1], viewing), 3)
                              for key, height in heights.items()}
         provenance = {"metric": "css_em", "basis": "project_policy", "conformance": "not_assessed",
                       "font_metric_status": metrics.get("status") if valid_metrics else "missing_or_invalid",
@@ -2762,12 +2838,10 @@ def applicable(check_id: str, profile: dict[str, Any], device: Any) -> bool:
     attrs = profile.get("attributes", {})
     touch = getattr(device, "input", "touch") == "touch"
     grip = attrs.get("grip", "")
-    if check_id in ("RH-01", "RH-02"):
-        if not touch or grip.startswith("cradle") or grip not in reach.SUPPORTED_GRIPS:
+    if check_id in ("RH-01", "RH-02", "GM-02"):
+        if reach.applicability(attrs, device).kind != "scored":
             return False
-        return not (grip.startswith("one_hand") and reach.tablet_like(reach.geometry_for_device(device)))
-    if check_id == "GM-02":
-        return touch and grip == "two_thumbs" and attrs.get("orientation") == "landscape"
+        return check_id != "GM-02" or (grip == "two_thumbs" and device.orientation == "landscape")
     if check_id in ("PT-03", "PT-04", "GM-05"):
         return touch
     if check_id in ("PT-05", "PT-06"):

@@ -48,6 +48,31 @@
     c.fillRect(0, 0, 200, 60);
     if (location.search.includes('wide')) document.getElementById('out').textContent = '눌림';
   });
+  const game = new URLSearchParams(location.search).get('gm02');
+  if (['edge', 'covered', 'full'].includes(game)) {
+    document.documentElement.style.cssText = 'width:100%;height:100%;overflow:hidden';
+    document.body.style.cssText = 'width:100%;height:100%;margin:0;overflow:hidden';
+    document.body.innerHTML = '<button id="gm02-control" type="button" data-ergo-role="game_control">Fire</button>'
+      + '<p id="gm02-state"></p>';
+    const control = document.getElementById('gm02-control');
+    const state = document.getElementById('gm02-state');
+    control.style.cssText = 'position:fixed;box-sizing:border-box;top:220px;height:40px;'
+      + (game === 'full' ? 'left:720px;width:40px' : 'left:750px;width:200px');
+    let intended = 0, cover = 0;
+    const readback = () => { state.textContent = `intended=${intended};cover=${cover};scroll=${scrollX},${scrollY}`; };
+    control.addEventListener('click', () => { intended += 1; readback(); });
+    addEventListener('scroll', readback);
+    if (game === 'covered') {
+      const overlay = document.createElement('button');
+      overlay.id = 'gm02-cover';
+      overlay.type = 'button';
+      overlay.textContent = 'Cover';
+      overlay.style.cssText = 'position:fixed;box-sizing:border-box;left:750px;top:220px;width:30px;height:40px;z-index:1';
+      overlay.addEventListener('click', () => { cover += 1; readback(); });
+      document.body.append(overlay);
+    }
+    readback();
+  }
 </script>
 </body>
 </html>

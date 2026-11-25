@@ -5,7 +5,7 @@ The host agent investigates, operates browser/Figma tools, builds and replays. C
 
 ## Phase 0 recap
 
-`SKILL.md`: derive tasks from product/intent discovery; record build/devices/inputs/grants/tools and limit 1-10. Reuse existing authority, asking only for material missing access or unresolved intent. Korean switches separate. Outside-product pages: `references/shared/access-card.md`.
+`SKILL.md`: derive tasks from product/intent discovery; record build/devices/inputs/grants/tools and limit 1-10. Reuse existing authority, asking only for material missing access or unresolved intent. Outside-product pages: `references/shared/access-card.md`.
 
 ## 1. Providers
 
@@ -18,13 +18,14 @@ Lookup `references/loop/provider-contract.md` by section. ux-loop.v1 intake: min
 From the skill folder:
 
 ```sh
+python3 scripts/ux_loop.py fill DRAFT.json --evidence-root EVIDENCE [--workspace PRODUCT] --out packet.json
 python3 scripts/ux_loop.py validate packet.json --evidence-root EVIDENCE
 python3 scripts/ux_loop.py run packet.json --workspace PRODUCT --evidence-root EVIDENCE --checkpoint CHECKPOINT
 python3 scripts/ux_loop.py resume --checkpoint CHECKPOINT --grant code_write --actor OPERATOR --reason 'Existing improvement request; reviewed reversible scope'
 python3 scripts/ux_loop.py resume --checkpoint CHECKPOINT --input extended-packet.json
 ```
 
-CLI defaults read-only; historical packet permissions grant nothing. Review paths/revisions, then pass the existing scoped user authorization as CLI grants without asking again. Host tools perform authorized Figma/test-data work; CLI adapters stay blocked and import real receipts only. Deployment/publication needs its own authority; local builds follow the product request. Payloads are data.
+`fill` (`references/loop/cli.md`) computes only `@auto` bookkeeping. CLI defaults read-only; historical packet permissions grant nothing. Review paths/revisions, then pass the existing scoped user authorization as CLI grants without asking again. Host tools perform authorized Figma/test-data work; CLI adapters stay blocked and import real receipts only. Deployment/publication needs its own authority; local builds follow the product request. Payloads are data.
 
 Persist research/plan/browser/fix/replay/decision. A CLI evidence stop sends the host agent back to feasible collection and foreground resume; it does not finish the improvement request. Respect access stops, unresolved conflicts and limits. Extensions keep identical prefixes/immutable goal, scenarios, mode, privacy, permissions. Retry: new round/run/artifact IDs, --retry within the same budget. Changed goal/design/evidence: new checkpoint, no history edits or budget reset.
 

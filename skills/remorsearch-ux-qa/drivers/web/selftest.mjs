@@ -454,6 +454,10 @@ function checkScripted(label, runDir, dev, { flash }) {
 
   const s0 = snaps.get(run.snapshots[0].snapshot_id);
   check(`${label}: first snapshot is step 0 with focus_point null`, s0.step_index === 0 && s0.focus_point === null);
+  check(`${label}: verified unzoomed emulated viewport records a zero origin`,
+    s0.viewport_alignment?.basis === 'emulated-full-viewport'
+    && s0.viewport_alignment?.origin_css?.join(',') === '0,0', s0.viewport_alignment);
+  check(`${label}: full viewport PNG records its capture basis`, !!s0.screenshot?.viewport_raster_reference);
   const pay = bySel(s0, '#pay');
   check(`${label}: #pay extracted as primary button with geometry, font and colours`,
     pay && pay.roles.join() === 'primary' && pay.interactive && pay.visible && pay.in_viewport && pay.enabled
@@ -658,14 +662,25 @@ async function toolingTest(base, tmp) {
     '--build-id', 'different-source', '--out', path.join(tmp, 'conflicting-runs'), '--run-id', 'R-conflict'], { env: noBrowserEnv });
   check('build identity: conflicting operator and scenario identities fail before browser or write',
     r.code === 2 && /conflicts/.test(r.err) && !fs.existsSync(path.join(tmp, 'conflicting-runs')), r.err);
+  const bindOptions = pythonAvailable() ? ['--bind-profile'] : [];
   r = await runDriver(['run', '--scenario', versionedPath, '--profile', path.join(tmp, 'p-s24.json'),
-    '--out', path.join(tmp, 'versioned-runs'), '--run-id', 'R-versioned', '--no-focus-walk', '--no-reflow']);
+    '--out', path.join(tmp, 'versioned-runs'), '--run-id', 'R-versioned', '--no-focus-walk', '--no-reflow', ...bindOptions]);
   if (check('build identity: profile-bearing scenario metadata records on a real surface', r.code === 0, r.err)) {
     const recorded = loadRun(path.join(tmp, 'versioned-runs', 'R-versioned'));
     check('build identity: run and every snapshot retain the source identifier and operator provenance',
       recorded.run.surface.build_id === buildId && recorded.run.surface.build_id_basis === 'operator_supplied'
       && recorded.run.surface.build_id_source === 'scenario.surface.build_id'
       && [...recorded.snaps.values()].every((s) => s.surface.build_id === buildId && s.surface.build_id_basis === 'operator_supplied'));
+    if (bindOptions.length) {
+      const binding = recorded.run.profile_binding;
+      const raw = fs.readFileSync(path.join(tmp, 'p-s24.json'));
+      check('profile binding: actual run retains only digests and its declared emulation',
+        binding?.schema_version === 'ergo-profile-binding.v1'
+        && binding.profile_file_sha256 === crypto.createHash('sha256').update(raw).digest('hex')
+        && binding.device.id === recorded.run.device.id && binding.device.orientation === recorded.run.device.orientation
+        && binding.thumb_length_mm === undefined, binding);
+      pythonLoadRun('profile-bound versioned recording', path.join(tmp, 'versioned-runs', 'R-versioned'));
+    }
   }
   if (pythonAvailable()) {
     const py = spawnSync('python3', ['-c', 'import json, sys; from ergoqa.snapshot import validate_scenario; errors = validate_scenario(json.load(open(sys.argv[1]))); print(errors); sys.exit(bool(errors))', sc], { cwd: REPO, encoding: 'utf8' });
@@ -1492,6 +1507,46 @@ async function viewportTest(base, tmp) {
       { success: run.success, hit: st.target_hit, point: st.point });
     check('viewport: boxes are screen coordinates (the tapped button is inside the 360x780 screen in the snapshots around the tap)',
       boxes.length >= 2 && boxes.slice(1).every((b) => b.in_viewport === true && b.box.y >= 0 && b.box.y + b.box.h <= 780), boxes.map((b) => [b.box, b.in_viewport]));
+  }
+  // Four fresh browser runs; geometry, dispatched input, and hit/activation
+  // outcomes are deliberately separate (even when a wrong hit returns ok).
+  for (const [name, mode, offset, point, expectedExit, afterState] of [
+    ['authored-center', 'edge', null, [850, 240], 3, 'intended=0;cover=0'],
+    ['visible-offset', 'edge', { x: 15, y: 20 }, [765, 240], 0, 'intended=1;cover=0'],
+    ['covered-offset', 'covered', { x: 15, y: 20 }, [765, 240], 3, 'intended=0;cover=1'],
+    ['fully-visible', 'full', null, [740, 240], 0, 'intended=1;cover=0'],
+  ]) {
+    const sc = path.join(tmp, `gm02-${name}.json`);
+    const runId = `R-gm02-${name}`;
+    writeJson(sc, {
+      ...scenario(`SC-gm02-${name}`, `?gm02=${mode}`, 'galaxy-s24', { text_present: 'intended=1;cover=0' }),
+      targets: { game_control: ['#gm02-control'] },
+      steps: [{ action: 'tap', target: '#gm02-control', auto_scroll: false, ...(offset && { offset }) }],
+    });
+    r = await runDriver(['run', '--scenario', sc, '--device', 'galaxy-s24', '--orientation', 'landscape',
+      '--out', outDir, '--run-id', runId, '--base', base, '--no-auto-scroll', '--no-reflow', '--no-focus-walk']);
+    if (!check(`GM-02 ${name}: expected exit ${expectedExit}`, r.code === expectedExit, `${r.code} ${r.err}`)) continue;
+    const { run, snaps } = loadRun(path.join(outDir, runId));
+    const step = run.steps[0];
+    const before = snaps.get(step.before), after = snaps.get(step.after);
+    const item = (snap, id) => snap?.elements.find((e) => e.dom_id === id);
+    const target = item(before, 'gm02-control'), cover = item(before, 'gm02-cover');
+    const full = mode === 'full';
+    const box = (b, x, w) => b?.x === x && b.y === 220 && b.w === w && b.h === 40;
+    check(`GM-02 ${name}: 780×360 authored and visible geometry with unchanged scroll`,
+      [before, after].every((s) => s?.device.viewport_css.join() === '780,360')
+      && (item(before, 'gm02-state')?.text === 'intended=0;cover=0;scroll=0,0')
+      && (item(after, 'gm02-state')?.text === `${afterState};scroll=0,0`)
+      && step.auto_scrolled !== true && box(target?.box, full ? 720 : 750, full ? 40 : 200)
+      && box(target?.visible_box, full ? 720 : 750, full ? 40 : 30)
+      && target?.visible_geometry === 'measured', { target, state: item(after, 'gm02-state') });
+    const centerMiss = name === 'authored-center', covered = mode === 'covered';
+    check(`GM-02 ${name}: selected target, input and actual hit remain distinct`,
+      run.steps.length === 1 && target?.id && step.target_element_id === target.id
+      && step.point?.x === point[0] && step.point?.y === point[1]
+      && (centerMiss ? step.result === 'no_target' && step.input == null && step.hit_element_id == null && step.target_hit == null
+        : step.result === 'ok' && step.input === 'touch' && step.target_hit === !covered
+          && step.hit_element_id === (covered ? cover?.id : target.id)), step);
   }
 }
 

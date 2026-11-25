@@ -141,7 +141,7 @@ legal. Readers cannot choose verification, grade, status or confidence.
 
 sanitized-imports.json is `{schema_version: ux-sanitized-imports.v1, run_id,
 imports: [...]}`. Each import is `{import_id, artifact_ref, content_sha256,
-source_type, producer_org, acquisition, sanitization, retention_until}`. artifact_ref
+source_type, producer_org, producer_stake, acquisition, sanitization, retention_until}`. artifact_ref
 is a safe run-relative mode-0600 UTF-8 text file, not a raw spreadsheet, absolute
 path or symlink. import_id is IMP- plus the full SHA-256 of canonical sanitized
 bytes hash and acquisition metadata excluding import_id. content_sha256 hashes
@@ -168,6 +168,19 @@ errors exit 1; malformed/invented provenance exits 2. Never print refused text.
 Check quotes/flags against the sanitized artifact. Source_ref is
 team-import://<run_id>/<import_id>, basis team_provided, method team_export.
 Imports have independent provenance receipts and consume no page/search budget.
+
+`prepare-imports --run RUN --draft INPUT [--check-only]` prepares this existing
+contract from genuine authorized native inputs without hand-authored hashes.
+The private draft declares original native/own-app console origin and actual
+permission, together with all provenance and producer/owner review fields.
+It never acquires sources, scrubs raw exports, supplies authorization or creates
+a gate. Preflight writes no prepared output; the common run lock may be created.
+Content-addressed output is idempotent and preserves conflicting prior files.
+See `skills/remorsearch-ux-qa/references/research/native-inputs.md`.
+Direct merge and preparation both refuse future export/review timestamps.
+Reuse checks the committed snapshot, not a new read of the original artifact:
+corrections require a new merge/gate and persona review; explicit source
+withdrawal blocks reuse.
 
 ## 4. Deterministic merge
 

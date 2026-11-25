@@ -1,0 +1,212 @@
+{
+  "schema_version": "pe2-independent-adjudication.v1",
+  "verdict": "valid completed bounded synthetic detection/false-alarm comparison; descriptive tie, not whole-PRD equivalence or superiority",
+  "precommit": "37b9e89",
+  "integrity": {
+    "four_frozen_report_hashes_match": true,
+    "committed_commitment_matches": true,
+    "oracle_key_sha256": "d0f2c62f41f43a067e5351dd6945e29baf580c50f868b92816cef6f59bed19f6",
+    "public_manifest_and_all_7_entries_verified": true,
+    "oracle_trace_manifest_and_66_entries_verified": true,
+    "frozen_skill_protocol_input_entries_verified": 7,
+    "external_authenticity_proven": false
+  },
+  "conditions": {
+    "M": {
+      "unique_seeded_defects": 3,
+      "seeded_denominator": 3,
+      "unsupported_unique_defect_claims": 0,
+      "duplicate_defect_claims": 0,
+      "clean_false_alarm_cases": 0,
+      "clean_control_denominator": 3,
+      "cases_executed": 6,
+      "attempted": 60,
+      "successful": 59,
+      "failed": 1,
+      "unknown": 0,
+      "first_action_utc": "2026-11-11T01:14:59.092Z",
+      "last_action_end_utc": "2026-11-11T01:22:34.570Z",
+      "elapsed_to_last_action_end_ms": 455477.67475,
+      "elapsed_to_final_evidence_end_ms": 455511.97425,
+      "within_60_actions_and_720000_ms": true,
+      "first_goto_succeeded": true,
+      "failure_sequence": 11,
+      "failure_description": "bounded timeout clicking absent Remove Morning Birds after faulty cancellation",
+      "EOF_exit_code": 0,
+      "failure_utc": [
+        "2026-11-11T01:16:25.657Z",
+        "2026-11-11T01:16:28.160Z"
+      ]
+    },
+    "N": {
+      "unique_seeded_defects": 3,
+      "seeded_denominator": 3,
+      "unsupported_unique_defect_claims": 0,
+      "duplicate_defect_claims": 0,
+      "clean_false_alarm_cases": 0,
+      "clean_control_denominator": 3,
+      "cases_executed": 6,
+      "attempted": 37,
+      "successful": 36,
+      "failed": 1,
+      "unknown": 0,
+      "first_action_utc": "2026-11-11T01:16:06.743Z",
+      "last_action_end_utc": "2026-11-11T01:21:28.542Z",
+      "elapsed_to_last_action_end_ms": 321799.955208,
+      "elapsed_to_final_evidence_end_ms": 321832.001792,
+      "within_60_actions_and_720000_ms": true,
+      "first_goto_succeeded": true,
+      "failure_sequence": 11,
+      "failure_description": "bounded timeout clicking absent Remove Morning Birds after faulty cancellation",
+      "EOF_exit_code": 0,
+      "failure_utc": [
+        "2026-11-11T01:17:40.480Z",
+        "2026-11-11T01:17:42.983Z"
+      ]
+    }
+  },
+  "case_evidence": {
+    "J2N": {
+      "verdict": "seeded cancel-removes fault",
+      "M": [
+        8,
+        9,
+        10,
+        11
+      ],
+      "N": [
+        8,
+        9,
+        10,
+        11
+      ]
+    },
+    "R5B": {
+      "verdict": "seeded stale-validation fault",
+      "M": [
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27
+      ],
+      "N": [
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24
+      ]
+    },
+    "D3W": {
+      "verdict": "seeded preference-reset fault; later ordinary preview manifestation is same fault",
+      "M": [
+        33,
+        34,
+        35,
+        36,
+        37,
+        38
+      ],
+      "N": [
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37
+      ]
+    },
+    "V7Q": {
+      "verdict": "clean control observed",
+      "M": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "N": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ]
+    },
+    "H8C": {
+      "verdict": "clean control observed",
+      "M": [
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "N": [
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ]
+    },
+    "L9F": {
+      "verdict": "clean control observed",
+      "M": [
+        28,
+        29,
+        30,
+        31,
+        32
+      ],
+      "N": [
+        25,
+        26,
+        27,
+        28,
+        29
+      ]
+    }
+  },
+  "workflow_N": {
+    "imported_profiles": 3,
+    "unchanged_reimport_revision": 1,
+    "reused_profiles": 3,
+    "claims": 6,
+    "starter_drafts": 6,
+    "accepted_records": 6,
+    "receipt_binding_matches": 6,
+    "verified_artifact_references": 31,
+    "record_outcomes": {
+      "passed": 3,
+      "failed": 3
+    },
+    "draft_outcome": "inconclusive",
+    "independent_claim_chronology": "claim artifacts and bindings checked; empty state history does not independently timestamp claim-before-action order"
+  },
+  "limitations": [
+    "One worker per condition and six authored synthetic cases; no population, causal persona-only, statistical, production, or real-user inference.",
+    "Different bounded paths: M exercised additional invalid classes and endpoints; N did not. Smaller N action/time totals are not equal-coverage efficiency.",
+    "Plan does not explicitly map plant initial defaults or walk initial defaults; valid endpoints not specifically required/excluded. Initial visible defaults were nonetheless present in execution.",
+    "Duplicated P1/P2, Q1/Q2, R1/R2 source paragraphs are not independent whole-paragraph coverage.",
+    "N J2N confirmed removal after cancellation was not run; absence of control directly observed. M checked confirm after reload, not successful recovery from faulty cancellation.",
+    "N D3W explicit Shortest-path check occurred when already selected; narrowly correct route is not evidence of successful broader preference change. Later Avoid-stairs change failed.",
+    "R5B invalid-class checks after validation latch cannot isolate each validator. Neither condition establishes valid-first R5B saving.",
+    "Preparation before first UI is untimed and nonzero; no model-token, cost or complete effort metric.",
+    "Harness gates at action start, not hard interruption of in-flight actions; all observed completions/evidence were within limit. Free observations are not time-gated; no extra observations occurred here.",
+    "Local digest commitment establishes checked consistency, not external authenticity. Reviewer is unblinded; strategy apparent in prose."
+  ]
+}

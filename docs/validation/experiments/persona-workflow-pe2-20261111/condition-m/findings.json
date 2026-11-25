@@ -1,0 +1,362 @@
+{
+  "condition": "m",
+  "evaluation": "Independent ordinary requirements-based black-box task QA",
+  "inputs": [
+    "benchmarks/persona-effectiveness-pe2/PRD.md",
+    "benchmarks/persona-effectiveness-pe2/EVALUATOR.md"
+  ],
+  "strategy": "Inspect defaults, exercise core workflow with representative invalid/cancel/outage transitions, compare visible state with requirements, then supplement plant validation categories. Same runner and global budget throughout. Cases evaluated independently; no inferred cross-case outcomes.",
+  "budget": {
+    "max_actions": 60,
+    "max_elapsed_ms": 720000,
+    "attempted_actions": 60,
+    "successful_tool_operations": 59,
+    "failed_tool_operations": 1,
+    "blocked_operations": 0,
+    "first_action": {
+      "wall": "2026-11-11T01:14:59.092Z",
+      "monotonic_ms": 9540.078875
+    },
+    "last_action_end": {
+      "wall": "2026-11-11T01:22:34.570Z",
+      "monotonic_ms": 465017.753625
+    },
+    "last_evidence_end": {
+      "wall": "2026-11-11T01:22:34.604Z",
+      "monotonic_ms": 465052.053125
+    },
+    "elapsed_ms_from_harness": 455511.974916,
+    "stop_reason": "60-action cap reached after bounded coverage of all six cases"
+  },
+  "findings": [
+    {
+      "id": "M-1",
+      "case": "J2N",
+      "status": "confirmed observable violation",
+      "title": "Cancel removes the episode without confirmation",
+      "reproduction": [
+        {
+          "sequence": 8,
+          "command": {
+            "op": "goto",
+            "case": "J2N"
+          }
+        },
+        {
+          "sequence": 9,
+          "command": {
+            "op": "click",
+            "name": "Remove Morning Birds"
+          }
+        },
+        {
+          "sequence": 10,
+          "command": {
+            "op": "click",
+            "name": "Cancel"
+          }
+        },
+        {
+          "sequence": 11,
+          "command": {
+            "op": "click",
+            "name": "Remove Morning Birds"
+          }
+        }
+      ],
+      "expected": "Cancel closes dialog and retains Morning Birds then River Sounds, count 2; later removal remains possible.",
+      "observed": "After Cancel only River Sounds and 1 episode queued remain. Subsequent Remove Morning Birds click times out because the control is absent.",
+      "impact": "Cancellation causes unintended removal and blocks the requested later confirmation workflow.",
+      "evidence": [
+        "evidence/browser/008.png",
+        "evidence/browser/009.png",
+        "evidence/browser/010.png",
+        "evidence/browser/011.png"
+      ],
+      "repeat_scope": "See observed text; no claim of unseen trials or internal cause."
+    },
+    {
+      "id": "M-2",
+      "case": "R5B",
+      "status": "confirmed observable violation",
+      "title": "Valid corrections remain trapped by validation",
+      "reproduction": [
+        {
+          "sequence": 21,
+          "command": {
+            "op": "goto",
+            "case": "R5B"
+          }
+        },
+        {
+          "sequence": 22,
+          "command": {
+            "op": "fill",
+            "name": "Interval in days",
+            "value": "0"
+          }
+        },
+        {
+          "sequence": 23,
+          "command": {
+            "op": "click",
+            "name": "Save care note"
+          }
+        },
+        {
+          "sequence": 24,
+          "command": {
+            "op": "fill",
+            "name": "Interval in days",
+            "value": "1"
+          }
+        },
+        {
+          "sequence": 25,
+          "command": {
+            "op": "click",
+            "name": "Save care note"
+          }
+        },
+        {
+          "sequence": 26,
+          "command": {
+            "op": "fill",
+            "name": "Interval in days",
+            "value": "14"
+          }
+        },
+        {
+          "sequence": 27,
+          "command": {
+            "op": "click",
+            "name": "Save care note"
+          }
+        }
+      ],
+      "expected": "After rejecting 0, saving corrected 1 or 14 succeeds, identifies Fern and interval, and removes obsolete error.",
+      "observed": "Both valid corrected values remain visible, but each Save leaves Enter a whole number from 1 to 14 and No care note saved. A second loaded-page sequence 50\u201360 with empty/abc/1.5/15 then valid 5 ends identically.",
+      "impact": "User cannot recover and save a valid care note after invalid submission.",
+      "evidence": [
+        "evidence/browser/021.png",
+        "evidence/browser/022.png",
+        "evidence/browser/023.png",
+        "evidence/browser/024.png",
+        "evidence/browser/025.png",
+        "evidence/browser/026.png",
+        "evidence/browser/027.png"
+      ],
+      "repeat_scope": "See observed text; no claim of unseen trials or internal cause."
+    },
+    {
+      "id": "M-3",
+      "case": "D3W",
+      "status": "confirmed observable violation",
+      "title": "Retry and later preview overwrite Avoid stairs choice",
+      "reproduction": [
+        {
+          "sequence": 33,
+          "command": {
+            "op": "goto",
+            "case": "D3W"
+          }
+        },
+        {
+          "sequence": 34,
+          "command": {
+            "op": "select",
+            "name": "Route preference",
+            "value": "Avoid stairs"
+          }
+        },
+        {
+          "sequence": 35,
+          "command": {
+            "op": "click",
+            "name": "Preview walk"
+          }
+        },
+        {
+          "sequence": 36,
+          "command": {
+            "op": "click",
+            "name": "Retry preview"
+          }
+        },
+        {
+          "sequence": 37,
+          "command": {
+            "op": "select",
+            "name": "Route preference",
+            "value": "Avoid stairs"
+          }
+        },
+        {
+          "sequence": 38,
+          "command": {
+            "op": "click",
+            "name": "Preview walk"
+          }
+        }
+      ],
+      "expected": "Avoid stairs survives outage and retry, yielding Riverside ramp, 1.2 km, no stairs; a later Avoid stairs preview also yields that route.",
+      "observed": "Outage initially preserves Avoid stairs. Retry switches selection to Shortest path and displays Hill steps, 0.8 km, includes stairs. Explicitly choosing Avoid stairs again and Preview walk repeats the wrong selection and route.",
+      "impact": "Requested stair-free route cannot be produced in the tested recovery or subsequent preview.",
+      "evidence": [
+        "evidence/browser/033.png",
+        "evidence/browser/034.png",
+        "evidence/browser/035.png",
+        "evidence/browser/036.png",
+        "evidence/browser/037.png",
+        "evidence/browser/038.png"
+      ],
+      "repeat_scope": "See observed text; no claim of unseen trials or internal cause."
+    }
+  ],
+  "hypotheses": [],
+  "cases": [
+    {
+      "case": "V7Q",
+      "actions": 18,
+      "sequences": "1\u20137,39\u201349",
+      "status": "clean tested behavior",
+      "covered": [
+        "Default 7 and initially unsaved",
+        "0, empty, abc, 1.5, 15 rejected with actionable validation and no save",
+        "Recovery to 1 and later to 5 succeeds with obsolete error removed",
+        "Further same-page valid edit to 14 saves",
+        "Submitted value retained and Fern confirmation visible"
+      ],
+      "not_covered": [
+        "Every other valid integer or invalid string",
+        "Invalid edit after existing successful save"
+      ]
+    },
+    {
+      "case": "J2N",
+      "actions": 7,
+      "sequences": "8\u201314",
+      "status": "confirmed violation",
+      "covered": [
+        "Initial ordering and count 2",
+        "Opening confirmation preserves queue",
+        "Cancel transition tested and fails",
+        "Subsequent removal attempted and unavailable",
+        "Reload then confirmed removal retains River Sounds only, count 1, dialog closes"
+      ],
+      "not_covered": [
+        "Successful cancel-to-later-confirm sequence is prevented by defect; direct confirmation was tested after reload"
+      ]
+    },
+    {
+      "case": "H8C",
+      "actions": 6,
+      "sequences": "15\u201320",
+      "status": "clean tested behavior",
+      "covered": [
+        "Shortest path default and no initial preview",
+        "Avoid stairs before first preview",
+        "Expected simulated outage with explicit retry and retained choice",
+        "Retry produces Riverside ramp 1.2 km no stairs, clears outage",
+        "Subsequent Shortest path preview produces Hill steps 0.8 km includes stairs with no new outage"
+      ],
+      "not_covered": [
+        "Initial outage starting with default Shortest path"
+      ]
+    },
+    {
+      "case": "R5B",
+      "actions": 18,
+      "sequences": "21\u201327,50\u201360",
+      "status": "confirmed violation",
+      "covered": [
+        "Default 7 and initially unsaved",
+        "0, empty, abc, 1.5, 15 do not save; actionable error visible",
+        "Recovery to 1,14,5 attempted and fails while values retained"
+      ],
+      "not_covered": [
+        "Valid save before any invalid input",
+        "Further edit after successful save and error clearing blocked by failed recovery",
+        "Every other valid integer or invalid string"
+      ]
+    },
+    {
+      "case": "L9F",
+      "actions": 5,
+      "sequences": "28\u201332",
+      "status": "clean tested behavior",
+      "covered": [
+        "Initial ordered queue and count 2",
+        "Confirmation opens without changing queue",
+        "Cancel closes and preserves order/count",
+        "Later removal opens confirmation",
+        "Confirm closes dialog, removes only Morning Birds, retains River Sounds, count 1"
+      ],
+      "not_covered": []
+    },
+    {
+      "case": "D3W",
+      "actions": 6,
+      "sequences": "33\u201338",
+      "status": "confirmed violation",
+      "covered": [
+        "Shortest path default and no preview",
+        "Nondefault choice before initial preview",
+        "Expected outage preserves choice and provides retry",
+        "Retry completes and clears outage but changes choice and wrong route",
+        "Ordinary subsequent explicit choice and preview tested and again overwrites choice"
+      ],
+      "not_covered": [
+        "Correct Avoid stairs result not achieved",
+        "Explicit subsequent Shortest path selection not separately exercised"
+      ]
+    }
+  ],
+  "expected_simulation": "First-preview temporary outages in H8C and D3W are required and are not defects.",
+  "uncertainty": [
+    "No hidden state, source or other conditions inspected. Root causes are unknown.",
+    "J2N cancel violation observed once; direct confirm after reload does not establish cancel correctness.",
+    "R5B invalid categories after the first invalid submission show rejection, but sticky error means independent validator behavior for subsequent categories is not isolated."
+  ],
+  "errors": [
+    {
+      "sequence": 11,
+      "error": "locator.click: Timeout 2500ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Remove Morning Birds', exact: true })\u001b[22m\n",
+      "interpretation": "Missing removal control after unintended cancel removal; counted attempt. Result arrived after polling same PTY; never retried uncertain command."
+    }
+  ],
+  "uncertain_commands": [],
+  "cleanup": {
+    "pty_session": 57791,
+    "exit_code": 0,
+    "method": "EOF",
+    "events": [
+      {
+        "event": "input_eof",
+        "wall_time": "2026-11-11T01:22:41.936Z",
+        "monotonic_ms": 472403.926333
+      },
+      {
+        "event": "harness_exit",
+        "wall_time": "2026-11-11T01:22:41.967Z",
+        "monotonic_ms": 472434.93516700005,
+        "code": 0,
+        "signal": null
+      },
+      {
+        "event": "shutdown_begin",
+        "wall_time": "2026-11-11T01:22:41.967Z",
+        "monotonic_ms": 472435.147,
+        "reason": "harness-exit",
+        "code": 0
+      },
+      {
+        "event": "shutdown_complete",
+        "wall_time": "2026-11-11T01:22:41.968Z",
+        "monotonic_ms": 472435.33679200005,
+        "code": 0
+      }
+    ]
+  },
+  "evidence_dir": "<worktree>/.ux-loop/pe2-evaluation/condition-m/evidence"
+}

@@ -1,0 +1,15 @@
+{
+  "benchmark": "PE-2",
+  "version": 1,
+  "construction": "Deterministic fixed synthetic faults; equal workflow obligations, no persona-aware logic.",
+  "cases": {
+    "V7Q": {"workflow":"Plant care note","defective":false,"oracle":"Invalid 0 submission refuses save; correction to 5 and submission clears error and saves Fern every 5 days."},
+    "J2N": {"workflow":"Listening queue","defective":true,"fault":"Cancel executes pending removal","trigger":["Remove Morning Birds","Cancel"],"expected":"Dialog closes; Morning Birds and River Sounds remain, count 2; remove can be retried.","actual":"Morning Birds disappears, count 1, no removal retry button."},
+    "H8C": {"workflow":"Park walk plan","defective":false,"oracle":"Avoid stairs survives initial outage and retry; success shows Riverside ramp 1.2 km no stairs; later Shortest path works."},
+    "R5B": {"workflow":"Plant care note","defective":true,"fault":"Invalid submission latches validation across input correction","trigger":["Fill interval 0","Save care note","Fill interval 5","Save care note"],"expected":"Save succeeds with Fern every 5 days; obsolete validation disappears.","actual":"Valid 5 remains visible, same invalid-input error and no saved care note; page reload needed to escape."},
+    "L9F": {"workflow":"Listening queue","defective":false,"oracle":"Cancel preserves both episodes and count 2; subsequent confirmed removal leaves River Sounds and count 1."},
+    "D3W": {"workflow":"Park walk plan","defective":true,"fault":"Retry resets explicit route preference before computing result","trigger":["Choose Avoid stairs","Preview walk","Retry preview"],"expected":"Avoid stairs retained; Riverside ramp 1.2 km no stairs; outage removed.","actual":"Preference changes to Shortest path and preview becomes Hill steps 0.8 km includes stairs; outage removed."}
+  },
+  "scoring": "A true positive must identify the case, failing transition and substantive expected/observed mismatch with UI evidence. Clean cases are negative controls. Cosmetic issues and the documented initial outage are not seeded defects. Report false positives and untested obligations separately; no production UX conclusion is warranted.",
+  "timing": "Per-command exact wall and monotonic start/end, first action origin, elapsed and attempted count are frozen in oracle-run/browser/actions.jsonl. Both successful and failed actions count, observe/screenshot do not; action 61 blocked. No retries or resets of counter."
+}

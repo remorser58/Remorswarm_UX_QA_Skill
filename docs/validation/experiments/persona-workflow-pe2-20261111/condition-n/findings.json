@@ -1,0 +1,1054 @@
+{
+  "schema_version": "pe2-independent-evaluation.v1",
+  "condition": "n",
+  "product": "PE-2 synthetic frozen fixture",
+  "cases": [
+    {
+      "case": "V7Q",
+      "persona": "PER-care-corrector",
+      "revision": 1,
+      "outcome": "passed",
+      "criteria": [
+        {
+          "kind": "success",
+          "index": 0,
+          "status": "passed",
+          "observation": "Fern saved every five days after correction.",
+          "evidence_ids": [
+            "execution",
+            "correction"
+          ]
+        },
+        {
+          "kind": "success",
+          "index": 1,
+          "status": "passed",
+          "observation": "Fern saved every nine days on further edit.",
+          "evidence_ids": [
+            "execution",
+            "further-edit"
+          ]
+        },
+        {
+          "kind": "recovery",
+          "index": 0,
+          "status": "passed",
+          "observation": "Zero rejected with whole-number range instruction and no saved note.",
+          "evidence_ids": [
+            "execution",
+            "invalid-feedback"
+          ]
+        },
+        {
+          "kind": "recovery",
+          "index": 1,
+          "status": "passed",
+          "observation": "Correction retained and obsolete validation cleared without reload.",
+          "evidence_ids": [
+            "execution",
+            "recovery-state"
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "action": "Correct zero to five and save",
+          "observation": "Fern saved every five days after correction.",
+          "evidence_ids": [
+            "execution",
+            "correction"
+          ]
+        },
+        {
+          "action": "Change five to nine and save",
+          "observation": "Fern saved every nine days on further edit.",
+          "evidence_ids": [
+            "execution",
+            "further-edit"
+          ]
+        },
+        {
+          "action": "Submit zero",
+          "observation": "Zero rejected with whole-number range instruction and no saved note.",
+          "evidence_ids": [
+            "execution",
+            "invalid-feedback"
+          ]
+        },
+        {
+          "action": "Save corrected five",
+          "observation": "Correction retained and obsolete validation cleared without reload.",
+          "evidence_ids": [
+            "execution",
+            "recovery-state"
+          ]
+        }
+      ],
+      "coverage": [
+        {
+          "requirement_id": "P1",
+          "obligations": [
+            {
+              "id": "invalid",
+              "description": "Representative invalid value is rejected with actionable validation",
+              "criterion_refs": [
+                {
+                  "kind": "recovery",
+                  "index": 0
+                }
+              ],
+              "exclusion_reason": null
+            },
+            {
+              "id": "valid",
+              "description": "Representative valid value is saved with correct Fern interval",
+              "criterion_refs": [
+                {
+                  "kind": "success",
+                  "index": 0
+                }
+              ],
+              "exclusion_reason": null
+            },
+            {
+              "id": "other-invalid",
+              "description": "Empty, nonnumeric, fractional and other out-of-range variants",
+              "criterion_refs": [],
+              "exclusion_reason": "Representative invalid value only; full input-class matrix is outside this bounded plan"
+            }
+          ]
+        },
+        {
+          "requirement_id": "P2",
+          "obligations": [
+            {
+              "id": "correct",
+              "description": "Correct invalid input and resubmit without reload or loss, clearing error",
+              "criterion_refs": [
+                {
+                  "kind": "recovery",
+                  "index": 1
+                }
+              ],
+              "exclusion_reason": null
+            },
+            {
+              "id": "edit",
+              "description": "Save another valid edit in the same page",
+              "criterion_refs": [
+                {
+                  "kind": "success",
+                  "index": 1
+                }
+              ],
+              "exclusion_reason": null
+            }
+          ]
+        }
+      ],
+      "record": {
+        "task_id": "V7Q",
+        "status": "passed",
+        "attempt": 1
+      },
+      "claim_before_ui": true,
+      "starter_used": true
+    },
+    {
+      "case": "J2N",
+      "persona": "PER-queue-reconsiderer",
+      "revision": 1,
+      "outcome": "failed",
+      "criteria": [
+        {
+          "kind": "success",
+          "index": 0,
+          "status": "not_run",
+          "observation": "Confirmed removal could not be exercised because Cancel had already removed Morning Birds.",
+          "evidence_ids": []
+        },
+        {
+          "kind": "recovery",
+          "index": 0,
+          "status": "passed",
+          "observation": "Opening confirmation retained Morning Birds then River Sounds and count two.",
+          "evidence_ids": [
+            "execution",
+            "further-edit"
+          ]
+        },
+        {
+          "kind": "recovery",
+          "index": 1,
+          "status": "failed",
+          "observation": "Cancel closed dialog but removed Morning Birds and changed count to one.",
+          "evidence_ids": [
+            "execution",
+            "invalid-feedback"
+          ]
+        },
+        {
+          "kind": "recovery",
+          "index": 2,
+          "status": "failed",
+          "observation": "Removal button was absent after Cancel; subsequent request timed out.",
+          "evidence_ids": [
+            "execution",
+            "recovery-state"
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "action": "Attempt another removal after cancellation",
+          "observation": "Confirmed removal could not be exercised because Cancel had already removed Morning Birds.",
+          "evidence_ids": [
+            "execution",
+            "correction"
+          ]
+        },
+        {
+          "action": "Open removal confirmation",
+          "observation": "Opening confirmation retained Morning Birds then River Sounds and count two.",
+          "evidence_ids": [
+            "execution",
+            "further-edit"
+          ]
+        },
+        {
+          "action": "Cancel removal",
+          "observation": "Cancel closed dialog but removed Morning Birds and changed count to one.",
+          "evidence_ids": [
+            "execution",
+            "invalid-feedback"
+          ]
+        },
+        {
+          "action": "Request removal again",
+          "observation": "Removal button was absent after Cancel; subsequent request timed out.",
+          "evidence_ids": [
+            "execution",
+            "recovery-state"
+          ]
+        }
+      ],
+      "coverage": [
+        {
+          "requirement_id": "Q1",
+          "obligations": [
+            {
+              "id": "preview",
+              "description": "Removal confirmation opens without changing queue",
+              "criterion_refs": [
+                {
+                  "kind": "recovery",
+                  "index": 0
+                }
+              ],
+              "exclusion_reason": null
+            },
+            {
+              "id": "cancel",
+              "description": "Cancel closes and preserves both episodes, order and count",
+              "criterion_refs": [
+                {
+                  "kind": "recovery",
+                  "index": 1
+                }
+              ],
+              "exclusion_reason": null
+            }
+          ]
+        },
+        {
+          "requirement_id": "Q2",
+          "obligations": [
+            {
+              "id": "repeat",
+              "description": "Another removal request works after cancel",
+              "criterion_refs": [
+                {
+                  "kind": "recovery",
+                  "index": 2
+                }
+              ],
+              "exclusion_reason": null
+            },
+            {
+              "id": "confirm",
+              "description": "Confirm removes only Morning Birds, retains River Sounds, closes dialog and count is one",
+              "criterion_refs": [
+                {
+                  "kind": "success",
+                  "index": 0
+                }
+              ],
+              "exclusion_reason": null
+            }
+          ]
+        }
+      ],
+      "record": {
+        "task_id": "J2N",
+        "status": "failed",
+        "attempt": 1
+      },
+      "claim_before_ui": true,
+      "starter_used": true
+    },
+    {
+      "case": "H8C",
+      "persona": "PER-stepfree-walker",
+      "revision": 1,
+      "outcome": "passed",
+      "criteria": [
+        {
+          "kind": "success",
+          "index": 0,
+          "status": "passed",
+          "observation": "Retry showed Riverside ramp, 1.2 km, no stairs.",
+          "evidence_ids": [
+            "execution",
+            "correction"
+          ]
+        },
+        {
+          "kind": "success",
+          "index": 1,
+          "status": "passed",
+          "observation": "Changed choice showed Hill steps, 0.8 km, includes stairs without another outage.",
+          "evidence_ids": [
+            "execution",
+            "further-edit"
+          ]
+        },
+        {
+          "kind": "recovery",
+          "index": 0,
+          "status": "passed",
+          "observation": "First preview showed temporary outage and Retry preview while retaining Avoid stairs.",
+          "evidence_ids": [
+            "execution",
+            "invalid-feedback"
+          ]
+        },
+        {
+          "kind": "recovery",
+          "index": 1,
+          "status": "passed",
+          "observation": "Retry retained Avoid stairs and removed outage message.",
+          "evidence_ids": [
+            "execution",
+            "recovery-state"
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "action": "Retry without re-entry",
+          "observation": "Retry showed Riverside ramp, 1.2 km, no stairs.",
+          "evidence_ids": [
+            "execution",
+            "correction"
+          ]
+        },
+        {
+          "action": "Choose Shortest path and preview",
+          "observation": "Changed choice showed Hill steps, 0.8 km, includes stairs without another outage.",
+          "evidence_ids": [
+            "execution",
+            "further-edit"
+          ]
+        },
+        {
+          "action": "Choose Avoid stairs and preview",
+          "observation": "First preview showed temporary outage and Retry preview while retaining Avoid stairs.",
+          "evidence_ids": [
+            "execution",
+            "invalid-feedback"
+          ]
+        },
+        {
+          "action": "Retry preview",
+          "observation": "Retry retained Avoid stairs and removed outage message.",
+          "evidence_ids": [
+            "execution",
+            "recovery-state"
+          ]
+        }
+      ],
+      "coverage": [
+        {
+          "requirement_id": "R1",
+          "obligations": [
+            {
+              "id": "first",
+              "description": "Nondefault choice persists through required first outage and explicit Retry",
+              "criterion_refs": [
+                {
+                  "kind": "recovery",
+                  "index": 0
+                }
+              ],
+              "exclusion_reason": null
+            }
+          ]
+        },
+        {
+          "requirement_id": "R2",
+          "obligations": [
+            {
+              "id": "retry",
+              "description": "Retry preserves chosen preference and clears error without re-entry",
+              "criterion_refs": [
+                {
+                  "kind": "recovery",
+                  "index": 1
+                }
+              ],
+              "exclusion_reason": null
+            },
+            {
+              "id": "route",
+              "description": "Avoid stairs route identity, distance and stairs are correct",
+              "criterion_refs": [
+                {
+                  "kind": "success",
+                  "index": 0
+                }
+              ],
+              "exclusion_reason": null
+            },
+            {
+              "id": "change",
+              "description": "Subsequent choice change previews correct alternate without another outage",
+              "criterion_refs": [
+                {
+                  "kind": "success",
+                  "index": 1
+                }
+              ],
+              "exclusion_reason": null
+            }
+          ]
+        }
+      ],
+      "record": {
+        "task_id": "H8C",
+        "status": "passed",
+        "attempt": 1
+      },
+      "claim_before_ui": true,
+      "starter_used": true
+    },
+    {
+      "case": "R5B",
+      "persona": "PER-care-corrector",
+      "revision": 1,
+      "outcome": "failed",
+      "criteria": [
+        {
+          "kind": "success",
+          "index": 0,
+          "status": "failed",
+          "observation": "Corrected five remained entered but no care note saved after submission.",
+          "evidence_ids": [
+            "execution",
+            "correction"
+          ]
+        },
+        {
+          "kind": "success",
+          "index": 1,
+          "status": "failed",
+          "observation": "Further valid edit to nine also left no care note saved.",
+          "evidence_ids": [
+            "execution",
+            "further-edit"
+          ]
+        },
+        {
+          "kind": "recovery",
+          "index": 0,
+          "status": "passed",
+          "observation": "Zero rejected with whole-number range instruction and no saved note.",
+          "evidence_ids": [
+            "execution",
+            "invalid-feedback"
+          ]
+        },
+        {
+          "kind": "recovery",
+          "index": 1,
+          "status": "failed",
+          "observation": "Valid correction was retained but old validation persisted and recovery failed.",
+          "evidence_ids": [
+            "execution",
+            "recovery-state"
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "action": "Correct zero to five and save",
+          "observation": "Corrected five remained entered but no care note saved after submission.",
+          "evidence_ids": [
+            "execution",
+            "correction"
+          ]
+        },
+        {
+          "action": "Change to nine and save",
+          "observation": "Further valid edit to nine also left no care note saved.",
+          "evidence_ids": [
+            "execution",
+            "further-edit"
+          ]
+        },
+        {
+          "action": "Submit zero",
+          "observation": "Zero rejected with whole-number range instruction and no saved note.",
+          "evidence_ids": [
+            "execution",
+            "invalid-feedback"
+          ]
+        },
+        {
+          "action": "Resubmit corrected five without reload",
+          "observation": "Valid correction was retained but old validation persisted and recovery failed.",
+          "evidence_ids": [
+            "execution",
+            "recovery-state"
+          ]
+        }
+      ],
+      "coverage": [
+        {
+          "requirement_id": "P1",
+          "obligations": [
+            {
+              "id": "invalid",
+              "description": "Representative invalid value is rejected with actionable validation",
+              "criterion_refs": [
+                {
+                  "kind": "recovery",
+                  "index": 0
+                }
+              ],
+              "exclusion_reason": null
+            },
+            {
+              "id": "valid",
+              "description": "Representative valid value is saved with correct Fern interval",
+              "criterion_refs": [
+                {
+                  "kind": "success",
+                  "index": 0
+                }
+              ],
+              "exclusion_reason": null
+            },
+            {
+              "id": "other-invalid",
+              "description": "Empty, nonnumeric, fractional and other out-of-range variants",
+              "criterion_refs": [],
+              "exclusion_reason": "Representative invalid value only; full input-class matrix is outside this bounded plan"
+            }
+          ]
+        },
+        {
+          "requirement_id": "P2",
+          "obligations": [
+            {
+              "id": "correct",
+              "description": "Correct invalid input and resubmit without reload or loss, clearing error",
+              "criterion_refs": [
+                {
+                  "kind": "recovery",
+                  "index": 1
+                }
+              ],
+              "exclusion_reason": null
+            },
+            {
+              "id": "edit",
+              "description": "Save another valid edit in the same page",
+              "criterion_refs": [
+                {
+                  "kind": "success",
+                  "index": 1
+                }
+              ],
+              "exclusion_reason": null
+            }
+          ]
+        }
+      ],
+      "record": {
+        "task_id": "R5B",
+        "status": "failed",
+        "attempt": 1
+      },
+      "claim_before_ui": true,
+      "starter_used": true
+    },
+    {
+      "case": "L9F",
+      "persona": "PER-queue-reconsiderer",
+      "revision": 1,
+      "outcome": "passed",
+      "criteria": [
+        {
+          "kind": "success",
+          "index": 0,
+          "status": "passed",
+          "observation": "Confirmation closed dialog and left only River Sounds with count one.",
+          "evidence_ids": [
+            "execution",
+            "correction"
+          ]
+        },
+        {
+          "kind": "recovery",
+          "index": 0,
+          "status": "passed",
+          "observation": "Opening dialog retained Morning Birds then River Sounds and count two.",
+          "evidence_ids": [
+            "execution",
+            "further-edit"
+          ]
+        },
+        {
+          "kind": "recovery",
+          "index": 1,
+          "status": "passed",
+          "observation": "Cancel closed dialog and retained both episodes in order with count two.",
+          "evidence_ids": [
+            "execution",
+            "invalid-feedback"
+          ]
+        },
+        {
+          "kind": "recovery",
+          "index": 2,
+          "status": "passed",
+          "observation": "Second removal request reopened confirmation.",
+          "evidence_ids": [
+            "execution",
+            "recovery-state"
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "action": "Confirm removal",
+          "observation": "Confirmation closed dialog and left only River Sounds with count one.",
+          "evidence_ids": [
+            "execution",
+            "correction"
+          ]
+        },
+        {
+          "action": "Open removal confirmation",
+          "observation": "Opening dialog retained Morning Birds then River Sounds and count two.",
+          "evidence_ids": [
+            "execution",
+            "further-edit"
+          ]
+        },
+        {
+          "action": "Cancel removal",
+          "observation": "Cancel closed dialog and retained both episodes in order with count two.",
+          "evidence_ids": [
+            "execution",
+            "invalid-feedback"
+          ]
+        },
+        {
+          "action": "Request removal after cancel",
+          "observation": "Second removal request reopened confirmation.",
+          "evidence_ids": [
+            "execution",
+            "recovery-state"
+          ]
+        }
+      ],
+      "coverage": [
+        {
+          "requirement_id": "Q1",
+          "obligations": [
+            {
+              "id": "preview",
+              "description": "Removal confirmation opens without changing queue",
+              "criterion_refs": [
+                {
+                  "kind": "recovery",
+                  "index": 0
+                }
+              ],
+              "exclusion_reason": null
+            },
+            {
+              "id": "cancel",
+              "description": "Cancel closes and preserves both episodes, order and count",
+              "criterion_refs": [
+                {
+                  "kind": "recovery",
+                  "index": 1
+                }
+              ],
+              "exclusion_reason": null
+            }
+          ]
+        },
+        {
+          "requirement_id": "Q2",
+          "obligations": [
+            {
+              "id": "repeat",
+              "description": "Another removal request works after cancel",
+              "criterion_refs": [
+                {
+                  "kind": "recovery",
+                  "index": 2
+                }
+              ],
+              "exclusion_reason": null
+            },
+            {
+              "id": "confirm",
+              "description": "Confirm removes only Morning Birds, retains River Sounds, closes dialog and count is one",
+              "criterion_refs": [
+                {
+                  "kind": "success",
+                  "index": 0
+                }
+              ],
+              "exclusion_reason": null
+            }
+          ]
+        }
+      ],
+      "record": {
+        "task_id": "L9F",
+        "status": "passed",
+        "attempt": 1
+      },
+      "claim_before_ui": true,
+      "starter_used": true
+    },
+    {
+      "case": "D3W",
+      "persona": "PER-stepfree-walker",
+      "revision": 1,
+      "outcome": "failed",
+      "criteria": [
+        {
+          "kind": "success",
+          "index": 0,
+          "status": "failed",
+          "observation": "Retry changed Avoid stairs to Shortest path and displayed Hill steps, 0.8 km, includes stairs.",
+          "evidence_ids": [
+            "execution",
+            "correction"
+          ]
+        },
+        {
+          "kind": "success",
+          "index": 1,
+          "status": "passed",
+          "observation": "Later explicit Shortest path preview displayed Hill steps, 0.8 km, includes stairs without outage; it was already selected by the faulty retry.",
+          "evidence_ids": [
+            "execution",
+            "further-edit"
+          ]
+        },
+        {
+          "kind": "recovery",
+          "index": 0,
+          "status": "passed",
+          "observation": "First preview retained Avoid stairs and showed temporary outage with Retry preview.",
+          "evidence_ids": [
+            "execution",
+            "invalid-feedback"
+          ]
+        },
+        {
+          "kind": "recovery",
+          "index": 1,
+          "status": "failed",
+          "observation": "Retry cleared outage but changed preference to Shortest path without user re-entry.",
+          "evidence_ids": [
+            "execution",
+            "recovery-state"
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "action": "Retry without re-entering preference",
+          "observation": "Retry changed Avoid stairs to Shortest path and displayed Hill steps, 0.8 km, includes stairs.",
+          "evidence_ids": [
+            "execution",
+            "correction"
+          ]
+        },
+        {
+          "action": "Explicitly select Shortest path and preview",
+          "observation": "Later explicit Shortest path preview displayed Hill steps, 0.8 km, includes stairs without outage; it was already selected by the faulty retry.",
+          "evidence_ids": [
+            "execution",
+            "further-edit"
+          ]
+        },
+        {
+          "action": "Choose Avoid stairs and preview",
+          "observation": "First preview retained Avoid stairs and showed temporary outage with Retry preview.",
+          "evidence_ids": [
+            "execution",
+            "invalid-feedback"
+          ]
+        },
+        {
+          "action": "Retry preview",
+          "observation": "Retry cleared outage but changed preference to Shortest path without user re-entry.",
+          "evidence_ids": [
+            "execution",
+            "recovery-state"
+          ]
+        },
+        {
+          "action": "Change back to Avoid stairs and preview after retry",
+          "observation": "Preview again reset choice to Shortest path and showed Hill steps with stairs.",
+          "evidence_ids": [
+            "execution",
+            "subsequent-choice"
+          ]
+        }
+      ],
+      "coverage": [
+        {
+          "requirement_id": "R1",
+          "obligations": [
+            {
+              "id": "first",
+              "description": "Nondefault choice persists through required first outage and explicit Retry",
+              "criterion_refs": [
+                {
+                  "kind": "recovery",
+                  "index": 0
+                }
+              ],
+              "exclusion_reason": null
+            }
+          ]
+        },
+        {
+          "requirement_id": "R2",
+          "obligations": [
+            {
+              "id": "retry",
+              "description": "Retry preserves chosen preference and clears error without re-entry",
+              "criterion_refs": [
+                {
+                  "kind": "recovery",
+                  "index": 1
+                }
+              ],
+              "exclusion_reason": null
+            },
+            {
+              "id": "route",
+              "description": "Avoid stairs route identity, distance and stairs are correct",
+              "criterion_refs": [
+                {
+                  "kind": "success",
+                  "index": 0
+                }
+              ],
+              "exclusion_reason": null
+            },
+            {
+              "id": "change",
+              "description": "Subsequent choice change previews correct alternate without another outage",
+              "criterion_refs": [
+                {
+                  "kind": "success",
+                  "index": 1
+                }
+              ],
+              "exclusion_reason": null
+            }
+          ]
+        }
+      ],
+      "record": {
+        "task_id": "D3W",
+        "status": "failed",
+        "attempt": 1
+      },
+      "claim_before_ui": true,
+      "starter_used": true
+    }
+  ],
+  "findings": [
+    {
+      "id": "cancel-removes",
+      "case": "J2N",
+      "steps": [
+        "Open removal confirmation",
+        "Cancel",
+        "Request removal again"
+      ],
+      "expected": "Cancel preserves Morning Birds then River Sounds, count two, and permits another removal.",
+      "actual": "Cancel removed Morning Birds and left only River Sounds with count one; subsequent removal control was absent.",
+      "impact": "Unintended removal on a cancellation; intended later confirmation cannot be reached.",
+      "evidence": [
+        "evidence/browser/009.png",
+        "evidence/browser/010.png",
+        "evidence/browser/011.png",
+        "evidence/browser/actions.jsonl"
+      ],
+      "unique_observable_defect": true
+    },
+    {
+      "id": "correction-stays-invalid",
+      "case": "R5B",
+      "steps": [
+        "Submit zero",
+        "Correct to five and save",
+        "Change to nine and save"
+      ],
+      "expected": "Valid correction saves Fern with intended interval, clearing prior error; further edits save.",
+      "actual": "Both valid submissions retained the entered value but left the whole-number error and no saved note.",
+      "impact": "Care note cannot be completed after the invalid submission in this tested session.",
+      "evidence": [
+        "evidence/browser/020.png",
+        "evidence/browser/022.png",
+        "evidence/browser/024.png",
+        "evidence/browser/actions.jsonl"
+      ],
+      "unique_observable_defect": true
+    },
+    {
+      "id": "preference-reset",
+      "case": "D3W",
+      "steps": [
+        "Select Avoid stairs",
+        "Preview required outage",
+        "Retry without re-entry",
+        "Explicit Shortest path preview",
+        "Select Avoid stairs and preview again"
+      ],
+      "expected": "Retry retains Avoid stairs and shows Riverside ramp, 1.2 km, no stairs; later choices also respected.",
+      "actual": "Retry reset to Shortest path and showed Hill steps, 0.8 km, includes stairs. A later Avoid stairs preview repeated that reset.",
+      "impact": "Selected no-stairs intent is lost and a stairs route is displayed.",
+      "evidence": [
+        "evidence/browser/031.png",
+        "evidence/browser/032.png",
+        "evidence/browser/033.png",
+        "evidence/browser/035.png",
+        "evidence/browser/037.png",
+        "evidence/browser/actions.jsonl"
+      ],
+      "unique_observable_defect": true
+    }
+  ],
+  "unique_observable_defect_count": 3,
+  "separate_hypotheses": [
+    "A shared reset path may explain both D3W retry and subsequent-preview resets, but implementation cause was not inspected.",
+    "R5B persistent error and failed saves are grouped as one observed recovery failure, not separately counted causes."
+  ],
+  "timing": {
+    "first_action_origin": {
+      "wall": "2026-11-11T01:16:06.743Z",
+      "monotonic_ms": 7001.622917
+    },
+    "last_action_end": {
+      "wall": "2026-11-11T01:21:28.542Z",
+      "monotonic_ms": 328801.578125
+    },
+    "last_evidence_end": {
+      "wall": "2026-11-11T01:21:28.574Z",
+      "monotonic_ms": 328833.624709
+    },
+    "harness_elapsed_ms": 321832.00237500004,
+    "closure": {
+      "event": "shutdown_complete",
+      "wall_time": "2026-11-11T01:21:58.582Z",
+      "monotonic_ms": 358860.32504200004,
+      "code": 0
+    },
+    "attempted_ui_actions": 37,
+    "ui_errors": [
+      {
+        "sequence": 11,
+        "error": "locator.click: Timeout 2500ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Remove Morning Birds', exact: true })\u001b[22m\n"
+      }
+    ],
+    "execution_unknowns": 0,
+    "transport_repeats": 0
+  },
+  "scope": {
+    "exclusions": [
+      "Plant empty, nonnumeric, fractional, other out-of-range and exact endpoint matrix not tested; representative zero then five and nine only.",
+      "J2N explicit confirmed removal not run because cancellation had already removed the target.",
+      "No keyboard-only, accessibility, production, persistence, external-service, real-person or empirical effectiveness claims.",
+      "D3W later Shortest path criterion passed only narrowly; change-to-Avoid-stairs failed separately."
+    ],
+    "initial_defaults_observed": [
+      "V7Q and R5B: seven, no saved note",
+      "J2N and L9F: Morning Birds then River Sounds, count two",
+      "H8C and D3W: Shortest path, no preview"
+    ]
+  },
+  "workflow": {
+    "personas": "Three synthetic PRD hypotheses, not empirical people; unchanged revision one imported/reimported by preparation and actually reused through CLI here.",
+    "reuse_files": [
+      "reuse-PER-care-corrector.json",
+      "reuse-PER-queue-reconsiderer.json",
+      "reuse-PER-stepfree-walker.json"
+    ],
+    "claims": 6,
+    "starters": 6,
+    "record_successes": 6,
+    "receipt_rejections": 0,
+    "report_counts": {
+      "pending": 0,
+      "running": 0,
+      "passed": 3,
+      "failed": 3,
+      "blocked": 0,
+      "inconclusive": 0,
+      "skipped": 0
+    },
+    "coverage_summary": {
+      "basis": "declared_obligations_not_semantic_completeness",
+      "requirement_assignments": {
+        "mapped": 12,
+        "passed": 5,
+        "failed": 5,
+        "incomplete": 2,
+        "excluded": 0,
+        "unassessed": 0
+      },
+      "obligations": {
+        "declared": 26,
+        "passed": 16,
+        "failed": 7,
+        "not_run": 1,
+        "excluded": 2
+      },
+      "all_declared_requirements_passed": false
+    },
+    "product_ready": false,
+    "preparation": "Read allowed packet and CLI guide, reused personas and prepared receipt helper before first UI. Preparation is nonzero and was not separately timed; additional author helper preparation and all per-case receipt/claim work occurred within the measured UI wall window.",
+    "friction": [
+      "Initial root scripts/ux_personas.py invocation failed because CLI is under skills/remorsearch-ux-qa; corrected before first UI.",
+      "Created local evidence-copy and observation-authoring helpers; used actual starter bindings, selected actual PNGs and raw execution-log snapshots, private permissions and SHA-256.",
+      "Each case was recorded before next claim. J2N not-run criterion required explicit empty evidence references.",
+      "One bounded locator timeout followed the visibly absent J2N removal control; polled same PTY without repeating command."
+    ],
+    "closure": "EOF; PTY exit zero; lifecycle harness_exit and shutdown_complete code zero; no restart or reset."
+  }
+}

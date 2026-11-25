@@ -7,10 +7,11 @@ from .canonical import EngineError
 from .storage import Store,read_bytes,read_json,safe_path,scenario_output
 from .engine import fresh,gate_command,merge_command
 
-COMMANDS={"merge","gate","plan","report-check","export-audience","persona-starter","export-personas","persona-intake","minimize"}
+COMMANDS={"merge","gate","plan","report-check","export-audience","persona-starter","export-personas","persona-intake","minimize","prepare-imports"}
 
 HELP={"merge":"Merge typed reader returns with authoritative captures","gate":"Regrade every claim and check the research process","plan":"Initialize and preflight the axes plan, acknowledgements and empty search ledger together","report-check":"Check report order, citations and statement mapping","export-audience":"Export an honest incomplete audience draft","persona-starter":"Write an authored-input starter of gated claim cards and diagnostics for synthetic persona hypotheses","export-personas":"Export authored synthetic persona/scenario hypotheses as a QA packet and ergo scenario skeletons","minimize":"Create an allowlisted loop projection"}
 HELP["persona-intake"]="기존 QA가 바로 읽을 수 있는 현재 페르소나 패킷과 시나리오 경로를 검증해 반환합니다."
+HELP["prepare-imports"]="Validate producer-reviewed native research and prepare import hashes without granting evidence support."
 
 
 def add_parser(commands):
@@ -18,7 +19,10 @@ def add_parser(commands):
         parser=commands.add_parser(name,help=HELP[name])
         parser.add_argument("--run",required=True)
         parser.add_argument("--lock-timeout",type=float,default=5)
-        if name=="merge":
+        if name=="prepare-imports":
+            parser.add_argument("--draft",type=Path,required=True,help="private ux-native-import-draft.v1 metadata with actual permission and review attestations")
+            parser.add_argument("--check-only",action="store_true",help="validate without writing prepared inputs or changing the research gate")
+        elif name=="merge":
             parser.add_argument("--manifest",type=Path,required=True);parser.add_argument("--acknowledgements",type=Path);parser.add_argument("--search-ledger",type=Path,required=True);parser.add_argument("--imports",type=Path);parser.add_argument("--returns",type=Path,nargs="+",required=True)
         elif name=="plan":
             parser.add_argument("--manifest",type=Path,required=True,help="a ux-research-axes.v1 draft; written to RUN/axes.json only when the whole plan validates");parser.add_argument("--acknowledgements",type=Path,help="a ux-axis-acknowledgements.v1 file; an empty one is created when omitted")
@@ -89,6 +93,9 @@ def execute(args,run):
                 raise EngineError("expired", "Retention deadline passed before manifest commit; purge and rerun.")
         store.validator=validate_publish
         try:
+            if args.command=="prepare-imports":
+                from .native_inputs import prepare
+                return prepare(args,run)
             if args.command=="merge":return merge_command(args,run,store)
             if args.command=="gate":return gate_command(args,run,store)
             if args.command=="plan":

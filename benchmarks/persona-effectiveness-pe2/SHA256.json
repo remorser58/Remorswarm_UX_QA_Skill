@@ -1,0 +1,12 @@
+{
+  "algorithm": "SHA256",
+  "files": {
+    "EVALUATOR.md": "3f53412784eaefddb0c80ce2f877d797206c2325da7615b8979263c24f5e3dd3",
+    "PRD.md": "583710b6dc0d394698582dfb40730bf6e682daaa30696bd530dc48328bfc70fe",
+    "app.js": "47c23fad0a5cfd5e9278f834cae62996693fabf80256f69a43768c7f40e1f048",
+    "harness.cjs": "6c1b1b91008cd467bb593f6c8e8c11aab0f9a5e36e4d2868dbfbdde21494ba79",
+    "index.html": "1cff379492aea22756582401dae19602abd1665ecf2a279074e69bf1f3b2dff8",
+    "run.cjs": "a036be4b13497b5a8fe490717d78330cbb89ec4f750b146bd3acae725bbc1f1a",
+    "tests/runner.test.cjs": "3b2addb7326f45b6562aee4d9c214f98b962c24e6eddda1ed22ab46ea7e5c2f2"
+  }
+}

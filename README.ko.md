@@ -15,30 +15,43 @@ Remorsearch(리모서치, *ree-mor-search*) UX QA는 어느 정도 완성된 제
 | **ergonomics**(실험적) | 시뮬레이션한 프로필로 도달, 터치, 지각, 시간과 배치를 선별 점검합니다. | 관련 시나리오. 모델 결과와 실제 기기·사람의 검증을 구분합니다. |
 | **loop** | 한도 안에서 수정, 현재 빌드 재실행, 회귀와 의도 보존 결과를 기록합니다. | 호스트의 브라우저·Figma 도구와 실제 실행 기록. 개선 요청에 포함된 권한을 로컬 수정 범위에 맞게 기록합니다. |
 
-제품 이해부터 수정·재검증까지 이어지는 호스트 에이전트 지침을 구현했습니다. CLI는 전달받은 근거를 검증하고 범위가 정해진 로컬 텍스트 패치를 적용합니다. 브라우저 조작, Figma 작업과 빌드 실행은 호스트가 수행합니다. 실제 제품에서 요청부터 개선 완료까지 이어지는 전체 실행은 별도 검증이 필요합니다. 기존 픽스처와 구성 요소 검사만으로 전체 실행을 검증했다고 주장하지 않습니다.
+제품 이해부터 수정·재검증까지 이어지는 호스트 에이전트 지침을 구현했습니다. CLI는 전달받은 근거를 검증하고 범위가 정해진 로컬 텍스트 패치를 적용하며, 검토된 단일 Python 어댑터로 소유 로컬 코어 과제를 실행할 수 있습니다. 브라우저 조작, Figma 작업과 빌드 실행은 호스트가 수행합니다. 실제 제품에서 요청부터 개선 완료까지 이어지는 전체 실행은 별도 검증이 필요합니다. 기존 픽스처와 구성 요소 검사만으로 전체 실행을 검증했다고 주장하지 않습니다.
 
 ## 설치
+
+배포본은 `main` 브랜치와 버전이 붙은 [GitHub Releases](https://github.com/remorser58/Remorswarm_UX_QA_Skill/releases)에 게시됩니다
+(이전 저장소 이름 `github.com/remorser58/Remorsearch_UX_QA_Skill`에서도 자동 리다이렉트됩니다).
 
 폴더 하나를 스킬 폴더에 복사합니다. 사용자 리서치에서 쓰는 insane-search 원문과
 참조 자료가 안에 들어 있으므로 검색 스킬을 따로 설치할 필요가 없습니다.
 Python 도구는 Python 3.10 이상에서 표준 라이브러리와 POSIX 파일 잠금을 사용합니다.
-macOS, Linux, Windows의 WSL에서 실행할 수 있습니다.
-
-현재 후보는 `codex/release-candidate-20261002` 브랜치에 있습니다.
-`main`에 병합되기 전까지 아래 브랜치로 설치합니다.
+macOS, Linux, Windows의 WSL에서 실행할 수 있습니다. 기본 `python3`가 더 낮으면(macOS 기본 Python은 3.9입니다) 호스트가 스킬 폴더에서 `python3 scripts/find_runtime.py`를 실행합니다. 지원되는 가장 높은 Python, Node.js 22 경로와 공백을 JSON으로 출력하며 아무것도 설치하지 않습니다.
 
 ```sh
-git clone --branch codex/release-candidate-20261002 https://github.com/remorser58/Remorsearch_UX_QA_Skill.git
+git clone https://github.com/remorser58/Remorswarm_UX_QA_Skill.git
 # Claude Code(개인용). 팀과 나누려면 프로젝트 안의 .claude/skills/에 복사합니다
 mkdir -p ~/.claude/skills
-cp -R Remorsearch_UX_QA_Skill/skills/remorsearch-ux-qa ~/.claude/skills/
+cp -R Remorswarm_UX_QA_Skill/skills/remorsearch-ux-qa ~/.claude/skills/
 # Codex
 mkdir -p ~/.codex/skills
-cp -R Remorsearch_UX_QA_Skill/skills/remorsearch-ux-qa ~/.codex/skills/
+cp -R Remorswarm_UX_QA_Skill/skills/remorsearch-ux-qa ~/.codex/skills/
+```
+
+### 자동 업데이트
+
+기존 설치본(`v1.1.0` 이전 복제본 포함)은 검증된 [GitHub Releases](https://github.com/remorser58/Remorswarm_UX_QA_Skill/releases)를 통해 SHA-256 무결성 검증, 타임스탬프 백업,
+로컬 수정 보호, `drivers/web/node_modules`·`.ux-*` 실행 상태 보존과 함께 한 줄로 설치·업데이트할 수 있습니다. 캐시된 업데이트 확인을 끄려면 `REMORSEARCH_NO_UPDATE_CHECK=1`을 설정합니다.
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/remorser58/Remorswarm_UX_QA_Skill/main/scripts/install.sh | bash -s -- --target claude --with-design-system
+python3 "$HOME/.claude/skills/remorsearch-ux-qa/scripts/update_skill.py" check
+python3 "$HOME/.claude/skills/remorsearch-ux-qa/scripts/update_skill.py" apply --with-design-system
 ```
 
 폴더를 복사하면 스킬 설치가 끝납니다. 유지보수용 패키징과 무결성 검사는
 [빌드와 배포 전 검사](docs/release.md)에 정리했습니다.
+선택적 동반 React 디자인 시스템 스킬도 함께 설치하려면 `skills/react-design-system/`을
+`skills/remorsearch-ux-qa/` 옆에 복사하거나 `https://github.com/remorser58/react-design-system-skill`에서 설치합니다.
 
 폴더에는 Python 도구, JSON 스키마, 시연용 예제, 실시간 웹 드라이버와 검색 원문,
 참조 자료, 출처 기록이 들어 있습니다.
@@ -57,6 +70,12 @@ Node.js 22를 쓰십시오. 고정된 Playwright 1.56.1에서는 Node.js 24.16 �
 
 ## 사용법
 
+저장된 페르소나의 정적 브라우저 여정과 대규모 실행 큐를 포함한 누적 개선은 `main` 브랜치에 반영되어 있습니다.
+기존 설치본을 직접 수정했다면 먼저 보존한 뒤 업데이트합니다.
+
+[재실행 검증 결과·남은 제한](docs/validation/persona-journey-replay-20261111.md)과
+[페르소나 저장·재사용·과업 실행 계약](skills/remorsearch-ux-qa/references/persona-qa/persona-library-swarm.md)을 확인할 수 있습니다.
+
 처음이어도 괜찮습니다. 평소 말투로 요청하거나, 스킬 이름을 불러서 시작하시면 됩니다.
 
 ```text
@@ -71,9 +90,47 @@ Node.js 22를 쓰십시오. 고정된 Playwright 1.56.1에서는 Node.js 24.16 �
 
 요청에 "간단히"가 있으면 가장 중요한 축만 돌립니다. "깊게"가 있으면 기본 축을 모두 돌립니다. "근거 붙여서"가 있으면 모든 주장에 출처 ID를 붙입니다. "간단히"가 다른 말과 함께 나오면 "간단히"를 따릅니다. 어느 경우에도 중단 규칙, 등급 규칙, 확인 표시는 그대로입니다([`overview.md`](skills/remorsearch-ux-qa/references/research/korea/overview.md) 4절).
 
-에이전트는 제품에서 주요 과업과 질문을 찾고, 관련 프로젝트 문서와 접근 가능한 의도 기록을 확인합니다. 확인한 결정은 수정 후에도 항목별로 점검합니다. 필수 접근 정보가 없거나 중요한 결정이 충돌하는 부분만 질문하고, 가능한 작업은 계속합니다. 하위 에이전트는 필요할 때 사용하며 별도의 모델 선택 절차를 시작 조건으로 요구하지 않습니다.
+에이전트는 제품에서 주요 과업과 질문을 찾고, 관련 프로젝트 문서와 접근 가능한 의도 기록을 확인합니다. 확인한 결정은 수정 후에도 항목별로 점검합니다. 필수 접근 정보가 없거나 중요한 결정이 충돌하는 부분만 질문하고, 가능한 작업은 계속합니다. 하위 에이전트는 필요할 때 사용하며 현재 세션의 모델을 그대로 씁니다. 모델을 직접 고르고 싶다고 말할 때만 묻습니다.
+
+요청은 URL이나 저장소 하나로 충분합니다. 에이전트는 먼저 실제로 도달한 과업의 범위를 정한 기준 평가를 작성합니다. 이 평가만으로도 쓸모가 있습니다. 그다음 평가에서 나온 질문만 조사하고, 수정이 정당할 때만 고쳐서 다시 실행합니다. 선택 출처나 도구가 없으면 해당 결과만 제한됩니다. loop 패킷을 만들 때는 호스트가 관찰한 사실을 쓰고 기계적인 필드를 `@auto`로 표시합니다. `python3 scripts/ux_loop.py fill DRAFT.json --evidence-root EVIDENCE [--workspace PRODUCT] --out packet.json`는 해시, 다이제스트, 실행 연결과 수정 리비전만 계산합니다. 맥락, 의도, 권한, 결과, 심각도는 채우지 않으며 거부되거나 유효하지 않은 결과는 승인이 아닙니다. 통과한 과업은 그 과업만 보여 주며 제품 전체 준비 상태나 실제 사용자 이점의 측정이 아닙니다.
 
 기본 조사 후보는 당근, 디시인사이드, 유튜브 댓글, X, 인스타그램, Threads(쓰레드)입니다. 관찰한 과업에 맞는 곳을 선택하며 매번 모두 수집하지는 않습니다. 현재 접근 가능성이나 수집 성공도 보장하지 않습니다. 후보 URL을 찾은 뒤 포함된 insane-search 방법을 사용하되 기존 접근·근거 규칙을 따릅니다. [실행 안내](skills/remorsearch-ux-qa/references/loop/product-improvement.md)에 제품 탐색부터 재검증까지의 절차와 plan·bundle·loop 명령을 정리했습니다.
+
+### 목표를 말하면 현재 QA 결과까지 연결
+
+여러 작은 모델로 수십~수백 페르소나를 실행하는 경로는 [대규모 큐 안내](skills/remorsearch-ux-qa/references/persona-qa/scale-run.md)에 연결했습니다. 호스트가 저장된 현재 프로필과 도구를 준비하고 세션 수·전송 대상·동시 요청·최대 비용을 먼저 보여 줍니다. 유료 실행은 그 계획에 대한 명시적 승인 후 시작하며 일시정지·재개는 저장된 응답과 예산을 유지합니다. 응답이 불확실한 요청을 자동 반복하지 않습니다. [이번 검증 기록](docs/validation/scalable-swarm-results-20261113.md)은 모의 확장 시험과 실제 모델 미검증 범위를 구분합니다.
+
+대상 폴더와 확인할 사용자 목표를 평소 말투로 전달합니다. 호스트가 필요한 코드·기존 페르소나·실행 경로를 검토하므로 사용자가 복사 목록, JSON, 해시, lease를 작성할 필요가 없습니다. `start`로 준비한 새 작업공간에서 검토된 소유 단일 Python 어댑터가 있으면 `run`이 실제 코어 과제를 실행하고 관측을 기존 receipt 검증과 MD/JSON 보고서에 연결합니다. 이후 `status` 또는 같은 `start`로 목표별 실패, 미실행 조건, 정확한 페르소나 버전, 근거와 다음 행동을 확인합니다.
+
+지원 범위는 현재 PRD에 연결된 기존 가설 또는 검토한 연구 기반 합성 페르소나와 소유 로컬 어댑터입니다. 호스트가 정확한 연구 위치를 확인하면 현재 게이트·출처/캡처 보존·동기 근거 검증을 거쳐 같은 실행과 보고에 연결합니다. 원본 연구는 정리·복사·권한 변경 없이 읽습니다. 범용 브라우저·서비스 연결이나 OS·네트워크 샌드박스가 아닙니다. 페르소나를 자동 생성하거나 차단된 연구를 PRD 가설로 낮춰 재사용하지 않습니다. 원본·Library가 바뀌면 재사용을 막고, 중단된 실행 여부가 불확실하면 자동 재실행하지 않으며, 저장된 결과는 새 시도 없이 읽어 복구합니다. 코어 관측만으로 전체 통과, 실제 UI 관측 또는 실사용자 효과를 만들지 않습니다. 기존 저장된 실험 기준선은 이 경로로 초기화할 수 없습니다.
+
+[진입 안내](skills/remorsearch-ux-qa/references/persona-qa/start.md), [호스트 실행 계약](skills/remorsearch-ux-qa/references/persona-qa/local-run.md), [사전 기준](docs/validation/journey-run-protocol-20261112.md), [검증 결과](docs/validation/journey-run-results-20261112.md)에 범위와 복구 절차를 기록합니다. 설치물의 `examples/journey/run_fixture.py`는 알려진 결함이 있는 합성 진단이며 실제 사용자 연구가 아닙니다. 추출 배포물 검사에서도 실행하고, 진단 소프트웨어 검사 성공과 대상 과제의 실패·보류 판정을 구분합니다.
+
+추가 [swarm 증거 감사 기준](docs/validation/swarm-evidence-audit-protocol-20261112.md)과 [검증 결과](docs/validation/swarm-evidence-audit-results-20261112.md)는 receipt/실행 로그 재대조, 페르소나 간 중복·상충 관측 표시, 결정적 일관성 검사와 독립 검토의 차이를 설명합니다.
+
+### 검토한 정적 브라우저 여정 실행
+
+별도의 검토된 정적 브라우저 계획은 같은 저장 페르소나를 기존 Playwright 측정 드라이버에 연결합니다. 호스트가 실제 소스와 사용자 목표에서 행동·checkpoint를 구성하고, 소유 headless Chromium이 입력 보존·완료·복구를 관측합니다. 현재 과업·빌드·페르소나, native 로그와 PNG를 기존 receipt·감사에서 대조합니다. 앞선 실패는 나중 복구로 지워지지 않으며, 화면 밖·가림·미방문 조건은 미관측으로 남깁니다. 완료 재조회는 브라우저를 실행하거나 시도를 추가하지 않습니다.
+
+지원 대상은 검토한 소유 정적 파일과 합성 입력입니다. 임의 제품 URL·backend·계정·사용자 브라우저는 지원하지 않습니다. 선택 과업이 통과해도 `real_user_evidence`·`product_ready`는 거짓입니다. 설치물의 브라우저 진단은 알려진 입력 손실 경로와 정상 대조 경로로 실패 1·통과 1을 기대하며 제품 준비 완료를 뜻하지 않습니다. [브라우저 실행 계약](skills/remorsearch-ux-qa/references/persona-qa/browser-run.md), [사전 기준](docs/validation/browser-journey-protocol-20261112.md), [검증 기록](docs/validation/browser-journey-results-20261112.md)에 범위와 실제 결과를 기록합니다.
+
+### 조사 페르소나를 다음 QA에 보관
+
+현재 실행 보고서에는 주장·출처 ID, 게이트 상태, 정확한 페르소나 버전·내보내기 지문이 실제 제품 관측과 구분되어 연결됩니다. [연구 재사용 사전 기준](docs/validation/research-journey-protocol-20261112.md)과 [연구 재사용 검증](docs/validation/research-journey-results-20261112.md)을 참고합니다. 추출본의 `--research` 진단은 소유한 가상 자료로 로컬 계약을 검증하며, 기존 공개 파일럿의 재수집이나 출처 진위 검증이 아닙니다.
+
+호스트는 `ux_personas.py import-research`로 현재 검증된 연구 내보내기를 영속 라이브러리에 직접 연결합니다. PRD 인용과 페르소나 ID 연결을 준비하면 행동·예상 결정·반증 기준·가정·미확인을 다시 작성하지 않고 보존합니다. 동일 재시도는 버전을 늘리지 않고, 기존 내용을 바꾸려면 확인한 현재 버전을 명시합니다. 과업이나 실행 결과를 자동으로 만들지는 않습니다. [가져오기 계약](skills/remorsearch-ux-qa/references/persona-qa/persona-library-swarm.md#13-import-a-current-research-export-into-the-library)과 [공개 근거 파일럿](docs/validation/public-evidence-pilot-20261111.md)에 실제 수집·합성 가설·CLI 검증·실사용자 UX 근거의 차이를 기록했습니다.
+
+### 다음 빌드에서 같은 여정 재사용
+
+기준 실행의 모든 과업에 유효한 통과·실패 관찰이 있으면 호스트가 스킬 폴더에서 다음 실행을 준비합니다. 페르소나·과업·판정 기준·PRD 의무 연결 JSON을 다시 작성할 필요가 없습니다.
+
+```sh
+python3 scripts/ux_personas.py replay --library LIBRARY --baseline BEFORE_RUN --run AFTER_RUN --build-id build-2 --artifact build-2.bin --isolation-id fixture-v2 --confirm-starting-state --confirm-isolation
+```
+
+출력에는 격리 자료의 배정과 다음 claim·관찰 초안·record·report·compare 명령이 나옵니다. 현재 근거와 정확한 페르소나 버전·검토된 여정을 유지하면서 내용이 바뀐 빌드의 미실행 과업을 준비합니다. 과거 결과나 권한을 복사하거나 작업자를 실행하지 않습니다. 실제 행동과 새 관찰은 호스트가 수행합니다. 같은 기준 실행·후보 빌드의 재호출은 기존 목적지를 유지하며 진행 중·불확실한 기준 작업은 원래 실행·점검 절차를 따라야 합니다. 격리·재시작·근거의 범위는 [재실행 계약](skills/remorsearch-ux-qa/references/persona-qa/persona-library-swarm.md#12-prepare-the-next-build-without-rewriting-the-journey-plan)에 정리했습니다.
+
+여정 결과는 분리한 같은 입력 사본을 검증·저장하고, 근거 검사와 직렬화가 끝난 뒤 원자적 저장 직전에 원래 lease를 다시 확인합니다. 늦은 결과는 실행 상태·근거를 보존하여 명시적 점검·복구로 연결합니다.
 
 ## 근거 규칙
 
@@ -131,21 +188,28 @@ research와 persona-qa는 계정 없이 누구나 읽을 수 있는 것만 읽�
 ## 저장소 구성
 
 ```text
+VERSION                      배포 버전 단일 출처
+scripts/install.sh           원커맨드 릴리즈 설치·업데이트 스크립트
+scripts/build_release_assets.py 릴리즈 ZIP·매니페스트 빌더
 skills/remorsearch-ux-qa/    설치하는 스킬(이 폴더를 복사함)
+  VERSION                    설치된 스킬 버전
   SKILL.md                   진입점: 모드, 공통 규칙, 도구
   references/                모드별 흐름과 참고 문서
     research/korea/          한국 리서치 팩(한국어): 플랫폼 지도, 검색어, 표지, 통계, 법령 점검표, 보고서 틀
     persona-qa/kwcag-2.2.md  KWCAG 2.2와 WCAG 2.2 노트(한국어)
-  scripts/                   CLI: validate_bundle, ux_loop, ux_research, ergo_qa, 벤치마크
+  scripts/                   CLI: validate_bundle, ux_loop, ux_research, ergo_qa, update_skill, 벤치마크
   uxloop/ uxresearch/        loop CLI와 공개 페이지 reader의 Python 패키지
   ergoqa/ schemas/           인체공학 패키지와 CLI가 쓰는 JSON 스키마
   drivers/web/               실시간 Playwright 드라이버(Node.js)
   examples/loop/             loop CLI용 합성 시연 예제
+skills/react-design-system/  React + Vite 디자인 시스템, Base UI, Motion, Storybook, Safe Area, TanStack/Zustand/ky 동반 스킬
 tests/                       단위 테스트와 픽스처
 benchmarks/                  정답이 있는 블라인드 벤치마크
 docs/                        설계 노트, 인체공학 연구, 검증 기록
 README.md, README.ko.md      이 문서의 영어판과 한국어판
 ```
+
+동반 스킬: [react-design-system](skills/react-design-system/SKILL.md) (단독 저장소: [react-design-system-skill](https://github.com/remorser58/react-design-system-skill)).
 
 ## 개발
 
@@ -168,6 +232,10 @@ Python 3.10 이상과 고정된 웹 드라이버 의존성을 준비한 뒤 배�
 ```sh
 python3 scripts/check_release.py --output dist/release-check
 ```
+
+[2026-11-11 통제 UX 비교](docs/validation/experiments/persona-workflow-20261111/README.md)에서는 두 조건 모두 같은 결함 3개를 찾았지만, 페르소나 조건의 연결이 끊겨 비교가 미완료로 끝났습니다. 완전한 동률이나 우위를 입증한 결과가 아닙니다. 저장·재사용 과정과 공백, 최소화한 실행 근거를 기록했습니다. [후속 벤치마크 실행기](benchmarks/persona-effectiveness/RUNNING.md)로 로컬 재현을 준비할 수 있습니다. 공개된 사례는 개발용이며 새 비공개 평가 근거가 아닙니다.
+
+[사전 고정한 PE-2 비교](docs/validation/experiments/persona-workflow-pe2-20261111/README.md)는 두 조건 모두 예산 안에 6개 사례를 완료했고, 같은 결함 3개와 정상 대조군 오탐 0개를 확인했습니다. 이 제한된 동률은 우위·실제 사용자 효과·동일 검사 범위를 뜻하지 않습니다.
 
 ## 한계
 

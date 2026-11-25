@@ -33,6 +33,8 @@ def _issue(code, location, reason, next_step):
 
 
 def _source_safe(source):
+    if source.get("source_family") == "none" or source.get("source_type") in {"synthetic", "llm_output"}:
+        return "synthetic or unfit source"
     if source.get("research_tombstone") or source.get("retention_status") in UNSAFE_RETENTION:
         return "withdrawn or deleted source"
     access = source.get("access") or {}
@@ -64,6 +66,18 @@ def _url_issue(url, location):
     return None
 
 
+def _virtual_person_safe(target, kind, capture_ref, decisions, inherited=()):
+    """Use the gate-validated, exact-capture decisions, never an aggregate pass."""
+    flags = {x["id"] for x in target.get("flags", {}).get("virtual_person_hits", [])}
+    reviews = [d for d in decisions if d["kind"] == "virtual_person"
+               and d["target_kind"] == kind and d["target_id"] == target["id"]
+               and d["capture_ref"] == capture_ref]
+    cleared = {fid for d in reviews if d["outcome"] == "not_confirmed" for fid in d["flag_ids"]}
+    # merge copies capture flags into excerpts. The source check already
+    # requires its own exact-capture review; only excerpt-local flags add work.
+    return not (flags - set(inherited) - cleared) and not any(d["outcome"] == "confirmed" for d in reviews)
+
+
 def claim_cards(bundle, gate):
     """One honest card per gated claim: status, counter outcome and exportability."""
     rows = {x["claim_id"]: x for x in gate["claims"]}
@@ -79,11 +93,25 @@ def claim_cards(bundle, gate):
                            for e in claim.get(key, [])} | set(counter.get("counter_evidence_ids", [])))
         source_ids = sorted({evidence_map[e]["source_id"] for e in evidence if e in evidence_map}
                             | set(counter.get("read_source_ids", [])))
+        # Correcting a claim can remove all support while retaining its counters.
+        # A counter (even one also labelled as context/support) is not motivation.
+        counter_ids = (set(claim.get("counter_evidence_ids", []))
+                       | set(counter.get("counter_evidence_ids", []))
+                       | set(row.get("counter_evidence_ids", []) if row else []))
+        counting = sorted(set(row["counting_evidence_ids"]) - counter_ids) if row else []
+        context = sorted(set(row["context_evidence_ids"]) - counter_ids) if row else []
+        motivation_ids = set(counting) | set(context)
         blocked = None
         if row is None:
             blocked = "claim is absent from the current gate"
         elif row["status"] in BLOCKED_STATUS:
             blocked = f"gate status {row['status']} (unfit material cannot motivate personas)"
+        elif not motivation_ids:
+            blocked = "no non-counter counting or context evidence in the current gate"
+        elif not motivation_ids <= evidence_map.keys():
+            blocked = "missing motivation evidence reference"
+        elif any(g["final_grade"] == "E" for g in row.get("grades", [])):
+            blocked = "unfit evidence cannot motivate personas, including in mixed claims"
         else:
             for sid in source_ids:
                 source = sources.get(sid)
@@ -97,24 +125,34 @@ def claim_cards(bundle, gate):
                     blocked = "missing evidence reference"
                     break
                 src = capture_source(sources[ev["source_id"]], ev)
-                if _source_safe(src) or not _injection_safe(sources[ev["source_id"]], "source", ev.get("capture_ref"), decisions) or not _injection_safe(src, "source", ev.get("capture_ref"), decisions) or not _injection_safe(ev, "evidence", ev.get("capture_ref"), decisions):
-                    blocked = "stopped, withdrawn or unresolved injection-flagged capture"
+                if eid in motivation_ids and ev.get("epistemic_status") != "observed":
+                    blocked = "motivation evidence is inferred or unknown, not an observed source"
+                    break
+                targets = ((sources[ev["source_id"]], "source"), (src, "source"), (ev, "evidence"))
+                if _source_safe(src) or any(
+                        not _injection_safe(target, kind, ev.get("capture_ref"), decisions)
+                        or not _virtual_person_safe(target, kind, ev.get("capture_ref"), decisions,
+                            inherited={flag["id"] for flag in src.get("flags", {}).get("virtual_person_hits", [])}
+                            if kind == "evidence" else ())
+                        for target, kind in targets):
+                    blocked = "unsafe, synthetic or unresolved flagged capture"
                     break
             if blocked is None:
                 for sid in counter.get("read_source_ids", []):
                     src = sources[sid]
-                    if src.get("flags", {}).get("injection_flags") and not src.get("captures"):
+                    if (any(src.get("flags", {}).get(key) for key in ("injection_flags", "virtual_person_hits"))
+                            and not src.get("captures")):
                         blocked = "unsafe counter-search source"
                         break
                     for cap in src.get("captures", []):
                         view = {**src, **cap["metadata"]}
-                        if _source_safe(view) or not _injection_safe(view, "source", cap["capture_ref"], decisions):
+                        if (_source_safe(view)
+                                or not _injection_safe(view, "source", cap["capture_ref"], decisions)
+                                or not _virtual_person_safe(view, "source", cap["capture_ref"], decisions)):
                             blocked = "unsafe counter-search capture"
                             break
                     if blocked:
                         break
-            if blocked is None and not evidence:
-                blocked = "no counting or context evidence in the gated bundle"
             if blocked is None and privacy_scan([claim["statement"], counter.get("summary")]):
                 blocked = "claim text contains personal identifier patterns"
         if blocked:
@@ -127,10 +165,10 @@ def claim_cards(bundle, gate):
                           counter_search_required=row["counter_search_required"],
                           counter_outcome=counter.get("outcome"), counter_summary=counter.get("summary"),
                           counter_call_ids=list(counter.get("call_ids", [])),
-                          counter_evidence_ids=sorted(claim.get("counter_evidence_ids", [])),
+                          counter_evidence_ids=sorted(counter_ids),
                           counter_source_ids=sorted(counter.get("read_source_ids", [])),
-                          counting_evidence_ids=sorted(row["counting_evidence_ids"]),
-                          context_evidence_ids=sorted(row["context_evidence_ids"]),
+                          counting_evidence_ids=counting,
+                          context_evidence_ids=context,
                           source_ids=source_ids, exportable=True, blocked_reason=None))
     return cards
 

@@ -1,0 +1,186 @@
+{
+  "schema_version": "ux-controls-validation-receipt.v1",
+  "date_kst": "2026-11-19",
+  "implementation_revision": "4fb693d51f597aa811d6925f58d5285771609445",
+  "branch": "rem/ux-product-controls-20261119",
+  "published_base_revision": "f60d79d3c31aff57a51d82ab041cb68da1fb2ff0",
+  "latest_separate_worktree": {
+    "path": "/remorsearch-ux-qa/.worktrees/peekly-ux-findings-20261113/.worktrees/peekly-verdict-quality-20261113",
+    "revision": "982958e9f1fbbe2c058f9b6d8b8147add7565d1a",
+    "clean": true,
+    "ahead_local_tracking": 46,
+    "read_only_patch_check_exit_code": 0,
+    "integration_execution": false
+  },
+  "command": "PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_release.py --skip-web --output dist/ux-controls-20261119-final",
+  "exit_code": 1,
+  "validation_inputs_stable": true,
+  "unit_tests": {
+    "total": 1947,
+    "run_not_skipped": 1926,
+    "skipped": 21,
+    "failures": 0,
+    "errors": 0,
+    "seconds": 299.669,
+    "unclosed_database_warning_lines": 88,
+    "warning_allocation_origins_fully_traced": false
+  },
+  "release": {
+    "schema_version": "remorsearch-release-check.v1",
+    "ready": false,
+    "published": false,
+    "python": "3.15.2",
+    "checks": [
+      {
+        "name": "unit-tests",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 300.44,
+        "log": "logs/unit-tests.log"
+      },
+      {
+        "name": "release-files",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 0.03,
+        "log": "logs/release-files.log"
+      },
+      {
+        "name": "bundle-build",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 0.12,
+        "log": "logs/bundle-build.log"
+      },
+      {
+        "name": "bundle-integrity",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 0.07,
+        "log": "logs/bundle-integrity.log"
+      },
+      {
+        "name": "extracted-integrity",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 0.06,
+        "log": "logs/extracted-integrity.log"
+      },
+      {
+        "name": "extracted-runtime-discovery",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 0.13,
+        "log": "logs/extracted-runtime-discovery.log"
+      },
+      {
+        "name": "extracted-research-help",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 0.17,
+        "log": "logs/extracted-research-help.log"
+      },
+      {
+        "name": "extracted-search-source",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 0.06,
+        "log": "logs/extracted-search-source.log"
+      },
+      {
+        "name": "extracted-search-method",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 0.07,
+        "log": "logs/extracted-search-method.log"
+      },
+      {
+        "name": "search-method-body",
+        "passed": true,
+        "reason": "A linked platform method body, including its command, is readable"
+      },
+      {
+        "name": "extracted-smoke",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 1.68,
+        "log": "logs/extracted-smoke.log"
+      },
+      {
+        "name": "extracted-local-journey",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 0.94,
+        "log": "logs/extracted-local-journey.log"
+      },
+      {
+        "name": "extracted-research-journey",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 2.74,
+        "log": "logs/extracted-research-journey.log"
+      },
+      {
+        "name": "extracted-swarm-help",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 0.21,
+        "log": "logs/extracted-swarm-help.log"
+      },
+      {
+        "name": "extracted-scale-fixture",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 1.81,
+        "log": "logs/extracted-scale-fixture.log"
+      },
+      {
+        "name": "extracted-swarm-status",
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 0.22,
+        "log": "logs/extracted-swarm-status.log"
+      },
+      {
+        "name": "web-driver",
+        "passed": false,
+        "skipped": true,
+        "reason": "--skip-web requested; release validation is incomplete"
+      },
+      {
+        "name": "current-source-match",
+        "passed": true,
+        "reason": "Candidate matches current inputs"
+      },
+      {
+        "name": "validation-inputs-stable",
+        "passed": true,
+        "reason": "Validation source inputs remained unchanged",
+        "added": [],
+        "removed": [],
+        "changed": []
+      }
+    ],
+    "scope": "Package integrity and local synthetic regression tests; not live research or certification"
+  },
+  "hashes": {
+    "dist/ux-controls-20261119-final/validation.json": "11992aed9229894b7716eeb9aa6ab761e4d26b3f9ba9b3548720bb8b21334b35",
+    "dist/ux-controls-20261119-final/logs/unit-tests.log": "cc4cc9b63b9e25f6824d15e1c100983d4a095f26398a333a706f6b30a6b429ab",
+    ".ux-loop/ux-controls-projection-benchmark-v2.json": "d392ac21409fe3be11bc05b3b1b3eec249534454de3e5494a3682e9caeb79d36",
+    "skills/remorsearch-ux-qa/uxpersonas/product_controls.py": "665cce0b54d810556ca496f8ed2f15dba104eb86ea10835e3a2c637d5e16b5b2"
+  },
+  "scope": {
+    "new_live_model_calls": 0,
+    "browser_execution": false,
+    "actual_host_dialog_rendered": false,
+    "actual_hand_image_analysis": false,
+    "actual_human_benefit_measured": false,
+    "multi_file_atomic_rollback_supported": false,
+    "deleted_original_metadata_restore_supported": false,
+    "computed_css_isolation_verified": false,
+    "cohort_all_queues_independently_reread_this_turn": false,
+    "cohort_all_artifacts_independently_rehashed_this_turn": false,
+    "original_uncertain_outcomes_not_resubmitted": 7
+  },
+  "artifact_note": "This receipt and the report/benchmark are added after validation as a documentation-only commit; implementation source remains at the stated revision. Git branch push is separate from release.published."
+}

@@ -1,0 +1,216 @@
+{
+  "schema_version": "remorsearch.swarm-evidence-audit-verification.v1",
+  "date": "2026-11-12",
+  "branch": "rem/swarm-evidence-audit-20261112",
+  "base": {
+    "branch": "rem/research-journey-20261112",
+    "sha": "3074f5089e0fdd22db932709370211656c90b3eb",
+    "remote_matched_before_edit": true,
+    "parent_of_new_commit": "3074f5089e0fdd22db932709370211656c90b3eb"
+  },
+  "gap": {
+    "summary": "Per-task receipts were checked, but the final report did not independently reconcile stored execution logs against receipts or identify duplicate/contradictory observations for the same PRD obligation across personas.",
+    "red_reproduction": {
+      "test": "test_multi_persona_report_exposes_a_separate_swarm_evidence_audit",
+      "result": "failed_as_expected_before_implementation",
+      "error": "KeyError: evidence_audit",
+      "scope": "Historical recorded failure; not reproduced during handover."
+    }
+  },
+  "implementation": {
+    "module": "skills/remorsearch-ux-qa/uxpersonas/local_run.py",
+    "audit_basis": "deterministic_receipt_and_cross_persona_audit",
+    "read_only": true,
+    "rechecks": [
+      "bounded execution-log read and exact artifact digest",
+      "log schema and attempt/operation/build/persona binding",
+      "execution-log diagnostic shape and completion; not dispatch-journal diagnostic equality",
+      "stored observation versus receipt steps and criteria",
+      "same requirement/obligation/description/criterion references/exclusion mapping across tasks",
+      "duplicate observation fingerprints",
+      "contradictory passed/failed outcomes",
+      "missing and not_run obligations"
+    ],
+    "independent_reviewer": false,
+    "model_or_api_used": false,
+    "new_dependencies": false,
+    "changes_to_original_receipts": false,
+    "changes_to_persona_library": false,
+    "automatic_replay": false
+  },
+  "focused_tests": {
+    "scope": "Recorded implementation-time runs; only the journey module was rerun during handover.",
+    "new_test_methods": 5,
+    "test_journey_run": {"passed": 39, "failed": 0},
+    "test_persona_swarm": {"passed": 29, "failed": 0},
+    "test_persona_receipt_admission": {"passed": 17, "failed": 0},
+    "test_persona_comparison": {"passed": 21, "failed": 0},
+    "test_persona_replay": {"passed": 37, "failed": 0},
+    "test_research_journey": {"passed": 28, "failed": 0},
+    "new_regressions": [
+      "missing swarm audit is exposed",
+      "normal multi-persona run reports a consistent audit",
+      "identical observations are not double-counted",
+      "contradictory pass/fail outcomes remain unresolved",
+      "same obligation ID with different criterion mapping is not conflated",
+      "artifact hash cannot hide observation/receipt disagreement"
+    ]
+  },
+  "full_release": {
+    "scope": "Preserved historical acceptance run; not rerun during handover.",
+    "command": "python3 scripts/check_release.py --skip-web --output .ux-loop/validation/swarm-evidence-audit-20261112/release-final3",
+    "validation_json_sha256": "0e808003e1ffb9e802581f345b3e7538f27a1120b423bd7077f75a89928631a5",
+    "unit_tests_log_sha256": "9c7c80447ab1c125b5065a8a9a48fdf871fca6082f33362ce58aeaaf2a507259",
+    "ready": false,
+    "published": false,
+    "checks": {"passed": 15, "skipped": 1, "failed": 0},
+    "unit_tests": {"run": 1402, "passed": 1401, "skipped": 1, "failed": 0, "runner_seconds": 167.361, "elapsed_seconds": 167.83},
+    "release_files": true,
+    "bundle_build": true,
+    "bundle_integrity": true,
+    "extracted_integrity": true,
+    "extracted_runtime_discovery": true,
+    "extracted_research_help": true,
+    "extracted_search_source": true,
+    "extracted_search_method": true,
+    "extracted_smoke": true,
+    "extracted_local_journey": true,
+    "extracted_research_journey": true,
+    "web_driver": {"skipped": true, "reason": "--skip-web"},
+    "current_source_match": true,
+    "source_match_scope": "At the historical run and handover before documentation corrections; the two verification documents changed afterward.",
+    "validation_inputs_stable": true
+  },
+  "intermediate_release_regression": {
+    "check": "test_the_same_pages_are_linked",
+    "failure": "New English README validation links were not yet mirrored in README.ko.md.",
+    "resolution": "Added the matching Korean links and reran the full release check; only the final run is accepted."
+  },
+  "extracted_diagnostics": {
+    "scope": "Preserved release-final3 diagnostics and reports; read during handover without re-execution.",
+    "local_journey": {
+      "diagnostic_checks_passed": true,
+      "product_qa_passed": false,
+      "counts": {"passed": 0, "failed": 1, "inconclusive": 1, "pending": 0, "running": 0, "blocked": 0, "skipped": 0},
+      "ui_observed": false,
+      "real_user_evidence": false,
+      "original_library_unchanged": true,
+      "log_sha256": "a11e36c878c50fa166df454995bccdea66a6654690ed450aa1eb268094830c14"
+    },
+    "research_journey": {
+      "diagnostic_checks_passed": true,
+      "product_qa_passed": false,
+      "counts": {"passed": 0, "failed": 1, "inconclusive": 1, "pending": 0, "running": 0, "blocked": 0, "skipped": 0},
+      "ui_observed": false,
+      "real_user_evidence": false,
+      "actual_public_acquisition": false,
+      "original_library_unchanged": true,
+      "original_research_unchanged": true,
+      "log_sha256": "c4e67304f21f793a9ad4086ce4113f1fff430b7baf2ddca7d5018a545011b689"
+    },
+    "both_reports": {
+      "audit_basis": "deterministic_receipt_and_cross_persona_audit",
+      "integrity": "consistent",
+      "receipts_checked": 2,
+      "obligations": {"declared": 4, "observed": 1, "incomplete": 2, "excluded": 0, "distinct_observations": 2, "duplicated": 0, "conflicted": 0, "definition_conflicts": 1},
+      "markdown_audit_section": true
+    }
+  },
+  "package": {
+    "files": 250,
+    "file_count_excludes_manifest": true,
+    "source_release_files": 248,
+    "payload_sha256": "714af7f5838fd501501a2916a3db112f64aa868be987b0fe0588de571cd9b199",
+    "manifest_sha256": "b23535bda9294fb24e51787710f857bf84b24de0481c0a3132d82636021fa545",
+    "archive_sha256": "93f65aa76bb929ed0f90a3896d0b8e02712b1b4eca8ab0167121598f5b47794a",
+    "bundle_build": true,
+    "bundle_integrity": true,
+    "extracted_integrity": true
+  },
+  "mac_measurement": {
+    "scope": "Historical release-final3 measurement, not a new handover performance run.",
+    "os": "27.2",
+    "architecture": "arm64",
+    "logical_cpus": 14,
+    "ram_bytes": 38654705664,
+    "python": "3.14.7",
+    "elapsed_seconds": 174.81,
+    "user_seconds": 124.28,
+    "system_seconds": 22.84,
+    "max_rss_bytes": 155254784,
+    "time_log_sha256": "bd3ab12304072603c3b8dc2107ca9ae71406a51539369c364833ca7dd2b048a1",
+    "disk_free_at_check": "approximately 24 GiB",
+    "browser_launched": false
+  },
+  "validation_artifacts": {
+    "output_root": ".ux-loop/validation/swarm-evidence-audit-20261112/release-final3",
+    "source_snapshot_includes_pre_handover_docs": true,
+    "source_inputs_matched_before_document_corrections": 699,
+    "post_handover_document_corrections": [
+      "docs/validation/swarm-evidence-audit-results-20261112.md",
+      "docs/validation/swarm-evidence-audit-verification.json"
+    ],
+    "full_release_rerun_at_handover": false
+  },
+  "earlier_release": {
+    "output_root": ".ux-loop/validation/swarm-evidence-audit-20261112/release-final",
+    "scope": "Preserved earlier run; predates the final PRD/README changes and two verification documents.",
+    "validation_json_sha256": "786e596fe61d43c3dbb3e1c24319a338d0bf3f64a1b5b89e67b3781419be728c",
+    "unit_tests_log_sha256": "c4823ba00bac798f68a7a00f82ed83ee1646ae8ae509d1306e3905488dffb8ed",
+    "unit_tests": {"run": 1402, "passed": 1401, "skipped": 1, "failed": 0, "runner_seconds": 166.205, "elapsed_seconds": 166.7},
+    "measurement": {"elapsed_seconds": 174.04, "user_seconds": 123.84, "system_seconds": 22.54, "max_rss_bytes": 160923648},
+    "time_log_sha256": "fab53ec843d80a72b060c9fad6e4e9c5d85131ef277987fac707837da62f2709",
+    "local_journey_log_sha256": "0122e6e0041027bb6b6ae9bf64c3d06257cf97bc93e649ff554860af7cd0fab4",
+    "research_journey_log_sha256": "169d10322b78dacf4caf295c92d28c06f7fdfd2e298682c305b837687fb7b01a"
+  },
+  "handover": {
+    "date": "2026-11-12",
+    "evidence_directory": ".ux-loop/validation/swarm-evidence-audit-20261112/handover-20261112T024931Z",
+    "takeover_observations_utc": ["2026-11-12T02:41:01.834007+00:00", "2026-11-12T02:42:55.261025+00:00", "2026-11-12T02:47:59.840914+00:00"],
+    "initial_observation_interval_seconds": 113.431936333,
+    "changed_files": 9,
+    "mtime_and_sha256_stable": true,
+    "non_inspection_processes_found": 0,
+    "open_changed_files_found": 0,
+    "git_locks_found": false,
+    "runtime_and_tests_modified": false,
+    "source_inputs_matched_before_document_corrections": 699,
+    "journey_tests": {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -p test_journey_run.py",
+      "run": 39, "passed": 39, "skipped": 0, "failed": 0, "exit_code": 0,
+      "runner_seconds": 6.026, "wall_seconds": 6.234149,
+      "log": "journey-tests.log",
+      "log_sha256": "5b5108fdfd6e0f0a7eab15b11fa3e7efea0c4df536fecaa5b24d61692f9ecc6e"
+    },
+    "existing_package_checks": [
+      {"command": "python3 -B scripts/build_insane_search_bundle.py --verify .ux-loop/validation/swarm-evidence-audit-20261112/release-final3/bundle", "exit_code": 0, "files": 250, "log": "existing-bundle-integrity.log", "log_sha256": "29c27c3c68f8f31c8459fc0347ffdda9d0dd4235faf998c1ae9872f99066a01c"},
+      {"command": "python3 -B scripts/build_insane_search_bundle.py --verify .ux-loop/validation/swarm-evidence-audit-20261112/release-final3/extracted/remorsearch-ux-qa", "exit_code": 0, "files": 250, "log": "existing-extracted-integrity.log", "log_sha256": "29c27c3c68f8f31c8459fc0347ffdda9d0dd4235faf998c1ae9872f99066a01c"}
+    ],
+    "documentation_checks": {
+      "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=tests python3 -m unittest test_skill_packaging.ReadmeParityTests.test_the_same_pages_are_linked test_skill_packaging.ReadmeParityTests.test_local_links_resolve",
+      "run": 2, "passed": 2, "skipped": 0, "failed": 0, "exit_code": 0,
+      "runner_seconds": 0.001,
+      "log": "readme-checks.log",
+      "log_sha256": "fe008aab760eb03ccac7578e2b84665b1b50b0d7f855b17a0c7a8d039435b658",
+      "md_json_log_consistency": true,
+      "runtime_and_tests_match_historical_run": true,
+      "source_snapshot_files": 699
+    },
+    "new_worktree": false,
+    "new_build": false,
+    "new_extraction": false,
+    "full_release_reexecuted": false,
+    "extracted_journeys_reexecuted": false,
+    "real_user_or_browser_validation": false
+  },
+  "not_performed": [
+    "real user research or public-source acquisition",
+    "browser/Chrome/extension/previous tab interaction",
+    "Peekly product modifications",
+    "service account, credentials or personal data transmission",
+    "Codex CLI, API or model quota",
+    "keyboard or clipboard interaction",
+    "deployment or installed-skill replacement"
+  ],
+  "evidence_boundary": "All added journey executions use owned synthetic fixtures and invented/offline research contracts. A consistent audit proves internal linkage only; it is not independent human/model adjudication or real product/user acceptance."
+}

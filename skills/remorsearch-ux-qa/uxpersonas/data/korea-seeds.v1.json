@@ -1,0 +1,372 @@
+{
+  "schema_version": "ux-korea-seeds.v1",
+  "dataset": "nvidia/Nemotron-Personas-Korea",
+  "license": "CC-BY-4.0",
+  "license_url": "https://creativecommons.org/licenses/by/4.0/",
+  "attribution": "NVIDIA Corporation, Nemotron-Personas-Korea (2026)",
+  "source_url": "https://huggingface.co/datasets/nvidia/Nemotron-Personas-Korea",
+  "retrieval": {
+    "url": "https://datasets-server.huggingface.co/rows?dataset=nvidia%2FNemotron-Personas-Korea&config=default&split=train&offset=0&length=32",
+    "retrieved_at": "2026-11-18T19:05:43.495807+00:00",
+    "response_sha256": "e5899e39490a65b548345a8df6644cb60ea24cbe3b3811655d8721b727feedee",
+    "revision": "ada0f5b53a38bb5a30cce09358adde883c1ab63a",
+    "response_bytes": 150331
+  },
+  "sampling": "First 32 adult rows; a bounded convenience slice, not a representative population sample.",
+  "changes": "Retained only age, province, occupation, education_level and family_type; omitted narratives and identifiers. Local IDs are derived from source UUID hashes.",
+  "physical_attributes": "Not supplied by this dataset; grip, reach, vision and motor conditions must be separate authored or observed inputs.",
+  "records": [
+    {
+      "id": "KR-101792479254",
+      "row_index": 0,
+      "attributes": {
+        "age": 74,
+        "province": "광주",
+        "occupation": "하역 및 적재 관련 단순 종사원",
+        "education_level": "초등학교",
+        "family_type": "배우자와 거주"
+      }
+    },
+    {
+      "id": "KR-8f116c3c5b57",
+      "row_index": 1,
+      "attributes": {
+        "age": 71,
+        "province": "서울",
+        "occupation": "회계 사무원",
+        "education_level": "4년제 대학교",
+        "family_type": "배우자·자녀와 거주"
+      }
+    },
+    {
+      "id": "KR-b3853842cfce",
+      "row_index": 2,
+      "attributes": {
+        "age": 73,
+        "province": "서울",
+        "occupation": "무직",
+        "education_level": "고등학교",
+        "family_type": "배우자와 거주"
+      }
+    },
+    {
+      "id": "KR-d90ca2ab76bd",
+      "row_index": 3,
+      "attributes": {
+        "age": 46,
+        "province": "경기",
+        "occupation": "무직",
+        "education_level": "4년제 대학교",
+        "family_type": "배우자·미혼 형제자매와 거주"
+      }
+    },
+    {
+      "id": "KR-e2a15f6b268e",
+      "row_index": 4,
+      "attributes": {
+        "age": 50,
+        "province": "부산",
+        "occupation": "그 외 서비스 관련 단순 종사원",
+        "education_level": "고등학교",
+        "family_type": "배우자·자녀와 거주"
+      }
+    },
+    {
+      "id": "KR-d39af62592bb",
+      "row_index": 5,
+      "attributes": {
+        "age": 33,
+        "province": "인천",
+        "occupation": "경리 사무원",
+        "education_level": "고등학교",
+        "family_type": "배우자와 거주"
+      }
+    },
+    {
+      "id": "KR-7fb0c4e82c63",
+      "row_index": 6,
+      "attributes": {
+        "age": 31,
+        "province": "경상북",
+        "occupation": "강구조물 가공원",
+        "education_level": "2~3년제 전문대학",
+        "family_type": "혼자 거주"
+      }
+    },
+    {
+      "id": "KR-fdc9b91d0cc4",
+      "row_index": 7,
+      "attributes": {
+        "age": 76,
+        "province": "서울",
+        "occupation": "무직",
+        "education_level": "중학교",
+        "family_type": "자녀와 거주 (한부모)"
+      }
+    },
+    {
+      "id": "KR-6579115f107f",
+      "row_index": 8,
+      "attributes": {
+        "age": 44,
+        "province": "강원",
+        "occupation": "전화 상담원",
+        "education_level": "고등학교",
+        "family_type": "기타2세대"
+      }
+    },
+    {
+      "id": "KR-e1c19c96d7dd",
+      "row_index": 9,
+      "attributes": {
+        "age": 27,
+        "province": "경기",
+        "occupation": "무직",
+        "education_level": "고등학교",
+        "family_type": "기타3세대"
+      }
+    },
+    {
+      "id": "KR-05313094e735",
+      "row_index": 10,
+      "attributes": {
+        "age": 74,
+        "province": "경기",
+        "occupation": "음료 서비스 종사원",
+        "education_level": "중학교",
+        "family_type": "혼자 거주"
+      }
+    },
+    {
+      "id": "KR-17073dfbbd63",
+      "row_index": 11,
+      "attributes": {
+        "age": 61,
+        "province": "부산",
+        "occupation": "그 외 일반 영업원",
+        "education_level": "중학교",
+        "family_type": "배우자·자녀와 거주"
+      }
+    },
+    {
+      "id": "KR-0ef2053605ed",
+      "row_index": 12,
+      "attributes": {
+        "age": 61,
+        "province": "제주",
+        "occupation": "부동산 컨설턴트",
+        "education_level": "고등학교",
+        "family_type": "배우자·자녀와 거주"
+      }
+    },
+    {
+      "id": "KR-c43fbb98826a",
+      "row_index": 13,
+      "attributes": {
+        "age": 26,
+        "province": "서울",
+        "occupation": "무직",
+        "education_level": "고등학교",
+        "family_type": "기타3세대"
+      }
+    },
+    {
+      "id": "KR-adb7ae68f0f9",
+      "row_index": 14,
+      "attributes": {
+        "age": 76,
+        "province": "부산",
+        "occupation": "무직",
+        "education_level": "중학교",
+        "family_type": "자녀·어머니와 거주"
+      }
+    },
+    {
+      "id": "KR-0dce4e33e88e",
+      "row_index": 15,
+      "attributes": {
+        "age": 69,
+        "province": "강원",
+        "occupation": "건물 경비원",
+        "education_level": "고등학교",
+        "family_type": "배우자·자녀와 거주"
+      }
+    },
+    {
+      "id": "KR-b214dc6559d9",
+      "row_index": 16,
+      "attributes": {
+        "age": 50,
+        "province": "서울",
+        "occupation": "치과 일반 의사",
+        "education_level": "대학원",
+        "family_type": "배우자와 거주"
+      }
+    },
+    {
+      "id": "KR-434322b4a53b",
+      "row_index": 17,
+      "attributes": {
+        "age": 49,
+        "province": "충청남",
+        "occupation": "무직",
+        "education_level": "4년제 대학교",
+        "family_type": "배우자·자녀와 거주"
+      }
+    },
+    {
+      "id": "KR-1106d427c349",
+      "row_index": 18,
+      "attributes": {
+        "age": 54,
+        "province": "서울",
+        "occupation": "무직",
+        "education_level": "4년제 대학교",
+        "family_type": "배우자·자녀·어머니와 거주"
+      }
+    },
+    {
+      "id": "KR-a9357d84d00e",
+      "row_index": 19,
+      "attributes": {
+        "age": 54,
+        "province": "전북",
+        "occupation": "일반 비서",
+        "education_level": "2~3년제 전문대학",
+        "family_type": "배우자·자녀와 거주"
+      }
+    },
+    {
+      "id": "KR-0f473052d5d1",
+      "row_index": 20,
+      "attributes": {
+        "age": 32,
+        "province": "경기",
+        "occupation": "중형 화물차 운전원",
+        "education_level": "2~3년제 전문대학",
+        "family_type": "아버지와 동거"
+      }
+    },
+    {
+      "id": "KR-6bb6a862d3df",
+      "row_index": 21,
+      "attributes": {
+        "age": 53,
+        "province": "경기",
+        "occupation": "전자제품 개발 기술자 및 연구원",
+        "education_level": "대학원",
+        "family_type": "배우자와 거주"
+      }
+    },
+    {
+      "id": "KR-f9bbfddc60b7",
+      "row_index": 22,
+      "attributes": {
+        "age": 50,
+        "province": "경상남",
+        "occupation": "전기 용접원",
+        "education_level": "2~3년제 전문대학",
+        "family_type": "혼자 거주"
+      }
+    },
+    {
+      "id": "KR-b61fb441b58d",
+      "row_index": 23,
+      "attributes": {
+        "age": 22,
+        "province": "서울",
+        "occupation": "무직",
+        "education_level": "4년제 대학교",
+        "family_type": "부모와 동거"
+      }
+    },
+    {
+      "id": "KR-e4810ec755ee",
+      "row_index": 24,
+      "attributes": {
+        "age": 64,
+        "province": "충청남",
+        "occupation": "무직",
+        "education_level": "4년제 대학교",
+        "family_type": "배우자·자녀·부모와 거주"
+      }
+    },
+    {
+      "id": "KR-f8595d4b945d",
+      "row_index": 25,
+      "attributes": {
+        "age": 71,
+        "province": "부산",
+        "occupation": "무직",
+        "education_level": "중학교",
+        "family_type": "배우자·미혼 형제자매와 거주"
+      }
+    },
+    {
+      "id": "KR-dcc2fda0d43d",
+      "row_index": 26,
+      "attributes": {
+        "age": 49,
+        "province": "서울",
+        "occupation": "정보 보안 전문가",
+        "education_level": "4년제 대학교",
+        "family_type": "배우자·자녀와 거주"
+      }
+    },
+    {
+      "id": "KR-a3d03e860920",
+      "row_index": 27,
+      "attributes": {
+        "age": 53,
+        "province": "대전",
+        "occupation": "그 외 데이터 및 네트워크 관련 전문가",
+        "education_level": "4년제 대학교",
+        "family_type": "배우자·자녀와 거주"
+      }
+    },
+    {
+      "id": "KR-6edbaa4a20dc",
+      "row_index": 28,
+      "attributes": {
+        "age": 32,
+        "province": "인천",
+        "occupation": "무직",
+        "education_level": "4년제 대학교",
+        "family_type": "배우자·자녀와 거주"
+      }
+    },
+    {
+      "id": "KR-2a62df6cbb86",
+      "row_index": 29,
+      "attributes": {
+        "age": 50,
+        "province": "경상남",
+        "occupation": "일반 비서",
+        "education_level": "4년제 대학교",
+        "family_type": "배우자·자녀와 거주"
+      }
+    },
+    {
+      "id": "KR-bd50067de4b6",
+      "row_index": 30,
+      "attributes": {
+        "age": 45,
+        "province": "제주",
+        "occupation": "119 구조대원",
+        "education_level": "4년제 대학교",
+        "family_type": "배우자·자녀·어머니와 거주"
+      }
+    },
+    {
+      "id": "KR-0ba797c393d4",
+      "row_index": 31,
+      "attributes": {
+        "age": 38,
+        "province": "울산",
+        "occupation": "그 외 화학제품 생산기 조작원",
+        "education_level": "2~3년제 전문대학",
+        "family_type": "부모·형제자매와 동거"
+      }
+    }
+  ]
+}

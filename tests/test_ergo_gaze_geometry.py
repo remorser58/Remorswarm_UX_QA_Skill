@@ -228,6 +228,7 @@ class FeedbackFocusRelocation(unittest.TestCase):
                 'before': 'B', 'after': 'S-1', 'point': {'x': 192, 'y': 786}}
         c = ctx([phone, field, button, error], device_id='galaxy-s24-ultra', previous=previous, step=step,
                 focus={'x': 192, 'y': 786})
+        previous.update(device=dict(c.snapshot["device"]), viewport_alignment=c.snapshot["viewport_alignment"])
         c.snapshot['focus'] = {'on_body': False, 'dom_id': 'name'}
         return c
 
@@ -357,7 +358,37 @@ class FeedbackFocusRelocation(unittest.TestCase):
         c = self.context()
         with patch.object(checks.reach, 'occluded_by_thumb', return_value=False) as occlusion:
             self.feedback(c)
-        self.assertEqual(occlusion.call_args.args[0], checks._point_mm(c, 192, 786))
+        self.assertEqual(occlusion.call_args.args[0], checks._lengths_mm(c, 192, 786))
+
+    def test_thumb_occlusion_with_unknown_prior_frame_is_not_false(self) -> None:
+        c = self.context()
+        c.previous.pop("viewport_alignment")
+        with patch.object(checks.reach, 'occluded_by_thumb') as occlusion:
+            result = self.feedback(c)
+        occlusion.assert_not_called()
+        self.assertIsNone(result.measurement["occluded_by_thumb"])
+        self.assertEqual(result.measurement["action_viewport_alignment"]["basis"], "unknown")
+        self.assertEqual((result.measurement["band"], result.measurement["value"]), ("likely", 1.1))
+        self.assertFalse(result.passed)
+        self.assertIsNone(result.severity)
+        self.assertEqual(result.extra["verdict"], "inconclusive")
+        # A clear angular failure does not depend on the missing thumb evidence.
+        c.previous.pop("focus")
+        far = self.feedback(c)
+        self.assertEqual((far.measurement["band"], far.passed, far.severity), ("likely_missed", False, "P2"))
+        self.assertNotEqual(far.extra.get("verdict"), "inconclusive")
+
+    def test_notice_with_unknown_thumb_occlusion_cannot_establish_redundancy(self) -> None:
+        c = self.context()
+        c.previous.pop("viewport_alignment")
+        next(e for e in c.elements if e["id"] == "name-error")["box"]["y"] = 650
+        next(e for e in c.elements if e["id"] == "name")["a11y"]["described_by"].append("notice")
+        c.snapshot["elements"].append(el("notice", "status", (16, 190, 352, 22), text="완료 상태",
+                                         dom_id="notice", roles=("status",), fg="#d32f2f", weight=600))
+        record = self.feedback(c)
+        self.assertEqual(self.feedback(c, "#notice").measurement["band"], "likely")
+        self.assertFalse(record.measurement["redundant_with_noticed_feedback"])
+        self.assertEqual(record.severity, "P3")
 
 
 if __name__ == '__main__':

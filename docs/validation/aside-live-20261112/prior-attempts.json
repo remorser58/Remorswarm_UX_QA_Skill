@@ -1,0 +1,1008 @@
+[
+  {
+    "attempt": 1,
+    "completion": false,
+    "counts": {
+      "blocked": 0,
+      "failed": 0,
+      "inconclusive": 2,
+      "passed": 0,
+      "pending": 0,
+      "running": 0,
+      "skipped": 0
+    },
+    "diagnostic_sha256": "bdef559402a32e28b05c2c52a382f88f8f8f0680c4eb813aaa585f59213bcf5f",
+    "elapsed_seconds": 136.1933920418378,
+    "execution": {
+      "actual_model_calls": 6,
+      "actual_model_execution": true,
+      "actual_model_parallel_observed": true,
+      "actual_model_tool_personas": [],
+      "authored_decision_calls": 0,
+      "engine_sha256": "3b43b817ffdf95d126ab06c72b603625ee6acd52aa1355ab06e2ddb8ac057dc4",
+      "first_judgments": [],
+      "host": {
+        "adapter_sha256": "b10663f39b2df3ddb3f93d6ccad29910ad521cf7547efffaf0d046c567813b53",
+        "isolated_contexts": true,
+        "mode": "model_tools",
+        "model": "ChatGPT Pro displayed in owned UI",
+        "name": "aside-owned-chatgpt-pro",
+        "parallel_safe": true
+      },
+      "host_context_isolation_attested": true,
+      "mode": "model_tools",
+      "model_calls": 6,
+      "model_identity_basis": "host_transport_attestation_not_independent_provider_verification",
+      "observation_review": {
+        "basis": "declared_obligations_not_independent_raters",
+        "consensus_complete": false,
+        "groups": [
+          {
+            "definition_conflict": false,
+            "duplicate_observations": 1,
+            "missing": 2,
+            "obligation_id": "O-RECOVER",
+            "outcome_conflict": false,
+            "requirement_id": "R-STATE",
+            "tasks": [
+              "T-CAUTIOUS",
+              "T-RETURN"
+            ]
+          },
+          {
+            "definition_conflict": false,
+            "duplicate_observations": 1,
+            "missing": 2,
+            "obligation_id": "O-RETAIN",
+            "outcome_conflict": false,
+            "requirement_id": "R-STATE",
+            "tasks": [
+              "T-CAUTIOUS",
+              "T-RETURN"
+            ]
+          }
+        ]
+      },
+      "os_or_network_sandbox": false,
+      "parallel_observed": true,
+      "peak_calls_by_kind": {
+        "close": 1,
+        "model": 2,
+        "tool": 1
+      },
+      "peak_host_calls": 2,
+      "peer_results_supplied_to_model": false,
+      "real_user_evidence": false,
+      "runtime": "langgraph",
+      "tool_calls": 6,
+      "two_persona_model_tool_execution": false,
+      "verification_scope": "host_review_and_local_evidence_integrity",
+      "versions": {
+        "langgraph": "1.2.20",
+        "langgraph-checkpoint-sqlite": "3.1.3"
+      },
+      "workers": [
+        {
+          "context_id": "ctx-b67eb9819f1abe2e3f47d888d4e6a2071d5e5998",
+          "phase": "recorded",
+          "problem": "host_execution_failed",
+          "stopped": true,
+          "task_id": "T-CAUTIOUS"
+        },
+        {
+          "context_id": "ctx-a605a775d5485e5a76f2361226706530ae1f3b28",
+          "phase": "recorded",
+          "problem": "host_execution_failed",
+          "stopped": true,
+          "task_id": "T-RETURN"
+        }
+      ]
+    },
+    "failures": [
+      {
+        "original_sha256": "13a8cca11ab8bb044e973df6f8d96a9364b2aa33cdc10809077cff2edadadc49",
+        "record": {
+          "ended_at": 1794472987.8201091,
+          "error_type": "AsideError",
+          "kind": "model",
+          "operation_id": "op-4ad20ac76afd5c6a61f7c5fe589f278a8cb61328",
+          "prompt_sha256": "8d0ffa0bea50a2e2ae465dbae656db7f314f92e8f89914cfad9ca219b1df76c5",
+          "remote_session_id": "OobxvFK85db86yr2",
+          "request_sha256": "97214af95fd0c337f94136bbc9ca820b19bbac1d144a2c0ccc7f98b785a25d5b",
+          "started_at": 1794472986.1099782,
+          "status": "rejected"
+        }
+      },
+      {
+        "original_sha256": "8b1b3dc261f9e5e9ceada12dcf93fda5fd0154ca7885a80040ed6d2893a189a6",
+        "record": {
+          "ended_at": 1794472990.648584,
+          "error_type": "AsideError",
+          "kind": "model",
+          "operation_id": "op-ee03ccb7bdea77884076030dadc9b1a9bc40f07e",
+          "prompt_sha256": "fd40519180e1a83fca35e7312bea12dade516f3e4a0a4ace7940d83bc86c067c",
+          "remote_session_id": "L4G7sEnx5Tco3rw1",
+          "request_sha256": "2eea176c42f8c7a7e815a7fd2efcc7224b9c43c28d0317c39aeb4ae9cef5297c",
+          "started_at": 1794472988.9737668,
+          "status": "rejected"
+        }
+      }
+    ],
+    "maxrss_bytes": 104972288,
+    "private_path": "/Users/r3m0r5e/CodeProjects/remorsearch-ux-qa-resume/.ux-loop/oss-swarm-20261112/worktree/.ux-loop/aside-live-model-20261112-01",
+    "sources_unchanged": true,
+    "transport_probe_calls": 2
+  },
+  {
+    "attempt": 2,
+    "completion": false,
+    "counts": {
+      "blocked": 0,
+      "failed": 0,
+      "inconclusive": 2,
+      "passed": 0,
+      "pending": 0,
+      "running": 0,
+      "skipped": 0
+    },
+    "diagnostic_sha256": "f765fb14d7067732cb8e6aeb4dc49b9576f7a8a6fac7f3840fee01ab7bd97ff7",
+    "elapsed_seconds": 116.01225116592832,
+    "execution": {
+      "actual_model_calls": 6,
+      "actual_model_execution": true,
+      "actual_model_parallel_observed": true,
+      "actual_model_tool_personas": [],
+      "authored_decision_calls": 0,
+      "engine_sha256": "3b43b817ffdf95d126ab06c72b603625ee6acd52aa1355ab06e2ddb8ac057dc4",
+      "first_judgments": [],
+      "host": {
+        "adapter_sha256": "629c36aa4caad8d9976dd104bf1e9f3ed97788e5b8bd3ae7ed479187bcf4b670",
+        "isolated_contexts": true,
+        "mode": "model_tools",
+        "model": "ChatGPT Pro displayed in owned UI",
+        "name": "aside-owned-chatgpt-pro",
+        "parallel_safe": true
+      },
+      "host_context_isolation_attested": true,
+      "mode": "model_tools",
+      "model_calls": 6,
+      "model_identity_basis": "host_transport_attestation_not_independent_provider_verification",
+      "observation_review": {
+        "basis": "declared_obligations_not_independent_raters",
+        "consensus_complete": false,
+        "groups": [
+          {
+            "definition_conflict": false,
+            "duplicate_observations": 1,
+            "missing": 2,
+            "obligation_id": "O-RECOVER",
+            "outcome_conflict": false,
+            "requirement_id": "R-STATE",
+            "tasks": [
+              "T-CAUTIOUS",
+              "T-RETURN"
+            ]
+          },
+          {
+            "definition_conflict": false,
+            "duplicate_observations": 1,
+            "missing": 2,
+            "obligation_id": "O-RETAIN",
+            "outcome_conflict": false,
+            "requirement_id": "R-STATE",
+            "tasks": [
+              "T-CAUTIOUS",
+              "T-RETURN"
+            ]
+          }
+        ]
+      },
+      "os_or_network_sandbox": false,
+      "parallel_observed": true,
+      "peak_calls_by_kind": {
+        "close": 1,
+        "model": 2,
+        "tool": 1
+      },
+      "peak_host_calls": 2,
+      "peer_results_supplied_to_model": false,
+      "real_user_evidence": false,
+      "runtime": "langgraph",
+      "tool_calls": 6,
+      "two_persona_model_tool_execution": false,
+      "verification_scope": "host_review_and_local_evidence_integrity",
+      "versions": {
+        "langgraph": "1.2.20",
+        "langgraph-checkpoint-sqlite": "3.1.3"
+      },
+      "workers": [
+        {
+          "context_id": "ctx-7f25ce5eb7e0600214098a775473303fc62d6d10",
+          "phase": "recorded",
+          "problem": "worker_stop_unconfirmed",
+          "stopped": false,
+          "task_id": "T-CAUTIOUS"
+        },
+        {
+          "context_id": "ctx-b910745f3173c84414bbf89a3ff65c5a53a66577",
+          "phase": "recorded",
+          "problem": "worker_stop_unconfirmed",
+          "stopped": false,
+          "task_id": "T-RETURN"
+        }
+      ]
+    },
+    "failures": [
+      {
+        "original_sha256": "a1ccfbedc3fef0fa33f937a7d48afd6a11166021405836572173d682bbaaac0c",
+        "record": {
+          "ended_at": 1794473697.418085,
+          "error_reason": "Aside REPL rejected the owned operation: Error: missing observed composer after fill",
+          "error_type": "AsideError",
+          "kind": "model",
+          "operation_id": "op-b715621c77e6ad51015ee606baca2c5cd422ce67",
+          "prompt_sha256": "63ed9b9dcdd7e41aaef5ce886736946bde8eeace8de412fc3455e91f3738c55c",
+          "remote_session_id": "nuPfIrbjjjJJ6qUd",
+          "request_sha256": "d9eb5ba867473b85b73e74f8ad142adb5a4ed6cfb3f1d8b445317de45dca2d11",
+          "started_at": 1794473695.626935,
+          "status": "rejected"
+        }
+      },
+      {
+        "original_sha256": "97c931431408f23b9abd022a272e444e9922038429e4e24f9518c49907e78850",
+        "record": {
+          "ended_at": 1794473705.079212,
+          "error_reason": "Aside REPL rejected the owned operation: Error: missing observed composer after fill",
+          "error_type": "AsideError",
+          "kind": "model",
+          "operation_id": "op-06a46dccb68cfcf3d785eea96cf9510934637365",
+          "prompt_sha256": "cbc8d263fb93f20ba2454b999af680099d6e365d04031bb02f14df9a6f38b675",
+          "remote_session_id": "MYEWZejgvMHD5ZF1",
+          "request_sha256": "49288aaf013357b4dbdfc0381d6d3d46470d03983c83e7a2c96c0e6683a114d0",
+          "started_at": 1794473703.433723,
+          "status": "rejected"
+        }
+      }
+    ],
+    "maxrss_bytes": 105250816,
+    "private_path": "/Users/r3m0r5e/CodeProjects/remorsearch-ux-qa-resume/.ux-loop/oss-swarm-20261112/worktree/.ux-loop/aside-live-model-20261112-02",
+    "sources_unchanged": true,
+    "transport_probe_calls": 2
+  },
+  {
+    "attempt": 3,
+    "completion": false,
+    "counts": {
+      "blocked": 0,
+      "failed": 0,
+      "inconclusive": 2,
+      "passed": 0,
+      "pending": 0,
+      "running": 0,
+      "skipped": 0
+    },
+    "diagnostic_sha256": "74ac5c9feea78a11c7dcab6b556613b3b19acca1cee02c98c6797c01d6a1790e",
+    "elapsed_seconds": 4.298407125053927,
+    "execution": {
+      "actual_model_calls": 0,
+      "actual_model_execution": false,
+      "actual_model_parallel_observed": true,
+      "actual_model_tool_personas": [],
+      "authored_decision_calls": 0,
+      "engine_sha256": "3b43b817ffdf95d126ab06c72b603625ee6acd52aa1355ab06e2ddb8ac057dc4",
+      "first_judgments": [],
+      "host": {
+        "adapter_sha256": "c29a9c2375ccc50b8be05e62621d8fe001b09a482a4e5941e882e8dc0f2b26ac",
+        "isolated_contexts": true,
+        "mode": "model_tools",
+        "model": "ChatGPT Pro displayed in owned UI",
+        "name": "aside-owned-chatgpt-pro",
+        "parallel_safe": true
+      },
+      "host_context_isolation_attested": true,
+      "mode": "model_tools",
+      "model_calls": 0,
+      "model_identity_basis": "host_transport_attestation_not_independent_provider_verification",
+      "observation_review": {
+        "basis": "declared_obligations_not_independent_raters",
+        "consensus_complete": false,
+        "groups": [
+          {
+            "definition_conflict": false,
+            "duplicate_observations": 1,
+            "missing": 2,
+            "obligation_id": "O-RECOVER",
+            "outcome_conflict": false,
+            "requirement_id": "R-STATE",
+            "tasks": [
+              "T-CAUTIOUS",
+              "T-RETURN"
+            ]
+          },
+          {
+            "definition_conflict": false,
+            "duplicate_observations": 1,
+            "missing": 2,
+            "obligation_id": "O-RETAIN",
+            "outcome_conflict": false,
+            "requirement_id": "R-STATE",
+            "tasks": [
+              "T-CAUTIOUS",
+              "T-RETURN"
+            ]
+          }
+        ]
+      },
+      "os_or_network_sandbox": false,
+      "parallel_observed": true,
+      "peak_calls_by_kind": {
+        "close": 2,
+        "model": 2
+      },
+      "peak_host_calls": 2,
+      "peer_results_supplied_to_model": false,
+      "real_user_evidence": false,
+      "runtime": "langgraph",
+      "tool_calls": 0,
+      "two_persona_model_tool_execution": false,
+      "verification_scope": "host_review_and_local_evidence_integrity",
+      "versions": {
+        "langgraph": "1.2.20",
+        "langgraph-checkpoint-sqlite": "3.1.3"
+      },
+      "workers": [
+        {
+          "context_id": "ctx-6ef994a25758b50f42b0bd9e071ec7a87a4d65d2",
+          "phase": "recorded",
+          "problem": "host_execution_failed",
+          "stopped": true,
+          "task_id": "T-CAUTIOUS"
+        },
+        {
+          "context_id": "ctx-2d39a0020113cdd66ea4f1cff585164d6cafa76b",
+          "phase": "recorded",
+          "problem": "host_execution_failed",
+          "stopped": true,
+          "task_id": "T-RETURN"
+        }
+      ]
+    },
+    "failures": [
+      {
+        "original_sha256": "6664901e6b5a7dddad39e81b91d1ddb81efe905e0a8c0083403c7e5da1a2072c",
+        "record": {
+          "ended_at": 1794474184.25826,
+          "error_reason": "Aside REPL rejected the owned operation: Error: Error: ambiguous owned editor\n    at <anonymous>:1:227\n    at <anonymous>:1:786",
+          "error_type": "AsideError",
+          "kind": "model",
+          "operation_id": "op-55bbe73868a80e5c20ce0b1a7e68e2cf3842a07b",
+          "remote_session_id": "OpZQP5nveq9i5IIW",
+          "request_sha256": "78044466ae79d16354f51075ed7b95834f7b3d6eae0929e9db3334bed035543f",
+          "started_at": 1794474184.1295319,
+          "status": "rejected"
+        }
+      },
+      {
+        "original_sha256": "338050f0afc2515b407c0f9a96f036296d86e9b8e9c44463a90b5b0b08ba3de8",
+        "record": {
+          "ended_at": 1794474184.256874,
+          "error_reason": "Aside REPL rejected the owned operation: Error: Error: ambiguous owned editor\n    at <anonymous>:1:227\n    at <anonymous>:1:786",
+          "error_type": "AsideError",
+          "kind": "model",
+          "operation_id": "op-c48ddf808209920cd1d5a48803aaf49f3d3d11b9",
+          "remote_session_id": "NUy3c760YushhHKZ",
+          "request_sha256": "28e60e40028939405fd0c0d3a5e62fe8158470f1dc9c4116f182bb68020e3ede",
+          "started_at": 1794474184.133646,
+          "status": "rejected"
+        }
+      }
+    ],
+    "maxrss_bytes": 94502912,
+    "private_path": "/Users/r3m0r5e/CodeProjects/remorsearch-ux-qa-resume/.ux-loop/oss-swarm-20261112/worktree/.ux-loop/aside-live-model-20261112-03",
+    "sources_unchanged": true,
+    "transport_probe_calls": 0
+  },
+  {
+    "attempt": 4,
+    "completion": false,
+    "failure": "Preflight ended before graph/model dispatch; stdout exit 1 retained locally.",
+    "failures": [],
+    "private_path": "/Users/r3m0r5e/CodeProjects/remorsearch-ux-qa-resume/.ux-loop/oss-swarm-20261112/worktree/.ux-loop/aside-live-model-20261112-04"
+  },
+  {
+    "attempt": 5,
+    "completion": false,
+    "counts": {
+      "blocked": 0,
+      "failed": 0,
+      "inconclusive": 2,
+      "passed": 0,
+      "pending": 0,
+      "running": 0,
+      "skipped": 0
+    },
+    "diagnostic_sha256": "8902c302555ca9989861130d20f77643d02cc99429416f4f65693233e1287a94",
+    "elapsed_seconds": 23.60859675006941,
+    "execution": {
+      "actual_model_calls": 2,
+      "actual_model_execution": true,
+      "actual_model_parallel_observed": true,
+      "actual_model_tool_personas": [],
+      "actual_review_calls": 0,
+      "authored_decision_calls": 0,
+      "engine_sha256": "3b287dc92428adc03f24237ecefa527ecd6f7f6cc6ea32f19cf9c727e5a45284",
+      "first_judgments": [
+        {
+          "sha256": "482ca073ec2459858b5fbea3bf5b6ddbca710b00bc79ee99c5dfaecbc1c12be4",
+          "task_id": "T-CAUTIOUS"
+        },
+        {
+          "sha256": "10bf7dde2df3b002f07ece1f2a3147a2a7b5a9b42dc6d0bbb73ef3353066219e",
+          "task_id": "T-RETURN"
+        }
+      ],
+      "host": {
+        "adapter_sha256": "9530de621de30366b4dd32082b60071285dca4c8d16a725115b3f3381bc4ce2c",
+        "isolated_contexts": true,
+        "mode": "model_tools",
+        "model": "ChatGPT Pro displayed in owned UI",
+        "name": "aside-owned-chatgpt-pro",
+        "parallel_safe": true
+      },
+      "host_context_isolation_attested": true,
+      "mode": "model_tools",
+      "model_calls": 2,
+      "model_identity_basis": "host_transport_attestation_not_independent_provider_verification",
+      "model_parallel_basis": "completed_host_callback_intervals; provider_compute_concurrency_unverified",
+      "observation_review": {
+        "basis": "declared_obligations_not_independent_raters",
+        "consensus_complete": false,
+        "groups": [
+          {
+            "definition_conflict": false,
+            "duplicate_observations": 1,
+            "missing": 2,
+            "obligation_id": "O-RECOVER",
+            "outcome_conflict": false,
+            "requirement_id": "R-STATE",
+            "tasks": [
+              "T-CAUTIOUS",
+              "T-RETURN"
+            ]
+          },
+          {
+            "definition_conflict": false,
+            "duplicate_observations": 1,
+            "missing": 2,
+            "obligation_id": "O-RETAIN",
+            "outcome_conflict": false,
+            "requirement_id": "R-STATE",
+            "tasks": [
+              "T-CAUTIOUS",
+              "T-RETURN"
+            ]
+          }
+        ]
+      },
+      "os_or_network_sandbox": false,
+      "parallel_observed": true,
+      "peak_calls_by_kind": {
+        "close": 1,
+        "model": 2,
+        "review": 2
+      },
+      "peak_host_calls": 2,
+      "peer_results_supplied_to_model": false,
+      "real_user_evidence": false,
+      "runtime": "langgraph",
+      "tool_calls": 0,
+      "two_persona_model_tool_execution": false,
+      "verification_scope": "host_review_and_local_evidence_integrity",
+      "versions": {
+        "langgraph": "1.2.20",
+        "langgraph-checkpoint-sqlite": "3.1.3"
+      },
+      "workers": [
+        {
+          "context_id": "ctx-0f8ae7394cfb344700b7ba3a9188d59c6b30c6da",
+          "phase": "recorded",
+          "problem": "host_execution_failed",
+          "stopped": true,
+          "task_id": "T-CAUTIOUS"
+        },
+        {
+          "context_id": "ctx-48d83272050f9c5fdca76f0a38362ba7f5385eac",
+          "phase": "recorded",
+          "problem": "host_execution_failed",
+          "stopped": true,
+          "task_id": "T-RETURN"
+        }
+      ]
+    },
+    "failures": [
+      {
+        "original_sha256": "6decfce66199c369c63eca880c47ff2bee28707a0cf0c7a14e4e5029066b3692",
+        "record": {
+          "conversation_url": "https://chatgpt.com/c/6af58335-ff40-83ee-998c-a468b2ec25f4?temporary-chat=true",
+          "ended_at": 1794474821.536603,
+          "error_reason": "Assistant response is stale or does not match this operation",
+          "error_type": "AsideError",
+          "kind": "review",
+          "operation_id": "op-55e09eb553a0660e4eb5f9c3fb1f4c52006fcaf7",
+          "prompt_sha256": "73971728a1f1a98778e737a74cc7171505f0de57e0a89d3870b2eaa8187faa5c",
+          "remote_session_id": "kpBvmveNpkm86yrd",
+          "request_sha256": "6ed02b699d6a91620f5e210035791cba7b5dc0fd3db3663127232c97b85430e9",
+          "send_readiness": [
+            {
+              "at": 1794474816.309407,
+              "disabled": false
+            }
+          ],
+          "sent_at": 1794474816.381383,
+          "started_at": 1794474815.325941,
+          "status": "rejected"
+        }
+      },
+      {
+        "original_sha256": "dc79a1288c663cb88e3c706e3178ee0e8d89dd024806f10050538e90467c85ae",
+        "record": {
+          "conversation_url": "https://chatgpt.com/c/6af58336-3318-83ee-8136-f6be34809946?temporary-chat=true",
+          "ended_at": 1794474823.1446831,
+          "error_reason": "Assistant response is stale or does not match this operation",
+          "error_type": "AsideError",
+          "kind": "review",
+          "operation_id": "op-a1ffc7d8756631f76d58cb7494935678e75dd485",
+          "prompt_sha256": "5976124cd8d62edac1e10d6cbe94060ca4894af6f54ff2506835c1f096da2c9e",
+          "remote_session_id": "0FlZf7N3xVLIdJK7",
+          "request_sha256": "7b635f23c0998ef7effd3b72b916f2816897ff44009c4d663447ffa15d974cf9",
+          "send_readiness": [
+            {
+              "at": 1794474816.364026,
+              "disabled": false
+            }
+          ],
+          "sent_at": 1794474816.443284,
+          "started_at": 1794474815.3119261,
+          "status": "rejected"
+        }
+      }
+    ],
+    "maxrss_bytes": 90570752,
+    "private_path": "/Users/r3m0r5e/CodeProjects/remorsearch-ux-qa-resume/.ux-loop/oss-swarm-20261112/worktree/.ux-loop/aside-live-model-20261112-05",
+    "sources_unchanged": true,
+    "transport_probe_calls": 0
+  },
+  {
+    "attempt": 6,
+    "completion": false,
+    "counts": {
+      "blocked": 0,
+      "failed": 0,
+      "inconclusive": 2,
+      "passed": 0,
+      "pending": 0,
+      "running": 0,
+      "skipped": 0
+    },
+    "diagnostic_sha256": "a2a5a10fc446458ecb4fd7fa3c04788bc37e716637741281d4fdeed68886d703",
+    "elapsed_seconds": 67.65361954201944,
+    "execution": {
+      "actual_model_calls": 10,
+      "actual_model_execution": true,
+      "actual_model_parallel_observed": true,
+      "actual_model_tool_personas": [],
+      "actual_review_calls": 0,
+      "authored_decision_calls": 0,
+      "engine_sha256": "3b287dc92428adc03f24237ecefa527ecd6f7f6cc6ea32f19cf9c727e5a45284",
+      "first_judgments": [],
+      "host": {
+        "adapter_sha256": "4bfa33e20c1eb2982ed4e252aabb2c439968e399f2534cbb507c7bec502e7c13",
+        "isolated_contexts": true,
+        "mode": "model_tools",
+        "model": "ChatGPT Pro displayed in owned UI",
+        "name": "aside-owned-chatgpt-pro",
+        "parallel_safe": true
+      },
+      "host_context_isolation_attested": true,
+      "mode": "model_tools",
+      "model_calls": 10,
+      "model_identity_basis": "host_transport_attestation_not_independent_provider_verification",
+      "model_parallel_basis": "completed_host_callback_intervals; provider_compute_concurrency_unverified",
+      "observation_review": {
+        "basis": "declared_obligations_not_independent_raters",
+        "consensus_complete": false,
+        "groups": [
+          {
+            "definition_conflict": false,
+            "duplicate_observations": 1,
+            "missing": 2,
+            "obligation_id": "O-RECOVER",
+            "outcome_conflict": false,
+            "requirement_id": "R-STATE",
+            "tasks": [
+              "T-CAUTIOUS",
+              "T-RETURN"
+            ]
+          },
+          {
+            "definition_conflict": false,
+            "duplicate_observations": 1,
+            "missing": 2,
+            "obligation_id": "O-RETAIN",
+            "outcome_conflict": false,
+            "requirement_id": "R-STATE",
+            "tasks": [
+              "T-CAUTIOUS",
+              "T-RETURN"
+            ]
+          }
+        ]
+      },
+      "os_or_network_sandbox": false,
+      "parallel_observed": true,
+      "peak_calls_by_kind": {
+        "close": 1,
+        "model": 2,
+        "tool": 2
+      },
+      "peak_host_calls": 2,
+      "peer_results_supplied_to_model": false,
+      "real_user_evidence": false,
+      "runtime": "langgraph",
+      "tool_calls": 10,
+      "two_persona_model_tool_execution": false,
+      "verification_scope": "host_review_and_local_evidence_integrity",
+      "versions": {
+        "langgraph": "1.2.20",
+        "langgraph-checkpoint-sqlite": "3.1.3"
+      },
+      "workers": [
+        {
+          "context_id": "ctx-007e15e37f80bfbf2155af466e45aee7ac848018",
+          "phase": "recorded",
+          "problem": "host_execution_failed",
+          "stopped": true,
+          "task_id": "T-CAUTIOUS"
+        },
+        {
+          "context_id": "ctx-e676bc33ea9ccb0bfc0c2de1058129331fcb3601",
+          "phase": "recorded",
+          "problem": "host_execution_failed",
+          "stopped": true,
+          "task_id": "T-RETURN"
+        }
+      ]
+    },
+    "failures": [
+      {
+        "original_sha256": "2c38ea80d0a1e2b6929d465bc9aa6a04f6a2ae5b92233d0fce6f5648bc04a418",
+        "record": {
+          "ended_at": 1794475039.6281128,
+          "error_reason": "Owned composer does not contain the exact reviewed prompt",
+          "error_type": "AsideError",
+          "kind": "model",
+          "operation_id": "op-fb24b32bdde555f7c58e745d814f01fcc1a89edb",
+          "prompt_sha256": "e70700c516c1616eb3e75e686422a11cc4505b910e64bc9162fc9809704fcbdf",
+          "remote_session_id": "cWld2AZkbvHJEAoA",
+          "request_sha256": "31cb761789b3638ce84bee337fc56a118bae6dc72d217bd4a902b72b727d148e",
+          "started_at": 1794475037.1273751,
+          "status": "rejected"
+        }
+      },
+      {
+        "original_sha256": "60a174a7a3c01572b370523d6049f0cf20d456e44bb09bacb5ce07904bff5434",
+        "record": {
+          "ended_at": 1794475035.037236,
+          "error_reason": "Owned composer does not contain the exact reviewed prompt",
+          "error_type": "AsideError",
+          "kind": "model",
+          "operation_id": "op-a66c7899979c8ce41169fe3d6f3923374907e6d7",
+          "prompt_sha256": "f500f8a9c35806312e9e0db8b3c1e65794c0315176aaf3511cb169525f2023f3",
+          "remote_session_id": "PejVk2io0ggzH7Ku",
+          "request_sha256": "dd49bb75fe97af22b0e6fdc3362e241e37ba1393414473c5308c0ad50b9d53f6",
+          "started_at": 1794475032.6201012,
+          "status": "rejected"
+        }
+      }
+    ],
+    "maxrss_bytes": 102531072,
+    "private_path": "/Users/r3m0r5e/CodeProjects/remorsearch-ux-qa-resume/.ux-loop/oss-swarm-20261112/worktree/.ux-loop/aside-live-model-20261112-06",
+    "sources_unchanged": true,
+    "transport_probe_calls": 0
+  },
+  {
+    "attempt": 7,
+    "completion": false,
+    "counts": {
+      "blocked": 0,
+      "failed": 0,
+      "inconclusive": 2,
+      "passed": 0,
+      "pending": 0,
+      "running": 0,
+      "skipped": 0
+    },
+    "diagnostic_sha256": "0866743e2719036e7f81e138fcbeaa953d67c3bcdb59fa12adc72da1ee2b24d1",
+    "elapsed_seconds": 256.8185813331511,
+    "execution": {
+      "actual_model_calls": 12,
+      "actual_model_execution": true,
+      "actual_model_parallel_observed": true,
+      "actual_model_tool_personas": [],
+      "actual_review_calls": 0,
+      "authored_decision_calls": 0,
+      "engine_sha256": "ef01dc997314fe967b2c841a991c3d419ceedfdea85c2b88436760aed5ab0106",
+      "first_judgments": [
+        {
+          "sha256": "9d699416a9e27a4eb5d4530283d9d427293272501693f37a4b2d2afeb79c6843",
+          "task_id": "T-CAUTIOUS"
+        },
+        {
+          "sha256": "a4089afaac77eb4233caad35fab0b7ed4e68c909a65213d0b9c0fae7ac7eaef4",
+          "task_id": "T-RETURN"
+        }
+      ],
+      "host": {
+        "adapter_sha256": "af2efb78eeb6a7c61415be0f04e8ee253e5206d80cf9756ec54888e3c8f7ad05",
+        "isolated_contexts": true,
+        "mode": "model_tools",
+        "model": "ChatGPT Pro displayed in owned UI",
+        "name": "aside-owned-chatgpt-pro",
+        "parallel_safe": true
+      },
+      "host_context_isolation_attested": true,
+      "mode": "model_tools",
+      "model_calls": 12,
+      "model_identity_basis": "host_transport_attestation_not_independent_provider_verification",
+      "model_parallel_basis": "completed_host_callback_intervals; provider_compute_concurrency_unverified",
+      "observation_review": {
+        "basis": "declared_obligations_not_independent_raters",
+        "consensus_complete": false,
+        "groups": [
+          {
+            "definition_conflict": false,
+            "duplicate_observations": 1,
+            "missing": 0,
+            "obligation_id": "O-RECOVER",
+            "outcome_conflict": false,
+            "requirement_id": "R-STATE",
+            "tasks": [
+              "T-CAUTIOUS",
+              "T-RETURN"
+            ]
+          },
+          {
+            "definition_conflict": false,
+            "duplicate_observations": 0,
+            "missing": 0,
+            "obligation_id": "O-RETAIN",
+            "outcome_conflict": true,
+            "requirement_id": "R-STATE",
+            "tasks": [
+              "T-CAUTIOUS",
+              "T-RETURN"
+            ]
+          }
+        ]
+      },
+      "os_or_network_sandbox": false,
+      "parallel_observed": true,
+      "peak_calls_by_kind": {
+        "close": 1,
+        "model": 2,
+        "review": 2,
+        "tool": 1
+      },
+      "peak_host_calls": 2,
+      "peer_results_supplied_to_model": false,
+      "real_user_evidence": false,
+      "runtime": "langgraph",
+      "tool_calls": 10,
+      "two_persona_model_tool_execution": false,
+      "verification_scope": "host_review_and_local_evidence_integrity",
+      "versions": {
+        "langgraph": "1.2.20",
+        "langgraph-checkpoint-sqlite": "3.1.3"
+      },
+      "workers": [
+        {
+          "context_id": "ctx-064ae991a8d6173d605edcb162e5a01a0a4d33f3",
+          "phase": "recorded",
+          "problem": "worker_stop_unconfirmed",
+          "stopped": false,
+          "task_id": "T-CAUTIOUS"
+        },
+        {
+          "context_id": "ctx-998694b1de580edb5cbde21b0cc21e981547637e",
+          "phase": "recorded",
+          "problem": "worker_stop_unconfirmed",
+          "stopped": false,
+          "task_id": "T-RETURN"
+        }
+      ]
+    },
+    "failures": [
+      {
+        "candidate": {
+          "key": "fallback-turn-7:1:assistant",
+          "message_ids": "61e1e39a-baa5-4845-90a9-5029fe8bb654 61e1e39a-baa5-4845-90a9-5029fe8bb654",
+          "text": "ChatGPT 답변:\n\n{\"reason\":\"Reviewed the sealed judgment against all five actual observations. Both passed statuses are justified. Observation obs-3 directly confirms that the original draft remained unchanged after invalid-input rejection, with retained=true. Observation obs-5 confirms that the corrected note and saved value match exactly and that the interface reported successful saving. No failed intermediate checkpoint or unsupported claim was omitted. This is a review of the same synthetic persona's evidence, not independent validation of real-world user behavior.\",\"criteria\":[{\"kind\":\"success\",\"index\":0,\"status\":\"passed\",\"observation\":\"The original draft 'Owned first draft for safe recovery.' remained present after rejection. The interface displayed invalid-input feedback and retained=true.\",\"observation_ids\":[\"obs-3\"]},{\"kind\":\"recovery\",\"index\":0,\"status\":\"passed\",\"observation\":\"The corrected note 'Owned corrected note after rejection.' was saved exactly. The current note and saved value matched, and feedback confirmed 'Corrected note saved'.\",\"observation_ids\":[\"obs-5\"]}]}"
+        },
+        "original_sha256": "d8d5db1b1c21ca321b9fe31f72295131331c2da9b5e6cc52c8a5d659aed02651",
+        "record": {
+          "conversation_url": "https://chatgpt.com/c/6af58549-0eb8-83ec-90a9-d76400f01a72?temporary-chat=true",
+          "ended_at": 1794475581.474098,
+          "error_reason": null,
+          "error_type": "CancelledError",
+          "kind": "review",
+          "operation_id": "op-308c3adf40ac04f5a7fcb835eaa56cb68a4cdf8c",
+          "prompt_sha256": "b20285aea83dafe7a89f3c5761e819decc21bc1b46a259fbd304b43d43b2d716",
+          "remote_session_id": "ffTKpumoctFI394S",
+          "request_sha256": "a70b7885d0b414e8390259f81b187e9a6d039883959676d81bd008baa49d7830",
+          "send_readiness": [
+            {
+              "at": 1794475403.074862,
+              "disabled": false
+            }
+          ],
+          "sent_at": 1794475403.225025,
+          "started_at": 1794475401.473259,
+          "status": "uncertain"
+        }
+      },
+      {
+        "candidate": {
+          "key": "fallback-turn-7:1:assistant",
+          "message_ids": "0d33d603-15a5-4624-9325-11e6265d2d1a 0d33d603-15a5-4624-9325-11e6265d2d1a",
+          "text": "ChatGPT 답변:\n\n{\"reason\":\"The sealed judgment accurately reflects all observed checkpoints. The rejection explicitly reported retained=false and an empty note field, so the success criterion failed. Recovery was separately verified: the corrected note was saved and the saved value exactly matched the entered text. Recovery does not erase the original retention failure. Evidence is from an authorized synthetic fixture and does not establish real-user behavior.\",\"criteria\":[{\"kind\":\"success\",\"index\":0,\"status\":\"failed\",\"observation\":\"The original draft 'Owned return draft before interruption.' was cleared by rejection. The note field was empty afterward, requiring re-entry.\",\"observation_ids\":[\"obs-2\",\"obs-3\"]},{\"kind\":\"recovery\",\"index\":0,\"status\":\"passed\",\"observation\":\"The corrected text 'Owned corrected return draft.' was saved successfully, and the observed saved value matched it exactly.\",\"observation_ids\":[\"obs-4\",\"obs-5\"]}]}"
+        },
+        "original_sha256": "f6cd5f49062f46e78d4f08100e676d69ec8e6c6eda6f537eba7e312607562ca3",
+        "record": {
+          "conversation_url": "https://chatgpt.com/c/6af58548-e680-83ee-bf9f-42354b3e69e0?temporary-chat=true",
+          "ended_at": 1794475579.446399,
+          "error_reason": null,
+          "error_type": "CancelledError",
+          "kind": "review",
+          "operation_id": "op-6cc0cd1fec9defcb57eb95016f73cdb67a0fe2d3",
+          "prompt_sha256": "25522afdd2ffa555427483168b29c2ec01eb99b1884452d821bbd12f76eeef4e",
+          "remote_session_id": "qDv2k4gjh1zT05xM",
+          "request_sha256": "dd3214d3e1ffbf1bfc76ad59c04ef13cccc8d5e18a9aed6d2479e5195c7b0091",
+          "send_readiness": [
+            {
+              "at": 1794475401.024556,
+              "disabled": false
+            }
+          ],
+          "sent_at": 1794475401.208413,
+          "started_at": 1794475399.445926,
+          "status": "uncertain"
+        }
+      }
+    ],
+    "maxrss_bytes": 100745216,
+    "private_path": "/Users/r3m0r5e/CodeProjects/remorsearch-ux-qa-resume/.ux-loop/oss-swarm-20261112/worktree/.ux-loop/aside-live-model-20261112-07",
+    "sources_unchanged": true,
+    "transport_probe_calls": 2
+  },
+  {
+    "attempt": 8,
+    "completion": true,
+    "counts": {
+      "blocked": 0,
+      "failed": 1,
+      "inconclusive": 0,
+      "passed": 1,
+      "pending": 0,
+      "running": 0,
+      "skipped": 0
+    },
+    "diagnostic_sha256": "69e04571e932e299ab3f25c08fea9d8236729c50b02624741eb697b295579b8e",
+    "elapsed_seconds": 88.57917349995114,
+    "execution": {
+      "actual_model_calls": 12,
+      "actual_model_execution": true,
+      "actual_model_parallel_observed": true,
+      "actual_model_tool_personas": [
+        "PER-CAUTIOUS",
+        "PER-RETURN"
+      ],
+      "actual_review_calls": 2,
+      "authored_decision_calls": 0,
+      "engine_sha256": "ef01dc997314fe967b2c841a991c3d419ceedfdea85c2b88436760aed5ab0106",
+      "first_judgments": [
+        {
+          "sha256": "2d8bcf5c10f95e99962cd653f3c65e63791bdc535a8f0eea81d89433abd2c945",
+          "task_id": "T-CAUTIOUS"
+        },
+        {
+          "sha256": "5fe630f7fdc1bdd792aa525067db43f76c1628e0f836743def8ff962d74382eb",
+          "task_id": "T-RETURN"
+        }
+      ],
+      "host": {
+        "adapter_sha256": "b838248afdbbc9aef0d4c79bfd4517e346a9f4f19904c3a36a39d9eadb81a3d1",
+        "isolated_contexts": true,
+        "mode": "model_tools",
+        "model": "ChatGPT Pro displayed in owned UI",
+        "name": "aside-owned-chatgpt-pro",
+        "parallel_safe": true
+      },
+      "host_context_isolation_attested": true,
+      "mode": "model_tools",
+      "model_calls": 12,
+      "model_identity_basis": "host_transport_attestation_not_independent_provider_verification",
+      "model_parallel_basis": "completed_host_callback_intervals; provider_compute_concurrency_unverified",
+      "observation_review": {
+        "basis": "declared_obligations_not_independent_raters",
+        "consensus_complete": false,
+        "groups": [
+          {
+            "definition_conflict": false,
+            "duplicate_observations": 0,
+            "missing": 0,
+            "obligation_id": "O-RECOVER",
+            "outcome_conflict": false,
+            "requirement_id": "R-STATE",
+            "tasks": [
+              "T-CAUTIOUS",
+              "T-RETURN"
+            ]
+          },
+          {
+            "definition_conflict": false,
+            "duplicate_observations": 0,
+            "missing": 0,
+            "obligation_id": "O-RETAIN",
+            "outcome_conflict": true,
+            "requirement_id": "R-STATE",
+            "tasks": [
+              "T-CAUTIOUS",
+              "T-RETURN"
+            ]
+          }
+        ]
+      },
+      "os_or_network_sandbox": false,
+      "parallel_observed": true,
+      "peak_calls_by_kind": {
+        "close": 1,
+        "model": 2,
+        "review": 2,
+        "tool": 1
+      },
+      "peak_host_calls": 2,
+      "peer_results_supplied_to_model": false,
+      "real_user_evidence": false,
+      "runtime": "langgraph",
+      "tool_calls": 10,
+      "two_persona_model_tool_execution": true,
+      "verification_scope": "host_review_and_local_evidence_integrity",
+      "versions": {
+        "langgraph": "1.2.20",
+        "langgraph-checkpoint-sqlite": "3.1.3"
+      },
+      "workers": [
+        {
+          "context_id": "ctx-2e2464e70246d6261fc43d773e765eb9606891b3",
+          "phase": "recorded",
+          "problem": null,
+          "stopped": true,
+          "task_id": "T-CAUTIOUS"
+        },
+        {
+          "context_id": "ctx-d6e2390adf3bd2bd0f76c6f4b6452d098173d698",
+          "phase": "recorded",
+          "problem": null,
+          "stopped": true,
+          "task_id": "T-RETURN"
+        }
+      ]
+    },
+    "failures": [],
+    "followup": "Model/tool/review completed. Provider PNG privacy review found account sidebar content; those captures excluded from export. Final attempt 09 removes provider screenshots entirely.",
+    "maxrss_bytes": 105185280,
+    "private_path": "/Users/r3m0r5e/CodeProjects/remorsearch-ux-qa-resume/.ux-loop/oss-swarm-20261112/worktree/.ux-loop/aside-live-model-20261112-08",
+    "sources_unchanged": true,
+    "transport_probe_calls": 2
+  }
+]

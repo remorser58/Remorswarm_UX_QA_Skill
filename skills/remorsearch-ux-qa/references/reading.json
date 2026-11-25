@@ -35,7 +35,8 @@
     "plan",
     "persona-starter",
     "export-personas",
-    "persona-intake"
+    "persona-intake",
+    "prepare-imports"
   ],
   "korean_switches": {
     "report_language": {
@@ -102,7 +103,8 @@
         "references/loop/cli.md",
         "references/agent-setup.md",
         "drivers/web/README.md",
-        "references/ergonomics/visual-science.md"
+        "references/ergonomics/visual-science.md",
+        "references/loop/react-design-system.md"
       ],
       "later_conditions": {
         "causal_analysis": [
@@ -137,13 +139,19 @@
         "references/research/output-template.md",
         "references/research/korea/report-template.md",
         "references/persona-qa/qa-report-template.md",
+        "references/persona-qa/storage-retention.md",
+        "references/persona-qa/behavior-guidance.md",
+        "references/persona-qa/information-architecture.md",
+        "references/persona-qa/ux-qa-methods.md",
+        "references/persona-qa/keyboard-recovery.md",
         "references/ergonomics/report-template.md",
         "references/ergonomics/human-factors-checks.md",
         "references/loop/provider-contract.md",
         "references/loop/cli.md",
         "references/agent-setup.md",
         "drivers/web/README.md",
-        "references/ergonomics/visual-science.md"
+        "references/ergonomics/visual-science.md",
+        "references/loop/react-design-system.md"
       ],
       "later_conditions": {
         "causal_analysis": [
@@ -186,7 +194,8 @@
         "references/loop/cli.md",
         "references/agent-setup.md",
         "drivers/web/README.md",
-        "references/ergonomics/visual-science.md"
+        "references/ergonomics/visual-science.md",
+        "references/loop/react-design-system.md"
       ],
       "later_conditions": {
         "causal_analysis": [
@@ -229,7 +238,8 @@
         "references/loop/cli.md",
         "references/agent-setup.md",
         "drivers/web/README.md",
-        "references/ergonomics/visual-science.md"
+        "references/ergonomics/visual-science.md",
+        "references/loop/react-design-system.md"
       ],
       "later_conditions": {
         "causal_analysis": [

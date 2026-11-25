@@ -1,15 +1,17 @@
 <!-- Mode: persona-qa. Entry point: `SKILL.md`. -->
 # Persona QA mode
 
-Test task completion and input preservation. Synthetic scenarios define conditions; product traces establish failures. Integrated improvement includes task-linked research; standalone QA adds it only when requested.
+Test completion and input preservation with actual traces. Improvement includes task research; standalone QA adds research only on request.
 
 ## Phase 0 recap
 
-Use `SKILL.md` Phase 0. Discover tasks from the product; record URL/build, device/viewport/input, constraints, intent, Figma version, grants and synthetic fixtures. Begin baseline QA without a prepared audience or problem list. Ask only for missing material access; preserve existing grants.
+Use `SKILL.md` Phase 0. Discover tasks from the product; record URL/build, device/viewport/input, constraints, intent, Figma version, grants and synthetic fixtures. Begin baseline QA without a prepared audience or problem list. Ask only for missing material access.
 
-Disclose Chromium emulation limits: real device/grip/keyboard occlusion/safe area/screen reader remain untested. Korean product: `references/persona-qa/kwcag-card.md`; report language changes wording only. Outside-product pages: `references/shared/access-card.md` in operator/verifier prompts. Host browser first; preserve user state.
+Emulation leaves real device/grip/occlusion/safe area/screen reader untested. Korean product: `references/persona-qa/kwcag-card.md`; report language changes wording only. Outside-product pages: `references/shared/access-card.md` in operator/verifier prompts. Host browser first; preserve user state.
 
 ## 1. Build the priority-task matrix
+
+Persona reuse/workers: lookup `references/persona-qa/persona-library-swarm.md` by section.
 
 For every priority task, require all these rows on each device in scope:
 
@@ -22,11 +24,11 @@ For every priority task, require all these rows on each device in scope:
 | Keyboard only | Whole primary task, including intermediate choices and recovery |
 | Reading order | Each intermediate screen's meaningful sequence and focus order |
 
-After every step, verify prior values/choices. Author `success.task_checks` for material fields after error/coupon/address/recovery transitions and at completion (`drivers/web/README.md`). Use explicit expected reset/normalized values; `from_step` reuses an authored input, `type.redact:true` protects its recorded text. Failed submit: first-invalid focus, invalid state and error association. Success requires final options/quantities/amounts/notes to match. Each row: pass/partial/fail/untested with reason.
+List screens, states, devices reached or not. Where relevant, test Korean clipping, IME, input retention, recovery. After every step, verify prior values/choices. Author `success.task_checks` for material fields after error/coupon/address/recovery transitions and at completion (`drivers/web/README.md`). Use explicit expected reset/normalized values; `from_step` reuses an authored input, `type.redact:true` protects its recorded text. Failed submit: first-invalid focus, invalid state and error association. Success requires final options/quantities/amounts/notes to match. Each row: pass/partial/fail/untested with reason.
 
 Scenario: ID/task/goal/safe data, basis/brief condition, context/constraints/device/input/start, expected decision/integrity/risk, claim IDs and omissions. Audience rows cite audience_id/segment_id/task_id/facet and gate-supported motivations. Without an audience, choose task-changing strata: new/returning, touch/keyboard, interruption, delay, empty/stale/edge data. Do not add demographic decoration or stereotype behavior.
 
-Optional dataset: exact source/revision/schema, bounded/streaming sample; record adapter/schema fingerprint/seed/config/shard/read-byte-time bounds/IDs/strata/stop. Separate original attributes/assumptions. Scenario detail: `references/persona-qa/persona-scenario-design.md` by section.
+Optional dataset: exact source/revision/schema, bounded/streaming sample; record adapter/schema fingerprint/seed/config/shard/read-byte-time bounds/IDs/strata/stop. Separate original attributes/assumptions. See `references/persona-qa/persona-scenario-design.md` by section (Draft vs. Save).
 
 ## 2. Exercise and capture
 

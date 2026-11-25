@@ -1,0 +1,174 @@
+{
+  "schema": "pe1-independent-adjudication.v1",
+  "verdict": "incomplete_primary_comparison; partial_descriptive_evidence_only",
+  "review_mode": "Read-only logs, saved screenshots and frozen artifacts; no new UI, source inspection, target changes, commit or push.",
+  "scope": {
+    "workers_per_condition": 1,
+    "synthetic_cases": 6,
+    "seeded_defects": 3,
+    "clean_controls": 3,
+    "real_users": 0
+  },
+  "conditions": {
+    "Q": {
+      "unique_seeded_defects_detected": 3,
+      "seeded_denominator": 3,
+      "missed_seeded_defects": [],
+      "unsupported_unique_reproduced_claims": 0,
+      "duplicate_defect_reports": 0,
+      "clean_control_false_alarms": 0,
+      "clean_control_denominator": 3,
+      "clean_controls_observed": 3,
+      "clean_control_false_positive_rate": 0,
+      "cases_exercised": [
+        "K4M",
+        "B7N",
+        "T2V",
+        "D5Q",
+        "P8R",
+        "H9S"
+      ],
+      "attempted_actions": 60,
+      "successful_actions": 58,
+      "failed_actions": 2,
+      "observed_screenshot_interval_seconds": 107.584,
+      "total_elapsed_seconds": null,
+      "status": "All six cases have execution evidence; exact 12-minute compliance not independently recoverable."
+    },
+    "R": {
+      "unique_seeded_defects_detected": 3,
+      "seeded_denominator": 3,
+      "missed_seeded_defects": [],
+      "unsupported_unique_reproduced_claims": 0,
+      "duplicate_defect_reports": 0,
+      "clean_control_false_alarms": 0,
+      "clean_control_denominator": 3,
+      "clean_controls_observed": 2,
+      "clean_control_false_positive_rate": null,
+      "observed_clean_control_false_positive_rate": 0,
+      "cases_exercised": [
+        "K4M",
+        "P8R",
+        "T2V",
+        "B7N",
+        "D5Q"
+      ],
+      "unverified_cases": [
+        "H9S"
+      ],
+      "verified_attempted_actions": 45,
+      "successful_actions": 43,
+      "failed_actions": 2,
+      "read_only_observations": 1,
+      "additional_submitted_unconfirmed_actions": 8,
+      "submitted_actions_including_unconfirmed": 53,
+      "observed_screenshot_interval_seconds": 289.428,
+      "total_elapsed_seconds": null,
+      "status": "Incomplete: H9S has no execution result. Post-freeze inconclusive receipt is bookkeeping, not execution evidence."
+    }
+  },
+  "matches": [
+    {
+      "case": "B7N",
+      "obligation": "D2",
+      "Q_actions": [
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "R_actions": [
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38
+      ],
+      "verdict": "Both match seat reset on pause/resume. Q:27 to14; R:23 to14. Title retained. R D1 propagation is not a second defect."
+    },
+    {
+      "case": "D5Q",
+      "obligation": "I2",
+      "Q_actions": [
+        30,
+        31,
+        32,
+        33,
+        34,
+        35
+      ],
+      "R_actions": [
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45
+      ],
+      "verdict": "Both match canceled preview names appearing in current materials before Apply. I1 mutation timing is not separately established by visible evidence; no extra defect credited."
+    },
+    {
+      "case": "P8R",
+      "obligation": "C1",
+      "Q_actions": [
+        36,
+        37,
+        38,
+        39,
+        40
+      ],
+      "R_actions": [
+        12,
+        13,
+        14,
+        15
+      ],
+      "verdict": "Both match Cedar becoming Maple after cost sort and in review; Q additionally confirms Maple. R later replaces with Willow and confirms Willow, not Maple."
+    }
+  ],
+  "integrity": {
+    "Q_findings_sha256": "b27f18f280507bf6c14193449933ef7cdae9abbdd9271fd65648a5b7c7040aa1",
+    "Q_summary_sha256": "0690c5ae56cae8d34e40cf0f3448390ba27c0352bae241400f19e483063a20b1",
+    "R_findings_sha256": "fdd00d5aa4957700e7213cb2c64fda72028a00846eee75aff52bb87feb3558cd",
+    "R_summary_sha256": "3430a8c00a983ac6db87799e461f9b4401b0780784a8e23eb33c6054765a1309",
+    "oracle_key_current_sha256": "6eb1b9df13cee710971d1398e169358d995834741662827dbcc183507434fe7d",
+    "oracle_trace_sha256": "d1e45a3af77b7cd0aab8a63c9cb0617fca4513f9140ba067d306a68d7ee894af",
+    "fixture_manifest_files_match": 6,
+    "fixture_manifest_files_total": 6,
+    "receipt_artifacts_hash_verified": 48,
+    "limits": [
+      "Oracle key hash was not separately committed before trial; current hash is not a retroactive precommitment. Pretrial verification trace contains 46 successful actions and matches stored trace hash.",
+      "Q file hashes match supplied freeze. R file hashes match supplied post-recovery materialization; its earlier conversational freeze and no-exposure timing are coordinator provenance, not independently cryptographically proved here.",
+      "Condition prose reveals workflow; adjudication is not perfectly blinded.",
+      "No logged forbidden operation, budget reset, or unseeded defect was found. Logs alone cannot prove absence of unrecorded activity."
+    ]
+  },
+  "deviations": [
+    "Both first navigations failed with ERR_CONNECTION_REFUSED; same frozen server restoration and no budget reset were reported. Each failure remains counted.",
+    "Both visible-label import fills failed, followed by counted empty preview/back actions and successful alternate-label fills; these are not reproduced PRD defect claims.",
+    "R has a premature P8R navigation before accepted claim and a fresh navigation after claim; both count.",
+    "R H9S commands46-53 were submitted but no results survive. Nonexecution is not proved. No post-freeze UI was used.",
+    "Initial failures lack exact timestamps. Observed screenshot intervals exclude earlier waiting and are not total elapsed time or efficiency estimates."
+  ],
+  "workflow_evidence": {
+    "imported_profiles": 3,
+    "reimport_revision": 1,
+    "reimport_changed": false,
+    "plan_tasks": 6,
+    "max_parallel": 1,
+    "receipt_persona_revisions": 1,
+    "note": "Import/reimport records, saved profiles, plan and five evidence-backed receipts establish recorded workflow use. H9S late receipt has no artifacts."
+  },
+  "limits": [
+    "No superiority, statistical effectiveness, persona-only causation, real-user benefit, whole-product readiness, token count or monetary cost conclusion.",
+    "All three reported seed matches are supported in each condition, but this is not a completed head-to-head tie. R clean-control coverage is2/3. Report0 observed false alarms, not a verified0/3 complete-control false-positive rate.",
+    "Q tested duplicate import names and reverse room sorting; R explicitly excluded duplicate names and revised import content. Neither exhaustively tested all states."
+  ]
+}

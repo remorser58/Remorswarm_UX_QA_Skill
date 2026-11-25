@@ -1,4 +1,4 @@
-"""CLI contract: explicitly supplied --scenario files must bind every analyzed or attached run."""
+"""CLI contracts for scenario binding and capture-dependent heatmaps."""
 
 from __future__ import annotations
 
@@ -12,8 +12,74 @@ from pathlib import Path
 import _paths  # noqa: F401  (puts the skill folder on sys.path)
 from test_ergo_pipeline import make_run  # the owned synthetic recorded run fixture
 
-from ergoqa import cli
+from ergoqa import checks, cli, png
 from ergoqa.profiles import sample_profiles
+from ergoqa.snapshot import sha256_file
+from test_ergo_fixes import ctx, el
+
+
+class ReachHeatmapContract(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.root = Path(tmp.name)
+        self.profile = next(p for p in sample_profiles(14, 7, ["iphone-15"])
+                            if p["attributes"]["grip"] == "one_hand_right")
+        self.profile["attributes"]["thumb_length_mm"] = 102.6
+        (self.root / "profiles.json").write_text(json.dumps([self.profile]))
+        self.shot = self.root / "crop.png"
+        png.write_png(self.shot, png.new_image(393, 828, 3, (255, 255, 255)))
+        # Place a tiny synthetic primary target precisely at a rendered cell's sample.
+        self.x, self.y = 27.5 * 393 / 49, 36.5 * 828 / 103
+        self.context = ctx([el("apply", "button", (self.x - .5, self.y - .5, 1, 1),
+                               interactive=True, roles=("primary",))], self.profile, "iphone-15")
+        self.snap = self.context.snapshot
+        self.snap["device"]["viewport_css"] = [393, 828]
+        self.snap.update(viewport_alignment={"basis": "observed-landmarks", "origin_css": [0, 24],
+                                            "reference": "synthetic landmark in full display"})
+        self.snap["screenshot"] = dict(path=self.shot.name, width_px=393, height_px=828,
+                                       sha256=sha256_file(self.shot), viewport_raster_reference="authored viewport-only crop")
+        self.out = self.root / "heat.png"
+
+    def render(self, kind="reach"):
+        snapshot = self.root / "snapshot.json"
+        snapshot.write_text(json.dumps(self.snap))
+        err = io.StringIO()
+        with redirect_stdout(io.StringIO()), redirect_stderr(err):
+            code = cli.main(["heatmap", "--snapshot", str(snapshot), "--profiles", str(self.root / "profiles.json"),
+                             "--profile", self.profile["profile_id"], "--kind", kind, "--out", str(self.out)])
+        return code, err.getvalue()
+
+    def test_crop_cell_color_matches_rh01_at_same_display_point(self):
+        rh = next(o for o in checks.check_reach(self.context) if o.check_id == "RH-01")
+        self.assertEqual(rh.measurement["value"], 0.0)
+        self.assertEqual(self.render(), (cli.EXIT_OK, ""))
+        image = png.read_png(self.out)
+        self.assertEqual(image.pixel(int(self.x), int(self.y)), (255, 255, 255, 255))
+        self.assertNotEqual(image.pixel(4, 4), (255, 255, 255, 255))  # not an empty overlay
+
+    def test_unknown_origin_blocks_only_physical_reach(self):
+        self.snap.pop("viewport_alignment")
+        code, err = self.render()
+        self.assertEqual(code, cli.EXIT_USAGE)
+        self.assertIn("missing_viewport_alignment", err)
+        self.assertFalse(self.out.exists())
+        self.assertEqual(self.render("gaze"), (cli.EXIT_OK, ""))
+        self.assertTrue(self.out.is_file())
+
+    def test_display_origin_does_not_prove_viewport_to_raster_coverage(self):
+        self.snap["screenshot"].pop("viewport_raster_reference")
+        self.assertEqual(self.render()[0], cli.EXIT_USAGE)
+        self.assertFalse(self.out.exists())  # even an identical aspect ratio does not establish coverage
+
+    def test_raster_claim_is_bound_to_actual_bytes_and_viewport_scale(self):
+        self.snap["screenshot"]["sha256"] = "0" * 64
+        self.assertEqual(self.render()[0], cli.EXIT_USAGE)
+        self.assertFalse(self.out.exists())
+        png.write_png(self.shot, png.new_image(393, 852, 3, (255, 255, 255)))
+        self.snap["screenshot"].update(sha256=sha256_file(self.shot), height_px=852)
+        self.assertEqual(self.render()[0], cli.EXIT_USAGE)
+        self.assertFalse(self.out.exists())
 
 
 def scenario_doc(scenario_id: str) -> dict:

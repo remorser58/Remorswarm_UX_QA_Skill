@@ -22,33 +22,54 @@ artifacts between them. A research-only or review-only request keeps its scope.
 | **loop** | Records bounded fixes, current-build replay, regression and preserved-intent checks. | Host browser/Figma tools and actual receipts. Existing improvement authority is recorded explicitly for scoped local patches. |
 
 The host-agent instructions implement this integrated entry path. The CLI validates
-imported evidence and applies bounded local text patches; the host performs
+imported evidence, applies bounded local text patches and can execute owned core
+tasks through an explicitly reviewed single Python adapter; the host performs
 browser actions, Figma work and builds. Whole-product execution from request to
 verified improvement still needs a separate live acceptance run. Existing fixture
 and component tests do not establish that result.
 
 ## Install
 
+Releases are published on `main` and versioned [GitHub Releases](https://github.com/remorser58/Remorswarm_UX_QA_Skill/releases)
+(formerly `github.com/remorser58/Remorsearch_UX_QA_Skill`; GitHub redirects old remotes automatically).
+See [replay validation and remaining limits](docs/validation/persona-journey-replay-20261111.md)
+and the [persona library/task contract](skills/remorsearch-ux-qa/references/persona-qa/persona-library-swarm.md).
+Do not overwrite a locally edited installation without preserving it first.
+
 Install one folder into your skills directory. It includes the original
 insane-search toolkit as reference material for Remorsearch's research stage;
 users do not install a separate search skill. The Python tools need Python 3.10+
-on macOS, Linux or WSL and use the standard library and POSIX file locks.
-
-The current candidate is on `codex/release-candidate-20261002`; use that branch
-until the skill is merged into `main`.
+on macOS, Linux or WSL and use the standard library and POSIX file locks. If the
+default `python3` is older (the macOS system Python is 3.9), the host runs
+`python3 scripts/find_runtime.py` from the skill folder. It prints JSON with the
+highest supported Python, a Node.js 22 path and any gaps; it installs nothing.
 
 ```sh
-git clone --branch codex/release-candidate-20261002 https://github.com/remorser58/Remorsearch_UX_QA_Skill.git
+git clone https://github.com/remorser58/Remorswarm_UX_QA_Skill.git
 # Claude Code (personal); use .claude/skills/ inside a project to share it with a team
 mkdir -p ~/.claude/skills
-cp -R Remorsearch_UX_QA_Skill/skills/remorsearch-ux-qa ~/.claude/skills/
+cp -R Remorswarm_UX_QA_Skill/skills/remorsearch-ux-qa ~/.claude/skills/
 # Codex
 mkdir -p ~/.codex/skills
-cp -R Remorsearch_UX_QA_Skill/skills/remorsearch-ux-qa ~/.codex/skills/
+cp -R Remorswarm_UX_QA_Skill/skills/remorsearch-ux-qa ~/.codex/skills/
+```
+
+### Auto-update
+
+Existing installations (including copies cloned before `v1.1.0`) can install or upgrade
+from verified [GitHub Releases](https://github.com/remorser58/Remorswarm_UX_QA_Skill/releases) with SHA-256 verification, timestamped backups,
+local-edit protection, and preserved `drivers/web/node_modules` and `.ux-*` state. Set `REMORSEARCH_NO_UPDATE_CHECK=1` to opt out of cached background checks.
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/remorser58/Remorswarm_UX_QA_Skill/main/scripts/install.sh | bash -s -- --target claude --with-design-system
+python3 "$HOME/.claude/skills/remorsearch-ux-qa/scripts/update_skill.py" check
+python3 "$HOME/.claude/skills/remorsearch-ux-qa/scripts/update_skill.py" apply --with-design-system
 ```
 
 Copying the folder completes the skill installation. Maintainer-only packaging
 and integrity checks are documented in [build and release checks](docs/release.md).
+To also install the optional companion React design-system skill, copy `skills/react-design-system/`
+alongside `skills/remorsearch-ux-qa/` (or install from `https://github.com/remorser58/react-design-system-skill`).
 
 The folder contains the Python tools, JSON schemas, demo fixtures, live web
 driver, and original search instructions with their references and provenance.
@@ -84,8 +105,20 @@ Ask in plain words, or call it by name:
 The agent derives tasks, questions and scenarios from the product, inspects
 relevant project documents and accessible intent memory, and preserves confirmed
 decisions through replay. It asks only for material missing access or unresolved
-decisions and continues unaffected work. Subagents are optional; existing host
-settings apply without a mandatory model-selection setup.
+decisions and continues unaffected work. Subagents are optional and inherit the
+current session's model; you are asked only if you want to choose one.
+
+One request is enough: a URL or repository, optionally a task. The agent first
+writes a scoped baseline assessment of the tasks it actually reached, which is
+useful on its own, then researches only the questions that assessment raised. It
+makes a fix only when one is warranted and replays it. A missing optional source
+or tool limits only the affected result. When it prepares a loop packet, the
+host writes the observed facts and marks mechanical fields `@auto`;
+`python3 scripts/ux_loop.py fill DRAFT.json --evidence-root EVIDENCE [--workspace PRODUCT] --out packet.json`
+computes only hashes, digests, run links and fix revisions. It never fills
+context, intent, grants, outcomes or severity, and a refused or invalid result is
+not acceptance. A passed task shows that task only; it is not whole-product
+readiness or measured user benefit.
 
 Default research candidates are 당근 (Karrot), 디시인사이드 (DC Inside), 유튜브 댓글
 (YouTube comments), X, 인스타그램 (Instagram) and Threads(쓰레드). The agent selects
@@ -93,6 +126,116 @@ those relevant to observed tasks; availability and collection are not guaranteed
 After URL discovery, the bundled insane-search methods remain subject to the
 existing access/evidence rules. See the [operational checklist](skills/remorsearch-ux-qa/references/loop/product-improvement.md)
 for the product-to-replay workflow and existing plan/bundle/loop commands.
+
+### From an ordinary request to a current local QA report
+
+For larger independent persona runs, the [queued swarm workflow](skills/remorsearch-ux-qa/references/persona-qa/scale-run.md)
+connects current saved profiles to a durable provider-neutral model/tool loop.
+The host previews session count, destinations, concurrent calls and budget before
+recording explicit approval for paid calls. Pause/resume retains checkpoints and
+unknown-send cost exposure; authored simulations and live model results remain
+separate. The [current validation](docs/validation/scalable-swarm-results-20261113.md)
+records exercised scale, failures and remaining live-provider gaps.
+
+Tell the host the approved product folder and user goal. The host reviews the
+minimal source, existing personas and permitted execution path; you do not need
+to write JSON, copy a repository, manage leases or decide whether exit zero means
+success. `start` prepares the reviewed files. For a reviewed owned single Python
+adapter, `run` now executes the actual core tasks and joins their observations
+to the existing receipt validator and immutable MD/JSON reports. `status` and a
+repeated `start` show the current goals, failures, unexecuted criteria and next
+action. The host reads that report back in ordinary language.
+
+The report re-reads each stored execution log against its receipt and checks
+repeated or contradictory observations for the same PRD obligation across
+personas. Repeated evidence is not counted twice; conflicts stay visible and
+require review. This is deterministic integrity/consistency checking, not an
+independent human or model evaluator, and it cannot prove adapter observations true.
+
+This bounded path reuses current PRD hypotheses and saved research-motivated
+synthetic personas. The host explicitly reviews each research location; current
+gate, source/capture retention and motivation checks remain mandatory, and the
+original research is inspected without cleanup, copying or permission changes.
+It creates no personas and has no general browser/service
+adapter or OS/network sandbox. Source/Library changes block reuse; uncertain
+dispatch is not replayed; recorded results are recovered without new attempts.
+Core observations alone remain inconclusive, and no UI or real-user benefit is
+claimed. Saved experiment baselines cannot be reset through this entry.
+
+Host details: [start](skills/remorsearch-ux-qa/references/persona-qa/start.md),
+[local execution contract](skills/remorsearch-ux-qa/references/persona-qa/local-run.md),
+[fixed criteria](docs/validation/journey-run-protocol-20261112.md) and
+[validation results](docs/validation/journey-run-results-20261112.md).
+The additional [swarm evidence audit protocol](docs/validation/swarm-evidence-audit-protocol-20261112.md)
+and [verification record](docs/validation/swarm-evidence-audit-results-20261112.md)
+describe receipt/log rechecks, cross-persona duplicate/conflict detection and the
+explicit boundary between deterministic consistency checks and independent review.
+The installed `examples/journey/run_fixture.py` is a diagnostic with a known
+synthetic defect, not an actual-user study. Release validation runs it from the
+extracted package and keeps failed/inconclusive product verdicts distinct from
+successful software checks.
+
+Research reuse now reaches that same current execution/report path. Claim/source
+IDs, gate status, exact persona version and export fingerprints remain distinct
+from observed product behavior. See the [research reuse criteria](docs/validation/research-journey-protocol-20261112.md)
+and [research reuse validation](docs/validation/research-journey-results-20261112.md).
+The extracted `--research` diagnostic uses invented offline source contracts;
+it does not repeat the historical public pilot or establish source authenticity.
+
+### Execute a reviewed static browser journey
+
+A separate reviewed static-browser plan now connects those saved personas to the
+existing measured Playwright driver. The host derives actions and checkpoints
+from the actual reviewed source and user goal. An owned headless Chromium
+captures input retention, completion and recovery, with current task/build/persona
+bindings, native logs and PNGs checked by the existing receipt/audit path.
+An earlier failure survives later recovery; unseen or unvisited targets remain
+unobserved. Completed readback does not launch a browser or spend another attempt.
+
+This path supports reviewed owned static files and synthetic inputs. It does not
+run an arbitrary product URL, backend, account or the user's browser. One task
+scope may pass while real_user_evidence and product_ready remain false.
+The installed browser diagnostic has a known input-loss path and normal control:
+expected task outcomes are one failure and one pass, not a product-readiness claim.
+See the [browser execution contract](skills/remorsearch-ux-qa/references/persona-qa/browser-run.md),
+[fixed browser criteria](docs/validation/browser-journey-protocol-20261112.md)
+and [browser verification record](docs/validation/browser-journey-results-20261112.md).
+
+### Save researched personas for later QA
+
+The host can import the current validated research export directly into the
+versioned Library with `ux_personas.py import-research`. It prepares the exact PRD
+mapping and explicit persona IDs, preserving authored scenarios, decisions,
+falsifying tests and unknowns. Identical retries keep the revision; changed
+existing profiles require the reviewed current revision. The command creates no
+task or execution result. See the [research intake contract](skills/remorsearch-ux-qa/references/persona-qa/persona-library-swarm.md#13-import-a-current-research-export-into-the-library)
+and [public evidence pilot](docs/validation/public-evidence-pilot-20261111.md).
+Public-source capture, synthetic hypotheses, CLI verification and actual-user UX
+evidence remain separate.
+
+### Reuse completed journeys on the next build
+
+From the skill folder, the host can prepare the next run without rewriting the
+persona/task/criterion/PRD mapping JSON:
+
+```sh
+python3 scripts/ux_personas.py replay --library LIBRARY --baseline BEFORE_RUN --run AFTER_RUN --build-id build-2 --artifact build-2.bin --isolation-id fixture-v2 --confirm-starting-state --confirm-isolation
+```
+
+The output supplies fixture assignments and the next claim, receipt, report and
+comparison commands. It retains exact current persona versions and reviewed
+journeys, verifies existing evidence and prepares pending work on changed build
+bytes. It copies no results or execution permissions and does not run workers.
+The host still performs the journeys and records new observations. Same-pair
+retries reuse the reserved destination; active or uncertain baseline work must
+remain in its original execution/inspection flow. See the
+[replay contract](skills/remorsearch-ux-qa/references/persona-qa/persona-library-swarm.md#12-prepare-the-next-build-without-rewriting-the-journey-plan)
+for privacy, isolation, restart and evidence limits.
+
+Journey receipts now validate and save one detached input snapshot and recheck
+the original lease after evidence validation and serialization, immediately
+before atomic storage. Late results preserve the run and evidence for explicit
+inspection and recovery.
 
 ## Evidence rules
 
@@ -218,21 +361,28 @@ facts are marked 관찰됨; facts not reached in the primary source remain 미�
 ## Repository layout
 
 ```text
+VERSION                      release version source
+scripts/install.sh           one-command release installer/upgrader
+scripts/build_release_assets.py release ZIP & manifest builder
 skills/remorsearch-ux-qa/    the installable skill (copy this folder)
+  VERSION                    installed skill version
   SKILL.md                   entry point: modes, shared rules, tools
   references/                mode workflows and reference material
     research/korea/          Korean research pack (in Korean): platform map, query craft, markers, statistics, legal checklist, report template
     persona-qa/kwcag-2.2.md  KWCAG 2.2 and WCAG 2.2 notes for Korean products (in Korean)
-  scripts/                   CLIs: validate_bundle, ux_loop, ux_research, ergo_qa, benchmarks
+  scripts/                   CLIs: validate_bundle, ux_loop, ux_research, ergo_qa, update_skill, benchmarks
   uxloop/ uxresearch/        Python packages behind the loop CLI and the public-page reader
   ergoqa/ schemas/           ergonomics package and the JSON schemas used by the CLIs
   drivers/web/               live Playwright driver (Node.js)
   examples/loop/             synthetic demo fixture for the loop CLI
+skills/react-design-system/  optional companion skill for React + Vite design systems, Base UI, Motion, Storybook, Safe Area, and TanStack/Zustand/ky
 tests/                       unit tests and fixtures
 benchmarks/                  blind benchmark suites with answer keys
 docs/                        design notes, human-factors research, validation records
 README.md, README.ko.md      this page in English and in Korean
 ```
+
+Companion skill: [react-design-system](skills/react-design-system/SKILL.md) (standalone mirror at [react-design-system-skill](https://github.com/remorser58/react-design-system-skill)).
 
 ## Development
 
@@ -258,6 +408,18 @@ extracted ZIP from another working directory. See [release checks](docs/release.
 ```sh
 python3 scripts/check_release.py --output dist/release-check
 ```
+
+The [2026-11-11 controlled UX comparison](docs/validation/experiments/persona-workflow-20261111/README.md)
+found three supported seeded defects in both conditions, but the persona condition
+was incomplete after a connection loss. It does not establish a completed tie or
+superiority. The saved/reused persona workflow, shortcomings and minimized
+execution evidence are recorded. The [post-trial benchmark launcher](benchmarks/persona-effectiveness/RUNNING.md)
+provides a portable local reproduction path; published cases are development fixtures,
+not fresh held-out validation.
+The [precommitted PE-2 comparison](docs/validation/experiments/persona-workflow-pe2-20261111/README.md)
+completed all six cases under both budgets with the same three supported defects
+and no clean-control false alarms. This bounded tie does not establish superiority,
+real-user benefit or equal coverage.
 
 ## Limits
 

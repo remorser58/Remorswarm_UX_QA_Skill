@@ -38,7 +38,7 @@ jobs:
 
   web-driver:
     name: Web driver selftest on Node 22
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: skills/remorsearch-ux-qa/drivers/web
@@ -51,7 +51,19 @@ jobs:
           cache-dependency-path: skills/remorsearch-ux-qa/drivers/web/package-lock.json
       - name: Install driver dependencies
         run: npm ci
+      - name: Seed and recorder binding regressions on Node 22
+        working-directory: .
+        run: |
+          node --version
+          node -e "if (process.versions.node.split('.')[0] !== '22') process.exit(1)"
+          PYTHONPATH=tests PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest -v test_ergo_seed_bindings test_ergo_profile_binding
       - name: Install Chromium for Playwright
         run: npx playwright install --with-deps chromium
       - name: Driver selftest
         run: node selftest.mjs
+      - name: Persona benchmark launcher tests
+        working-directory: .
+        run: node --test benchmarks/persona-effectiveness/tests/runner.test.cjs benchmarks/persona-effectiveness-pe2/tests/runner.test.cjs
+      - name: Browser guardrail and bridge unit tests
+        working-directory: .
+        run: node --test skills/remorsearch-ux-qa/drivers/web/journey_bridge.test.mjs tests/scale_browser_guardrails.test.mjs tests/scale_browser_legacy_seed.test.mjs tests/scale_browser_lifecycle.test.mjs tests/scale_browser_action_deadline.test.mjs tests/scale_browser_scroll.test.mjs

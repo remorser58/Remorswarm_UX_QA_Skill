@@ -91,6 +91,29 @@ def main() -> int:
             assert completed['accepted_fix_ids'] == ['fix-1'] and completed['product_complete'] is False
             assert '상품 상세 보기' in (site / 'site/index.html').read_text(encoding='utf-8')
             command(['scripts/ux_loop.py', 'resume', '--checkpoint', str(checkpoint)], 0)
+            directory = root / 'filled'
+            packet = make_packet(directory)
+            workspace = directory / 'site'
+            workspace.mkdir()
+            (workspace / 'index.html').write_bytes((ROOT / 'examples/loop/site/index.html').read_bytes())
+            for artifact in packet['artifacts']:
+                artifact['sha256'] = '@auto'
+            for run in packet['browser_runs']:
+                run['scenario_digest'] = '@auto'
+            for fix in packet['fixes']:
+                fix.update(before_revision='@auto', after_revision='@auto', changed_paths='@auto')
+            draft, filled = directory / 'draft.json', directory / 'filled.json'
+            draft.write_text(json.dumps(packet, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+            value = command(['scripts/ux_loop.py', 'fill', str(draft), '--evidence-root', str(directory),
+                             '--workspace', str(workspace), '--out', str(filled)], 0)
+            assert value['valid'] and value['filled']
+            command(['scripts/ux_loop.py', 'validate', str(filled), '--evidence-root', str(directory)], 0)
+            value = command(['scripts/ux_loop.py', 'run', str(filled), '--workspace', str(workspace),
+                             '--evidence-root', str(directory), '--checkpoint', str(directory / 'checkpoint.json'),
+                             '--grant', 'code_write', '--actor', 'smoke-supervisor',
+                             '--reason', 'Approve only the isolated filled fixture patch'], 0)
+            assert value['status'] == 'complete' and value['product_complete'] is False
+            assert '상품 상세 보기' in (workspace / 'index.html').read_text(encoding='utf-8')
             for case, code, status in [('failed_visual', 5, 'failed'), ('unknown_evidence', 4, 'unknown'),
                                        ('regression_failure', 5, 'failed'), ('missing_browser', 3, 'blocked')]:
                 directory = root / case

@@ -66,10 +66,80 @@ installation and performs no downloads or install hooks. It verifies package
 integrity again after the browser test and compares the candidate with current
 inputs. `validation.json` records each check and its log.
 
+The extracted installation also runs `examples/journey/run_fixture.py`. This
+starts from an empty directory, prepares three reviewed sample files, reuses two
+pre-authored PRD hypotheses, invokes actual local Python adapters and verifies
+current report/readback with the original Library preserved. Expected product
+verdicts are one failed and one inconclusive; the diagnostic passes only when
+those known synthetic outcomes are reported honestly. It is not a browser or
+real-user check. Existing diagnostic output is never overwritten.
+
+The same extracted launcher also runs the `--research` variant in a separate
+new directory. It exercises the existing offline research input, real merge,
+gate, authored export, persistent Library import, reviewed research scope,
+current adapter execution and report/readback. Original research bytes, modes
+and modification times remain unchanged. Its live-mode contract fields and
+source grades belong to invented diagnostic inputs, not actual acquisition or
+user evidence. Both original and research diagnostics retain zero product passes.
+
+The browser gate also runs the pure bridge contract tests and the extracted
+`examples/journey/run_browser_fixture.py --research` diagnostic. It reuses the
+prepared Node 22 / Playwright 1.56.1 / Chromium runtime, starts owned headless
+sessions over reviewed synthetic static bytes, and admits native checkpoints,
+logs and PNGs through the real saved-persona receipt/audit path. The intentional
+input-loss task must fail while the normal control passes. Earlier failure
+survives final recovery, and repeated readback preserves the report and originals
+without another dispatch. This is actual browser execution of an authored
+diagnostic, not actual-user evidence, live-product QA or measured UX improvement.
+
 The output must be a new directory. Failed checks return nonzero. `--skip-web`
 produces a partial report with `ready: false`. Synthetic tests establish local
 behavior and packaging; live community access, real-user preferences, Figma access
 and accessibility certification remain outside this check.
+
+The extracted package also checks `remorsearch.py swarm --help`, runs an eight-session
+`examples/agents/scale_fixture.py` diagnostic at concurrency four, and reads it back
+through `remorsearch.py swarm status`. These checks use the durable queue and existing
+persona/evidence gates with authored model callbacks and generated PNGs. They make
+zero model or browser calls. Larger 8/32/100/300 stages and their measured coordinator
+cost are recorded separately in `docs/validation/scalable-swarm-results-20261113.md`.
+The standard-library queue does not require the optional agent runtime below.
+
+## Optional agent runtime checks
+
+The default installation remains standard-library only. The optional
+`requirements-agent.txt` pins LangGraph 1.2.20 and its SQLite checkpoint adapter
+3.1.3. Prepare a separate environment; do not install into a user's global
+Python or configure paid APIs/telemetry. The package actually compiles/invokes
+StateGraph and AsyncSqliteSaver; a missing runtime is an explicit diagnosis.
+
+Run the full check above with that interpreter and
+`REMORSEARCH_REQUIRE_AGENT_RUNTIME=1`, then run the extracted installation's
+`examples/agents/fixture.py --out NEW` and `scripts/ux_agents.py report`.
+The optional gate must not silently skip when the dependency is required.
+The owned browser variant accepts already-prepared Node 22, Playwright 1.56.1
+and Chromium paths; reuse those runtimes without copying browser/build trees.
+It verifies actual PNGs and model/tool-loop integration using authored decisions.
+Actual approved-model execution remains a separate acceptance condition.
+Document both optional-package-absent diagnosis and installed checks.
+
+The optional Aside transport uses only an existing approved SSH/profile route
+and the documented installed CLI REPL. It opens fresh owned temporary Pro
+contexts, rejects user drafts and stale responses, and binds model/tool/review
+receipts to the real graph. `tests/test_aside_transport.py` exercises protocol
+failures without contacting a model. `examples/agents/aside_live.py` separately
+records actual model decisions and owned Chromium observations; fixture
+decisions and transport probes cannot satisfy its two-persona completion gate.
+Default installs still need no new dependency. Aside/SSH/ChatGPT access is
+supplied by the approved host, not installed or authorized by this package.
+
+Keep real-run records separate from release regression results. Record both
+successful and interrupted live attempts, cleanup receipts, prompt/reply/PNG
+hashes and exact source manifests. MacBook coordinator elapsed/maxRSS excludes
+remote model memory and aggregate browser memory. The live note diagnostic
+does not establish arbitrary-product navigation, allowed public research,
+representative personas or measured user benefit. The new transport leaves the
+existing browser-run/driver/release-checker sources unchanged.
 
 ## Research and distribution boundary
 

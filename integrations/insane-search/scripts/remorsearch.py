@@ -18,10 +18,13 @@ GENERATED_DIRECTORIES = {"drivers/web/node_modules", *RUN_DIRECTORIES}
 
 COMMANDS = {
     "research": "scripts/ux_research.py",
+    "personas": "scripts/ux_personas.py",
+    "swarm": "scripts/ux_swarm.py",
     "ref": "scripts/ref.py",
     "loop": "scripts/ux_loop.py",
     "ergonomics": "scripts/ergo_qa.py",
     "validate": "scripts/validate_bundle.py",
+    "update": "scripts/update_skill.py",
 }
 
 
@@ -128,7 +131,7 @@ def emit(value: dict) -> None:
 
 def help_text() -> str:
     return ("Usage: python3 /path/to/remorsearch-ux-qa/scripts/remorsearch.py COMMAND [ARGS...]\n"
-            "Commands: paths, verify, research, ref, loop, ergonomics, validate, smoke\n"
+            "Commands: paths, verify, research, personas, swarm, ref, loop, ergonomics, validate, smoke, update\n"
             "Python 3.10+ on macOS/Linux/WSL. Engine arguments and exit codes are preserved.\n"
             "smoke uses invented fixtures only, without browser or network integration.\n")
 
@@ -153,6 +156,17 @@ def main(argv: list[str] | None = None) -> int:
     if command in {"paths", "verify", "smoke"} and arguments:
         print(command + " does not accept arguments", file=sys.stderr)
         return 2
+    if command == "update":
+        if sys.version_info < (3, 10):
+            print("Python 3.10 or newer is required; found " + sys.version.split()[0], file=sys.stderr)
+            return 2
+        try:
+            return run_engine(COMMANDS[command], arguments).returncode
+        except OSError as exc:
+            print("Cannot run bundled engine: " + str(exc), file=sys.stderr)
+            return 2
+        except KeyboardInterrupt:
+            return 130
     verification = verify_bundle(ROOT)
     if command == "verify":
         emit(verification)

@@ -102,7 +102,17 @@ def plan_intent(workspace: Path, paths: list[str], fix: dict, patch: bytes) -> d
     if changed != set(fix["changed_paths"]) or digest(after) != fix["after_revision"]:
         raise ContractError("Predicted patch scope/revision differs from reviewed fix")
     return {"fix_id": fix["id"], "before_hashes": {k: digest(v) for k, v in before.items()},
+            "before_files": {k: before[k] for k in sorted(changed)},
             "after_files": after, "after_revision": digest(after), "changed_paths": sorted(changed)}
+
+
+def rollback_snapshot(intent: dict) -> dict | None:
+    # Legacy in-flight intents have no originals. Do not invent a backup.
+    if "before_files" not in intent:
+        return None
+    body = {"before_files": dict(intent["before_files"]),
+            "after_files": {k: intent["after_files"][k] for k in intent["changed_paths"]}}
+    return {**body, "sha256": digest(body)}
 
 
 def finish_intent(workspace: Path, intent: dict) -> None:

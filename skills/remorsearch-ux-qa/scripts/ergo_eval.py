@@ -47,6 +47,7 @@ import statistics
 import subprocess
 import sys
 import time
+from contextlib import ExitStack
 from pathlib import Path
 from typing import Any
 
@@ -220,21 +221,27 @@ def configurations(data: dict[str, Any]) -> tuple[dict[str, dict[str, set[str]]]
 
 def record(data: dict[str, Any], out: Path) -> None:
     _, _, groups_of, notes = configurations(data)
+    if not any(groups_of.values()):
+        raise SystemExit(f"error: no runnable scenario/device pairs in suite: {data['suite']}")
     for n in notes:
         print(f"note: {n}", flush=True)
     runs_dir = out / "runs"
-    runs_dir.mkdir(parents=True, exist_ok=True)
-    (out / "profiles").mkdir(exist_ok=True)
+    profiles_dir = out / "profiles"
     log = []
-    with static_server(data["suite"].parent) as base_url:
+    with ExitStack() as stack:
+        base_url = None
         for sid, sc in sorted(data["scenarios"].items()):
             for gk in sorted(groups_of[sid]):
                 device_id, orientation = gk.split("|")
-                recorder = _base(gk)
                 run_id = f"R-{sid}-{device_id}-{orientation[0]}"
                 if (runs_dir / run_id / "run.json").is_file():
                     continue
-                ppath = out / "profiles" / f"{recorder['profile_id']}.json"
+                if base_url is None:
+                    runs_dir.mkdir(parents=True, exist_ok=True)
+                    profiles_dir.mkdir(exist_ok=True)
+                    base_url = stack.enter_context(static_server(data["suite"].parent))
+                recorder = _base(gk)
+                ppath = profiles_dir / f"{recorder['profile_id']}.json"
                 ppath.write_text(json.dumps(recorder, ensure_ascii=False), encoding="utf-8")
                 cmd = ["node", str(ROOT / "drivers/web/ergo_drive.mjs"), "run", "--scenario", str(data["paths"][sid]), "--profile", str(ppath),
                        "--out", str(runs_dir), "--run-id", run_id, "--base", base_url, "--continue-on-error"]
@@ -245,8 +252,10 @@ def record(data: dict[str, Any], out: Path) -> None:
                 entry = {"run_id": run_id, "scenario_id": sid, "group": gk, "exit": proc.returncode, "seconds": round(time.time() - started, 1)}
                 log.append(entry)
                 print(f"recorded {run_id}: exit {proc.returncode} in {entry['seconds']}s", flush=True)
-    previous = json.loads((out / "record-log.json").read_text(encoding="utf-8")) if (out / "record-log.json").is_file() else []
-    (out / "record-log.json").write_text(json.dumps(previous + log, indent=1), encoding="utf-8")
+    if log:
+        ledger = out / "record-log.json"
+        previous = json.loads(ledger.read_text(encoding="utf-8")) if ledger.is_file() else []
+        ledger.write_text(json.dumps(previous + log, indent=1), encoding="utf-8")
 
 
 def _lean(obs: dict[str, Any]) -> dict[str, Any]:
@@ -943,7 +952,8 @@ def main() -> int:
     C5_SEEDS = args.c5_seeds
     data = load_suite(args.suite.resolve())
     out = args.out.resolve()
-    out.mkdir(parents=True, exist_ok=True)
+    if args.cmd != "record":
+        out.mkdir(parents=True, exist_ok=True)
     if args.cmd == "plan":
         configs, registry, groups_of, notes = configurations(data)
         print(json.dumps({"configs": {c: {prod: len(ids) for prod, ids in v.items()} for c, v in configs.items() if not c.startswith("C5@") or c.endswith("#0")},
