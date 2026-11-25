@@ -175,5 +175,4 @@ community archive, or implicit claim of WCAG conformance. Editable Figma governs
 synthetic personas cannot establish population prevalence or user preference.
 
 See [references/loop/provider-contract.md](provider-contract.md) for exact boundaries, and the repository
-documents `docs/architecture.md`, `docs/omo-reference-review.md` and
-`docs/history/IMPLEMENTATION_REPORT.md` (not installed with the skill) for the rest.
+`docs/architecture.md` (not installed with the skill) for architecture details.

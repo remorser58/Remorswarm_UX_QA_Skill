@@ -9,16 +9,16 @@ import {validateLegacySeedFixture,requireFreshOwnedProfile,requireLegacySeedRead
 } from '../skills/remorsearch-ux-qa/drivers/web/scale_browser_cdp.mjs';
 
 const FILE='owned-legacy-unknown-state.json',ID='owned_legacy_unknown_v6';
-const PIN='51110f4c569673faa8d242d5b85c4b47afb54cbb';
-const LOADER='401759c4ef2d11efcf7b710292ba6269ce66653cd3d19fd2164fa6f54883559a';
+const PIN='a'.repeat(40);
+const LOADER='b'.repeat(64);
 const SEED_SPEC={
   storage_key:'owned_state_v6',
   target_key:'owned_state_v7',
   optional_keys:{owned_theme_preference:['system']},
   expected_initial_state:{snapshots:[],activeSnapshotId:null,comparisonSnapshotId:null,
-    whitelistedUsernames:[],customTagsByUsername:{},unfollowLog:[],cleanupQueueUsernames:[],
-    profileChecks:{},entitlement:{tier:'FREE',secretPassExpiresAt:null,rewardUnlockedItemIds:[],
-      whitelistLimit:20,customTagLimit:2,maxAccounts:1}},
+    pinnedIds:[],tagsById:{},historyLog:[],queuedIds:[],
+    profileChecks:{},entitlement:{tier:'FREE',passExpiresAt:null,unlockedItemIds:[],
+      pinLimit:20,tagLimit:2,maxAccounts:1}},
 };
 const sha=value=>createHash('sha256').update(value).digest('hex');
 const canonical=value=>JSON.stringify(value,function(key,item){
@@ -27,9 +27,9 @@ const canonical=value=>JSON.stringify(value,function(key,item){
 });
 const empty=()=>structuredClone(SEED_SPEC.expected_initial_state);
 const source=()=>({...empty(),activeSnapshotId:ID,comparisonSnapshotId:ID,
-  snapshots:[{id:ID,accountHandle:'owned_fixture_owner',isSample:false,label:'synthetic legacy',
-    createdAt:1765065600000,followers:[{pk:'synthetic_a',username:'synthetic_a'}],
-    following:[{pk:'synthetic_b',username:'synthetic_b'}]}]});
+  snapshots:[{id:ID,ownerId:'owned_fixture_owner',isSample:false,label:'synthetic legacy',
+    createdAt:1765065600000,primaryRecords:[{pk:'synthetic_a',label:'synthetic_a'}],
+    secondaryRecords:[{pk:'synthetic_b',label:'synthetic_b'}]}]});
 test('an actual observation carries explicit action provenance for the pristine seed gate',()=>{
   const state={url:'http://127.0.0.1:4174/',title:'Owned Target',text:'initial page',
     controls:[],storage_snapshot:{available:true,sha256:'a'.repeat(64)}};
@@ -69,7 +69,7 @@ test('seed accepts only bounded attested missing-provenance fixture bytes',()=>{
 });
 test('known-empty current data cannot impersonate legacy UNKNOWN',()=>{
   const value=source();
-  Object.assign(value.snapshots[0],{followers:[],following:[],includedFiles:['followers','following'],listCompleteness:'known'});
+  Object.assign(value.snapshots[0],{primaryRecords:[],secondaryRecords:[],includedSources:['primary','secondary'],recordCompleteness:'known'});
   const input=fixture(value);
   assert.throws(()=>validateLegacySeedFixture(input.bytes,input.manifest),/malformed/);
   const malformed=fixture('not JSON');
@@ -229,7 +229,7 @@ test('changed profile data, fixture digest and origin cause zero storage changes
 });
 test('readback exposes persisted selections and hashes without raw account or list data',async()=>{
   const input=fixture(),state=source(),storage=new Storage();
-  Object.assign(state.snapshots[0],{includedFiles:['followers','following'],listCompleteness:'unknown'});
+  Object.assign(state.snapshots[0],{includedSources:['primary','secondary'],recordCompleteness:'unknown'});
   state.activeSnapshotId=null;state.comparisonSnapshotId=null;
   storage.setItem('owned_state_v7',JSON.stringify(state));
   storage.setItem('owned_theme_preference','system');const restore=page(storage);

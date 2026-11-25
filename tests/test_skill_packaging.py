@@ -306,7 +306,7 @@ class ReadmeParityTests(unittest.TestCase):
 
     def test_the_project_is_named_by_its_current_repository(self):
         for text in (self.en, self.ko):
-            self.assertIn("github.com/remorser58/Remorsearch_UX_QA_Skill", text)
+            self.assertIn("github.com/remorser58/Remorswarm_UX_QA_Skill", text)
             self.assertNotIn("ux-research-qa-skills", text)
 
     def test_the_korean_readme_uses_one_word_for_a_user(self):

@@ -40,7 +40,7 @@ cp -R Remorswarm_UX_QA_Skill/skills/remorsearch-ux-qa ~/.codex/skills/
 ### 자동 업데이트
 
 기존 설치본(`v1.1.0` 이전 복제본 포함)은 검증된 [GitHub Releases](https://github.com/remorser58/Remorswarm_UX_QA_Skill/releases)를 통해 SHA-256 무결성 검증, 타임스탬프 백업,
-로컬 수정 보호, `drivers/web/node_modules`·`.ux-*` 실행 상태 보존과 함께 한 줄로 설치·업데이트할 수 있습니다. 캐시된 업데이트 확인을 끄려면 `REMORSEARCH_NO_UPDATE_CHECK=1`을 설정합니다.
+로컬 수정 보호, `drivers/web/node_modules`·`.ux-*` 실행 상태 보존과 함께 한 줄로 설치·업데이트할 수 있습니다. macOS 기본 `python3`가 3.9인 경우 아래 `python3` 대신 `scripts/find_runtime.py`가 찾은 Python 3.10+ 경로를 사용하세요. 캐시된 업데이트 확인을 끄려면 `REMORSEARCH_NO_UPDATE_CHECK=1`을 설정합니다.
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/remorser58/Remorswarm_UX_QA_Skill/main/scripts/install.sh | bash -s -- --target claude --with-design-system
@@ -218,7 +218,7 @@ README.md, README.ko.md      이 문서의 영어판과 한국어판
 ```sh
 python3 -m unittest discover -s tests -p 'test_*.py'
 python3 skills/remorsearch-ux-qa/scripts/smoke_loop.py
-(cd skills/remorsearch-ux-qa/drivers/web && npm install && node selftest.mjs)
+(cd skills/remorsearch-ux-qa/drivers/web && npm ci && node selftest.mjs)
 python3 skills/remorsearch-ux-qa/scripts/ergo_bench.py --suite benchmarks/heldout-mixed --out .ergo-bench/heldout
 ```
 

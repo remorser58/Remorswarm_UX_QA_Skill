@@ -1,6 +1,6 @@
 # Scalable persona runtime acceptance protocol — 2026-11-13
 
-Baseline: origin/rem/oss-swarm-20261112 at 7fd5d8dc731747ebd97a24946dc3f68324dd5e46.
+Baseline: swarm queue integration (`7fd5d8dc`).
 New branch: rem/scalable-swarm-20261113. Work is isolated below the approved
 repository; root and prior worktrees are preserved. This protocol is recorded
 before staged scale execution. Provider/queue unit checks may already have run

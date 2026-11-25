@@ -52,7 +52,7 @@ Browser: `references/persona-qa/browser-run.md`.
 
 ## Tools
 
-Python 3.10+ (stdlib); detect with `python3 scripts/find_runtime.py`. Prefer host/automation browsers, then Node 22: `drivers/web/ergo_drive.mjs` for products, `drivers/web/read_page.mjs` after pre-read. Sandbox: `drivers/web/README.md`. Denied launch remains a gap.
+Python 3.10+; detect: `scripts/find_runtime.py`; update: `scripts/update_skill.py`. Browsers: host first, then Node 22 (`drivers/web/ergo_drive.mjs`, `read_page.mjs`; `drivers/web/README.md`). Denied launch is a gap.
 
 `python3 scripts/ref.py <file> <section-id>` reads one section; omit ID to list sections. Large references are lookup-only.
 
@@ -77,4 +77,5 @@ After planning and URL discovery, use `references/insane-search/SOURCE.md` and i
 | Accessibility items | `references/persona-qa/kwcag-2.2.md` by ID |
 | Ergonomic checks | `references/ergonomics/human-factors-checks.md`, `references/ergonomics/platform-drivers.md` |
 | Loop packets | `references/loop/provider-contract.md`, `references/loop/cli.md` |
+| React UI fixes | `references/loop/react-design-system.md` |
 | Reading manifest | `references/reading.json` |

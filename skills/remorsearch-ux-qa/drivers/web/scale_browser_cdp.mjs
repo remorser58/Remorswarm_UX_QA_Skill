@@ -303,13 +303,17 @@ export function validateLegacySeedFixture(bytes,manifest) {
   let state;
   try {state=JSON.parse(bytes.toString('utf8'));}catch{throw new Error('legacy_seed_fixture_malformed');}
   const snapshot=state?.snapshots?.[0];
+  const primaryList = Array.isArray(snapshot?.primaryRecords) ? snapshot.primaryRecords : snapshot?.followers;
+  const secondaryList = Array.isArray(snapshot?.secondaryRecords) ? snapshot.secondaryRecords : snapshot?.following;
+  const ownerId = typeof snapshot?.ownerId === 'string' ? snapshot.ownerId : snapshot?.accountHandle;
   if(!Array.isArray(state?.snapshots)||state.snapshots.length!==1||snapshot?.id!==snapshotId
-      ||snapshot.isSample!==false||typeof snapshot.accountHandle!=='string'
-      ||!Array.isArray(snapshot.followers)||!snapshot.followers.length
-      ||!Array.isArray(snapshot.following)||!snapshot.following.length
+      ||snapshot.isSample!==false||typeof ownerId!=='string'
+      ||!Array.isArray(primaryList)||!primaryList.length
+      ||!Array.isArray(secondaryList)||!secondaryList.length
+      ||Object.hasOwn(snapshot,'includedSources')||Object.hasOwn(snapshot,'recordCompleteness')
       ||Object.hasOwn(snapshot,'includedFiles')||Object.hasOwn(snapshot,'listCompleteness')
       ||state.activeSnapshotId!==snapshotId||state.comparisonSnapshotId!==snapshotId
-      ||hash(Buffer.from(snapshot.accountHandle))!==descriptor.owner_sha256)
+      ||hash(Buffer.from(ownerId))!==descriptor.owner_sha256)
     throw new Error('legacy_seed_fixture_malformed');
   return descriptor;
 }
@@ -399,14 +403,17 @@ export async function pageReadLegacyState(attemptId,spec) {
       new TextEncoder().encode(text)))].map(x=>x.toString(16).padStart(2,'0')).join('');
     const rows=[];
     for(const snapshot of state.snapshots) {
+      const ownerId = typeof snapshot.ownerId === 'string' ? snapshot.ownerId : snapshot.accountHandle;
+      const includedSources = Array.isArray(snapshot.includedSources) ? snapshot.includedSources : snapshot.includedFiles;
+      const completeness = snapshot.recordCompleteness ?? snapshot.listCompleteness ?? null;
       if(typeof snapshot.id!=='string'||snapshot.id.length>100
-          ||typeof snapshot.accountHandle!=='string'||snapshot.accountHandle.length>30
-          ||typeof snapshot.isSample!=='boolean'||!Array.isArray(snapshot.includedFiles)
-          ||snapshot.includedFiles.length>20
-          ||snapshot.includedFiles.some(item=>typeof item!=='string'||item.length>40))return result;
-      rows.push({id:snapshot.id,account_sha256:await digest(snapshot.accountHandle),
-        is_sample:snapshot.isSample,list_completeness:snapshot.listCompleteness??null,
-        included_files:snapshot.includedFiles});
+          ||typeof ownerId!=='string'||ownerId.length>30
+          ||typeof snapshot.isSample!=='boolean'||!Array.isArray(includedSources)
+          ||includedSources.length>20
+          ||includedSources.some(item=>typeof item!=='string'||item.length>40))return result;
+      rows.push({id:snapshot.id,account_sha256:await digest(ownerId),
+        is_sample:snapshot.isSample,list_completeness:completeness,
+        included_files:includedSources});
     }
     const readKeys=Array.isArray(spec.read_keys)&&spec.read_keys.length
       ? spec.read_keys
@@ -422,7 +429,7 @@ export function isValidatedLegacyMigration(state,descriptor) {
   const snapshotId=Array.isArray(descriptor?.snapshot_ids)&&descriptor.snapshot_ids[0];
   const expectedFiles=Array.isArray(descriptor?.expected_included_files)
     ? descriptor.expected_included_files
-    : ['followers','following'];
+    : ['primary','secondary'];
   return state?.available===true&&state.snapshots.length===1&&Boolean(snapshotId)&&row?.id===snapshotId
     &&row.account_sha256===descriptor.owner_sha256&&row.is_sample===false
     &&row.list_completeness==='unknown'
@@ -907,7 +914,7 @@ async function evaluate(expression) {
 }
 async function observe() {
   await actionBudget.phase('observe_dom');
-  const expression = "(() => {const rendered=e=>{const r=e.getBoundingClientRect(),s=getComputedStyle(e);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none'&&(e.tagName==='SUMMARY'||!e.closest('details:not([open])'))};const visible=e=>{if(!rendered(e))return false;const r=e.getBoundingClientRect();if(r.bottom<=0||r.top>=innerHeight||r.right<=0||r.left>=innerWidth)return false;const x=Math.min(innerWidth-1,Math.max(0,r.x+r.width/2)),y=Math.min(innerHeight-1,Math.max(0,r.y+r.height/2)),hit=document.elementFromPoint(x,y);return !!hit&&(hit===e||e.contains(hit)||hit.closest('button,a,summary,[role=button],[role=link]')===e)};const selector=e=>{const parts=[];while(e&&e.nodeType===1&&e!==document.body){let n=1;for(let p=e.previousElementSibling;p;p=p.previousElementSibling)if(p.tagName===e.tagName)n++;parts.unshift(e.tagName.toLowerCase()+':nth-of-type('+n+')');e=e.parentElement;}return 'body>'+parts.join('>');};const controls=[...document.querySelectorAll('button,a,summary,input,textarea,select,[role=button],[role=link]')].filter(rendered).slice(0,100).map((e,i)=>({index:i,selector:selector(e),tag:e.tagName.toLowerCase(),id:e.id||null,role:e.getAttribute('role'),type:e.type||null,label:(e.getAttribute('aria-label')||e.innerText||e.textContent||e.getAttribute('placeholder')||'').trim().slice(0,180),placeholder:e.getAttribute('placeholder')||null,title:e.getAttribute('title')||null,multiple:e.multiple===true,disabled:!!e.disabled,visible:visible(e),href:e.tagName==='A'?e.href:null}));const fileInputs=[...document.querySelectorAll('input[type=file]')].map((e,i)=>({index:i,selector:selector(e),accept:e.accept,multiple:e.multiple,disabled:!!e.disabled,hidden:!visible(e)}));const listRows=[...document.querySelectorAll('.person-list [data-row-key]')].map(e=>({key:e.getAttribute('data-row-key'),text:(e.innerText||e.textContent||'').trim().slice(0,180)}));let storageKeys=[],storageAccess='denied';try{storageKeys=Object.keys(localStorage);storageAccess='available';}catch{}return {url:location.href,title:document.title,text:(document.body?.innerText||'').slice(0,12000),controls,file_inputs:fileInputs,list_rows:listRows,storage_keys:storageKeys,storage_access:storageAccess,viewport:{width:innerWidth,height:innerHeight}};})()";
+  const expression = "(() => {const rendered=e=>{const r=e.getBoundingClientRect(),s=getComputedStyle(e);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none'&&(e.tagName==='SUMMARY'||!e.closest('details:not([open])'))};const visible=e=>{if(!rendered(e))return false;const r=e.getBoundingClientRect();if(r.bottom<=0||r.top>=innerHeight||r.right<=0||r.left>=innerWidth)return false;const x=Math.min(innerWidth-1,Math.max(0,r.x+r.width/2)),y=Math.min(innerHeight-1,Math.max(0,r.y+r.height/2)),hit=document.elementFromPoint(x,y);return !!hit&&(hit===e||e.contains(hit)||hit.closest('button,a,summary,[role=button],[role=link]')===e)};const selector=e=>{const parts=[];while(e&&e.nodeType===1&&e!==document.body){let n=1;for(let p=e.previousElementSibling;p;p=p.previousElementSibling)if(p.tagName===e.tagName)n++;parts.unshift(e.tagName.toLowerCase()+':nth-of-type('+n+')');e=e.parentElement;}return 'body>'+parts.join('>');};const controls=[...document.querySelectorAll('button,a,summary,input,textarea,select,[role=button],[role=link]')].filter(rendered).slice(0,100).map((e,i)=>({index:i,selector:selector(e),tag:e.tagName.toLowerCase(),id:e.id||null,role:e.getAttribute('role'),type:e.type||null,label:(e.getAttribute('aria-label')||e.innerText||e.textContent||e.getAttribute('placeholder')||'').trim().slice(0,180),placeholder:e.getAttribute('placeholder')||null,title:e.getAttribute('title')||null,multiple:e.multiple===true,disabled:!!e.disabled,visible:visible(e),href:e.tagName==='A'?e.href:null}));const fileInputs=[...document.querySelectorAll('input[type=file]')].map((e,i)=>({index:i,selector:selector(e),accept:e.accept,multiple:e.multiple,disabled:!!e.disabled,hidden:!visible(e)}));const listRows=[...document.querySelectorAll('[data-row-key]')].map(e=>({key:e.getAttribute('data-row-key'),text:(e.innerText||e.textContent||'').trim().slice(0,180)}));let storageKeys=[],storageAccess='denied';try{storageKeys=Object.keys(localStorage);storageAccess='available';}catch{}return {url:location.href,title:document.title,text:(document.body?.innerText||'').slice(0,12000),controls,file_inputs:fileInputs,list_rows:listRows,storage_keys:storageKeys,storage_access:storageAccess,viewport:{width:innerWidth,height:innerHeight}};})()";
   const data=await evaluate(expression);
   if (!data || new URL(data.url).origin!==targetOrigin) throw new Error('origin_changed');
   await actionBudget.phase('observe_inputs');

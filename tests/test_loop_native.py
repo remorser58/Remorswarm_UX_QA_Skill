@@ -18,7 +18,7 @@ class NativeContractTests(unittest.TestCase):
         self.root = Path(self.temp.name).resolve()
         self.packet = make_packet(self.root)
 
-    def native(self, platform='ios', app_id='com.uniclub.preview'):
+    def native(self, platform='ios', app_id='com.example.preview'):
         packet = copy.deepcopy(self.packet)
         origin = platform + '-app://' + app_id
         for scenario in packet['scenarios']:
@@ -67,11 +67,11 @@ class NativeContractTests(unittest.TestCase):
         self.assertTrue(validate_packet(packet))
 
     def test_raw_native_origin_is_not_normalized_into_an_identity(self):
-        for app_id in ('com.uni\tclub.preview', 'com.uniclub.preview\n',
-                       'com.uniclub.preview?', 'com.uniclub.preview#'):
+        for app_id in ('com.exa\tmple.preview', 'com.example.preview\n',
+                       'com.example.preview?', 'com.example.preview#'):
             packet = self.native(app_id=app_id)
             for item in packet['browser_runs']:
-                item['tool']['application_id'] = 'com.uniclub.preview'
+                item['tool']['application_id'] = 'com.example.preview'
             self.assertTrue(validate_packet(packet), repr(app_id))
 
     def engine_packet(self):

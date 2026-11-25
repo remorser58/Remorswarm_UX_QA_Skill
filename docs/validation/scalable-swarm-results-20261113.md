@@ -1,7 +1,6 @@
 # Scalable persona queue: observed results — 2026-11-13
 
-Baseline: `origin/rem/oss-swarm-20261112` at
-`7fd5d8dc731747ebd97a24946dc3f68324dd5e46`.
+Baseline: `main` swarm queue integration (`7fd5d8dc`).
 Branch: `rem/scalable-swarm-20261113`, in a separate worktree.
 Protocol: [scalable-swarm-protocol-20261113.md](scalable-swarm-protocol-20261113.md).
 

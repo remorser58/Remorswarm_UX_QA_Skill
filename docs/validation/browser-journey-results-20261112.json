@@ -9,7 +9,7 @@
     "owned_static_synthetic_browser": true,
     "actual_browser_execution": true,
     "real_user_evidence": false,
-    "peekly_ui_executed": false,
+    "target_ui_executed": false,
     "product_ready": false,
     "public_research_acquired": false,
     "effectiveness_comparison": false
@@ -18,13 +18,10 @@
     "origin": "https://github.com/remorser58/Remorsearch_UX_QA_Skill.git",
     "base_remote_confirmed": true,
     "original_worktrees_clean": true,
-    "peekly_status_entries": 50,
-    "peekly_status_sha256": "1ae40c4182e84107555366303f747941b1fd8a2081edb8ff197800d08e5e3589",
-    "peekly_diff_sha256": "dfb732f1672427ff23cb524de77437a08fe2b0d869fe9beb35a8c0b9932afe48",
     "original_root_head_preserved": "611ca999130a993736b97862d155fc7fe9ea93a1",
     "base_worktree_head_preserved": "dec4dd3829485d9e7febe935d4adee6d90134434",
     "both_original_worktrees_still_clean": true,
-    "peekly_fingerprints_rechecked_unchanged": true
+    "target_fingerprints_rechecked_unchanged": true
   },
   "runtime": {
     "node": "22.16.0",
@@ -335,7 +332,7 @@
       "original_research_unchanged": true,
       "research_contract": "invented_offline_input",
       "actual_public_acquisition": false,
-      "peekly_product_executed": false,
+      "target_product_executed": false,
       "real_user_evidence": false,
       "commands": [
         {
@@ -504,7 +501,7 @@
   },
   "remaining": [
     "general app/backend execution",
-    "actual Peekly task execution",
+    "actual reference product task execution",
     "autonomous semantic journey planning",
     "representative public research and real participants",
     "comparative swarm or user effectiveness"

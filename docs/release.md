@@ -16,7 +16,13 @@ input is the checked-in toolkit; no network or installed-skill lookup is needed.
 python3 scripts/build_insane_search_bundle.py --output dist/remorsearch-rc
 python3 scripts/build_insane_search_bundle.py --verify dist/remorsearch-rc
 python3 dist/remorsearch-rc/remorsearch-ux-qa/scripts/remorsearch.py smoke
+python3 scripts/build_release_assets.py --output dist/release --commit "$(git rev-parse HEAD)"
+(cd dist/release && shasum -a 256 -c SHA256SUMS.txt)
 ```
+
+`scripts/build_release_assets.py` builds deterministic release ZIPs for both `remorsearch-ux-qa.zip` and `react-design-system.zip`, plus `release-manifest.json` (`remorswarm-release-manifest.v1`) and `SHA256SUMS.txt` used by `.github/workflows/release.yml` and `scripts/install.sh`. Both ZIPs include integrity manifests (`manifest.remorsearch.json` and `manifest.react-design-system.json`) and executable `0o755` permissions on bundled CLI scripts.
+
+Note: `scripts/remorsearch.py` (including `remorsearch.py update`) exists inside generated release ZIPs (`remorsearch-ux-qa.zip`), whereas source/git-copied checkouts invoke `scripts/update_skill.py` directly.
 
 The output contains the installable `remorsearch-ux-qa/` tree and
 `remorsearch-ux-qa.zip`. SHA-256 receipts record the original inputs and shipped

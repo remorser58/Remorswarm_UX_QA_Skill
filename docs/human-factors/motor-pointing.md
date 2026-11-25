@@ -329,7 +329,7 @@ This overlaps with the grip/reach domain brief. Only the pointing-relevant parts
 
 **Parameters.**
 - **Bergstrom-Lehtovirta & Oulasvirta 2014.** Quadratic functional-area model predicted from surface size, hand size and index-finger position on the back; fitted on 20 participants `[snippet]`. Formula and coefficients not retrieved: unconfirmed.
-  Update 2026-11-19: the author copy and coefficients are now available in the [reuse review](2026-11-19-reuse-review.md). The earlier access label is historical; no runtime coefficient replacement was made.
+  Update 2026-11-19: the author copy and coefficients were reviewed on 2026-11-19. The earlier access label is historical; no runtime coefficient replacement was made.
 - **Xiong & Muraki 2016.** Young (23.6 ± 1.8 y) vs older (67.5 ± 3.7 y) adults. Thumb coverage area did not grow as much as screen size. Older users and long-thumbed users had larger unreachable zones at the right and bottom `[snippet]`.
 - **Parhi et al. 2006.** Comfort by region (see MP-05). Smallest-comfortable-size perception ranged from 6.0 mm (centre) to 7.7 mm (NW) `[primary]`.
 - **Hoober target sizes by position.** ~7 mm centre, 11 mm top, 12 mm bottom `[snippet]`. This is practitioner book guidance from observational data, not peer-reviewed.

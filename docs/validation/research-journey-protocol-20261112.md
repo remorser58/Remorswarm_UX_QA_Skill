@@ -68,4 +68,4 @@ private state is not accessed or copied. New input uses the repository's owned
 offline research-contract builders and known defective local product. Its
 live-mode contract fields test validators, not actual public acquisition.
 No accounts, UI, browser/WebDriver, model API, OS installation, security setting,
-external deployment, private source upload or Peekly modification is authorized.
+external deployment, private source upload or external-product modification is authorized.

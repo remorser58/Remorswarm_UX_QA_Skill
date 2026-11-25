@@ -49,7 +49,7 @@ class RouteStats:
 class ModelRouter:
     def __init__(self, base_url, routes, *, timeout=90, max_retries=2, backoff_initial=1.0, backoff_max=20.0, opener=None, sleep=time.sleep, ledger_path=None, respect_rpm=True):
         if not (base_url.startswith("http://127.0.0.1:") or base_url.startswith("http://localhost:")):
-            raise ValueError("Only the local OpenCodex gateway is accepted.")
+            raise ValueError("Only an approved local OpenAI-compatible gateway is accepted.")
         if not routes or len({(r.provider, r.model) for r in routes}) != len(routes):
             raise ValueError("Routes must be nonempty and unique.")
         self.url = base_url.rstrip("/") + "/chat/completions"
@@ -154,12 +154,12 @@ class ModelRouter:
             "temperature": temperature, "stream": False,
             "response_format": {"type": "json_object"},
             "tool_choice": "none"}, ensure_ascii=False).encode()
-        # The Mac mini OpenCodex gateway authenticates with the existing
+        # Local OpenAI-compatible gateways may authenticate with the existing
         # PROXY_API_KEY environment variable. Never print, persist or forward it
         # anywhere except this explicitly loopback-only gateway.
         secret = os.environ.get("PROXY_API_KEY")
         if not isinstance(secret, str) or not secret or len(secret) > 4096 or any(ord(c) < 33 or ord(c) > 126 for c in secret):
-            raise RuntimeError("local_opencodex_auth_unavailable")
+            raise RuntimeError("local_gateway_auth_unavailable")
         req = urllib.request.Request(self.url, data=body, headers={
             "Content-Type": "application/json", "Accept": "application/json",
             "Authorization": "Bearer " + secret
@@ -205,7 +205,7 @@ class ModelRouter:
                 # enforce the strict downstream JSON schema.
                 content = message.get("reasoning_content")
             if not isinstance(content, str) or not content.strip():
-                # OpenCodex may expose the model's structured decision as a
+                # Local gateways may expose the model's structured decision as a
                 # native OpenAI tool_call even when response_format=json_object
                 # was requested. Normalize one call into our strict envelope;
                 # the downstream reviewed tool allowlist remains authoritative.
@@ -375,7 +375,7 @@ class ModelRouter:
 
 
 class RoutedScaleProvider:
-    """ScaleExecution provider adapter over the local OpenCodex model router."""
+    """ScaleExecution provider adapter over a local OpenAI-compatible model router."""
     mode = "live"
 
     def __init__(self, spec, router):

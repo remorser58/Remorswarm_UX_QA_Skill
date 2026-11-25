@@ -4,7 +4,7 @@ Date: 2026-11-12 KST. Base: `3074f5089e0fdd22db932709370211656c90b3eb`.
 Branch: `rem/swarm-evidence-audit-20261112`.
 
 This protocol is fixed before the new regression and implementation. It does not
-authorize browser, user, provider, network, model, or Peekly product activity.
+authorize browser, user, provider, network, model, or external-product activity.
 
 ## Selected gap
 
