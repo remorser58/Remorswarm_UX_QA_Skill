@@ -263,7 +263,7 @@ async function main(argv) {
   options.buildIdSource = buildId ? (f['build-id'] === undefined ? 'scenario.surface.build_id' : '--build-id') : null;
   const profileInput = f.profile ? readJsonFileWithBytes(f.profile, 'profile') : null;
   const profileDoc = profileInput ? profileInput.document : null;
-  const profile = profileDoc ? normalizeProfile(profileDoc) : null;
+  const profile = f.profile ? normalizeProfile(profileDoc) : null;
   let device = null;
   if (f['device-json']) {
     try {

@@ -2219,9 +2219,12 @@ async function analyzeTest(base, tmp) {
     timing_windows: [{ id: 'summary', selector: privateLocator, measure: 'visible_duration', kind: 'transient_text', text: 'owned timing text', has_action: true }],
     private_extras: { value: extras },
     success: { selector_visible: '#summary', task_checks: [
-      { id: 'retained', selector: '#summary', property: 'text', from_step: 1, after_step: 2, severity: 'P2', consequence: 'The owned input must survive.' },
+      { id: 'retained', selector: '#summary', property: 'text', from_step: 1, after_step: 2,
+        basis: { kind: 'task', reference: 'Owned task-integrity fixture preserves typed input in #summary.' },
+        severity: 'P2', consequence: 'The owned input must survive.' },
       { id: 'private-choice', selector: '#choice', property: 'value', expected: 'CHOICE-PRIVATE-51983', redact: true,
-        after_step: 2, severity: 'P2', consequence: 'The owned choice must survive.' },
+        after_step: 2, basis: { kind: 'task', reference: 'Owned task-integrity fixture preserves selected choice in #choice.' },
+        severity: 'P2', consequence: 'The owned choice must survive.' },
     ] } };
   const restoreSources = () => { writeJson(source, sc); writeJson(profilePath, p); };
   restoreSources();
