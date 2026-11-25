@@ -6,11 +6,12 @@
 //
 // Exit codes: 0 completed and success; 3 run written but not successful
 // (success false/unknown, or a scripted step failed); 2 usage/input error;
-// 4 driver/browser failure or blocked run.
+// 4 driver/browser failure, blocked run or requested analysis failure.
 
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 
 import { CATALOG, DeviceError, deviceFromJson, resolveDevice } from './devices.mjs';
 import { WebSession, ensureRunDir } from './session.mjs';
@@ -49,13 +50,22 @@ options:
   --agent TEXT             who operates the run (free text), stored in run.json agent
   --agent-json FILE        operator record {model_family, input_channel, model, persona_arm, seed, ...};
                            required by serve (input_channel "screenshot" keeps DOM data out of the replies)
+  --analyze                requires --profile: freeze sanitized analytical context and the full
+                           profile at startup, then run scripts/ergo_qa.py swarm on this exact run
+                           after browser close (up to 30s within a shared 110s finish budget);
+                           finish reports paths,
+                           status and counts (a failed analysis is exit 4, never a pass claim)
+  --python PATH            Python 3.10+ interpreter used by --analyze (default: $ERGOQA_PYTHON or python3)
   --locale L / --timezone Z  browser locale and timezone (default ko-KR, Asia/Seoul)
   --headed                 show the browser window (needs a display)
 
-exit codes: 0 completed+success, 3 not successful, 2 usage/input error, 4 driver failure/blocked`;
+exit codes: 0 completed+success, 3 not successful, 2 usage/input error, 4 driver/analysis failure or blocked`;
 
 const INPUT_CHANNELS = new Set(['screenshot', 'a11y', 'screenshot+a11y']);
 const PERSONA_ARMS = new Set(['neutral', 'cognition', 'full', 'full+view']);
+
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const ERGO_QA_SCRIPT = path.join(HERE, '..', '..', 'scripts', 'ergo_qa.py');
 
 /** Machine-readable operator record (LAT-02): corroboration is computed from model family and channel. */
 function readAgentJson(file) {
@@ -72,9 +82,9 @@ function readAgentJson(file) {
 
 const VALUE_FLAGS = new Set([
   'scenario', 'profile', 'out', 'run-id', 'base', 'build-id', 'port', 'flash-sample-ms', 'device', 'device-json', 'orientation',
-  'allow-origin', 'feedback-timeout-ms', 'settle-ms', 'timeout-s', 'idle-timeout-s', 'locale', 'timezone', 'agent', 'agent-json', 'url', 'task',
+  'allow-origin', 'feedback-timeout-ms', 'settle-ms', 'timeout-s', 'idle-timeout-s', 'locale', 'timezone', 'agent', 'agent-json', 'url', 'task', 'python',
 ]);
-const BOOL_FLAGS = new Set(['headed', 'continue-on-error', 'no-auto-scroll', 'no-visual-feedback', 'focus-walk', 'no-focus-walk', 'no-reflow', 'bind-profile', 'help']);
+const BOOL_FLAGS = new Set(['headed', 'continue-on-error', 'no-auto-scroll', 'no-visual-feedback', 'focus-walk', 'no-focus-walk', 'no-reflow', 'bind-profile', 'help', 'analyze']);
 
 function parseArgs(argv) {
   const out = { command: null, flags: {}, allowOrigins: [] };
@@ -189,6 +199,10 @@ async function main(argv) {
   if (f['bind-profile'] && (!f.profile || f['device-json'])) {
     throw new UsageError('--bind-profile needs --profile and a built-in device, not --device-json');
   }
+  if (f.analyze && !f.profile) throw new UsageError('--analyze requires --profile FILE for the recorded persona');
+  if (f.python !== undefined && !f.analyze) throw new UsageError('--python requires --analyze');
+  const python = f.python ?? process.env.ERGOQA_PYTHON ?? 'python3';
+  if (f.analyze && !python.trim()) throw new UsageError('--python must name an interpreter');
   // Every interactive session names its operator: the channel decides what the replies
   // may carry, and corroboration counts operators by model family and channel.
   if (args.command === 'serve' && !f['agent-json']) {
@@ -232,6 +246,7 @@ async function main(argv) {
     // agent-layer results can be attributed and compared across models.
     agent: typeof f.agent === 'string' ? f.agent.slice(0, 200) : null,
     agentInfo: f['agent-json'] ? readAgentJson(f['agent-json']) : null,
+    analyze: f.analyze ? { python, script: ERGO_QA_SCRIPT } : null,
   };
   if (!/^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(options.locale)) throw new UsageError('--locale must look like ko-KR');
   if (!/^[A-Za-z_]+(\/[A-Za-z0-9_+-]+)*$/.test(options.timezoneId)) throw new UsageError('--timezone must be an IANA zone like Asia/Seoul');
@@ -240,13 +255,15 @@ async function main(argv) {
   const port = intFlag(f, 'port', 9477, 0, 65535);
   if (f.orientation && !['portrait', 'landscape'].includes(f.orientation)) throw new UsageError('--orientation must be portrait or landscape');
 
-  const { scenario, warnings } = normalizeScenario(readJsonFile(f.scenario, 'scenario'), { base, requireSteps: args.command === 'run' });
+  const scenarioDoc = readJsonFile(f.scenario, 'scenario');
+  const { scenario, warnings } = normalizeScenario(scenarioDoc, { base, requireSteps: args.command === 'run' });
   const buildId = f['build-id'] === undefined ? scenario.build_id : normalizeBuildId(f['build-id'], '--build-id');
   if (scenario.build_id && buildId !== scenario.build_id) throw new UsageError('--build-id conflicts with scenario.surface.build_id');
   options.buildId = buildId;
   options.buildIdSource = buildId ? (f['build-id'] === undefined ? 'scenario.surface.build_id' : '--build-id') : null;
   const profileInput = f.profile ? readJsonFileWithBytes(f.profile, 'profile') : null;
-  const profile = profileInput ? normalizeProfile(profileInput.document) : null;
+  const profileDoc = profileInput ? profileInput.document : null;
+  const profile = f.profile ? normalizeProfile(profileDoc) : null;
   let device = null;
   if (f['device-json']) {
     try {
@@ -284,6 +301,9 @@ async function main(argv) {
     pw,
     pwInfo: info,
     scenario,
+    timingWindowActions: f.analyze ? Object.fromEntries((scenarioDoc.timing_windows || [])
+      .filter((w) => typeof w.has_action === 'boolean').map((w) => [w.id, w.has_action])) : undefined,
+    profile: profileDoc,
     deviceRequest: { id: deviceId, device, orientation, fallbackDevice: early.snapshotDevice },
     profileId,
     profileBinding,
@@ -296,7 +316,7 @@ async function main(argv) {
 
   const onSignal = (sig) => {
     session.finish({ reason: `interrupted by ${sig}` })
-      .then((r) => emit({ event: 'finished', run: r.runPath, status: r.status, success: r.success, exit_code: EXIT.DRIVER }))
+      .then((r) => emit({ event: 'finished', run: r.runPath, status: r.status, success: r.success, exit_code: EXIT.DRIVER, ...(r.analysis ? { analysis: r.analysis } : {}) }))
       .catch(() => {})
       .finally(() => process.exit(EXIT.DRIVER));
   };
@@ -307,7 +327,7 @@ async function main(argv) {
     await session.start();
   } catch (err) {
     const r = await session.finish({ reason: err.message });
-    emit({ event: 'finished', run: r.runPath, status: r.status, success: r.success, exit_code: EXIT.DRIVER, error: err.message });
+    emit({ event: 'finished', run: r.runPath, status: r.status, success: r.success, exit_code: EXIT.DRIVER, error: session.redactRecord(err.message), ...(r.analysis ? { analysis: r.analysis } : {}) });
     return EXIT.DRIVER;
   }
 
@@ -316,7 +336,7 @@ async function main(argv) {
     // Hard stop if a single step hangs past the limit: still write a blocked run.json.
     const watchdog = setTimeout(() => {
       session.finish({ reason: `run timeout (${timeoutS}s) while a step was running` })
-        .then((r) => emit({ event: 'finished', run: r.runPath, status: r.status, success: r.success, exit_code: EXIT.DRIVER }))
+        .then((r) => emit({ event: 'finished', run: r.runPath, status: r.status, success: r.success, exit_code: EXIT.DRIVER, ...(r.analysis ? { analysis: r.analysis } : {}) }))
         .catch(() => {})
         .finally(() => process.exit(EXIT.DRIVER));
     }, timeoutS * 1000 + 30000);
@@ -338,17 +358,19 @@ async function main(argv) {
         if (session.crashed) break;
       }
     }
+    clearTimeout(watchdog); // steps are over; finish and analysis have their own bounds
     const r = await session.finish(failure ? { reason: failure } : {});
     emit({
       event: 'finished', run: r.runPath, run_dir: runDir, status: r.status, success: r.success,
       steps: r.run.steps.length, snapshots: r.run.snapshots.length, exit_code: r.exitCode,
+      ...(r.analysis ? { analysis: r.analysis } : {}),
     });
     return r.exitCode;
   }
 
   if (session.blockReasons.length) {
     const r = await session.finish({});
-    emit({ event: 'finished', run: r.runPath, status: r.status, success: r.success, exit_code: r.exitCode, error: session.blockReasons.join('; ') });
+    emit({ event: 'finished', run: r.runPath, status: r.status, success: r.success, exit_code: r.exitCode, error: session.redactRecord(session.blockReasons.join('; ')), ...(r.analysis ? { analysis: r.analysis } : {}) });
     return r.exitCode;
   }
   return new Promise((resolve) => {
@@ -370,10 +392,13 @@ async function main(argv) {
       onDone: (r, err) => {
         if (err) {
           process.stderr.write(`ergo_drive: HTTP server error: ${err.message}\n`);
-          session.finish({ reason: `HTTP server error: ${err.message}` }).finally(() => resolve(EXIT.DRIVER));
+          session.finish({ reason: `HTTP server error: ${err.message}` })
+            .then((r) => emit({ event: 'finished', run: r.runPath, status: r.status, success: r.success,
+              exit_code: EXIT.DRIVER, ...(r.analysis ? { analysis: r.analysis } : {}) }))
+            .finally(() => resolve(EXIT.DRIVER));
           return;
         }
-        emit({ event: 'finished', run: r.runPath, status: r.status, success: r.success, exit_code: r.exitCode });
+        emit({ event: 'finished', run: r.runPath, status: r.status, success: r.success, exit_code: r.exitCode, ...(r.analysis ? { analysis: r.analysis } : {}) });
         resolve(r.exitCode);
       },
     });

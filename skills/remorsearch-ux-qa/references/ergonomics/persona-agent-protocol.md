@@ -93,6 +93,28 @@ are ignored.
    `agent_limitation` notes, or when the next action would create a real-world
    side effect (payment, post, message, account change). `POST /finish`.
 
+### Request schema to include in the operator prompt
+
+Send JSON objects, one request at a time. Unknown keys return HTTP 400 with the
+allowed fields; correct the request, not the product finding.
+
+- `/note`: required `confusion` (boolean); optional `intent`, `expected`,
+  `observed` (strings, at most 4000 characters each), `step_index` (integer from
+  0 through the current step), `failure_class` (the enum above), `evidence`
+  (snapshot ID, at most 200 characters) and `anchor` (the forms above).
+  The API also accepts `severity` (`P0`–`P3`) and `corroborated` (boolean) as
+  ignored claims; operators must omit them. There is no `scope` field.
+- `/finish`: only optional `success` (boolean). Use `{"success":true}`,
+  `{"success":false}` or `{}` for unknown. Do not send `task_success_claimed`,
+  findings, reasons or notes here; record observations with `/note` first.
+  Measured scenario criteria take precedence over the operator's claim.
+
+Each action already captures a measured screen. After asynchronous transitions,
+request another `/snapshot`. The technical auditor analyzes the entire run after
+finish, checks every reached screen, and records missing measurement/viewport/
+keyboard coverage as "not checked". Screenshot-only operators still must not
+open snapshot JSON; collection does not grant access to DOM evidence.
+
 The expected/observed pair is how Norman's gulfs of execution and evaluation are
 recorded (UXD checks in `docs/human-factors/ux-design-discipline.md`).
 These are repository documents, not installed with the skill.

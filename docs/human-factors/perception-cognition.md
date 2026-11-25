@@ -27,16 +27,16 @@ Prepared 2026-09-28 for the ergonomic persona-swarm QA (`ergoqa`).
 
 Each number carries one of the tags below. These match the sibling `motor-pointing.md`, plus one extra tag, `[recalled]`.
 
-- `[primary]`: I read the primary text or data myself in this session. Examples: the WCAG 2.0 SC text in the `wcag-as-json` package, the axe-core 4.13.0 source, the apca-w3 0.1.9 docs, and the colour-science 0.4.6 Machado tables.
+- `[primary]`: I read the primary text or data myself at the time of writing. Examples: the WCAG 2.0 SC text in the `wcag-as-json` package, the axe-core 4.13.0 source, the apca-w3 0.1.9 docs, and the colour-science 0.4.6 Machado tables.
 - `[snippet]`: the value comes from search-engine excerpts of the named source. I could not open the full text. Verify before hard-coding.
 - `[derived]`: I computed the value here from a cited model. It is a model output, not an observation.
-- `[recalled]`: a well-known value from the cited primary source. It is **not re-verified in this session** because of the access problems below. Treat it as provisional until someone checks the source. It is never a threshold on its own authority.
+- `[recalled]`: a well-known value from the cited primary source. It is **not re-verified at the time of writing** because of the access problems below. Treat it as provisional until someone checks the source. It is never a threshold on its own authority.
 - `unconfirmed`: I could not trace the value to a source. Do not use it as a threshold.
 
-### Access problems in this session
+### Retrieval limits when this was written (October 2026)
 
 - **WebFetch was blocked** by the egress proxy for every host I tried: w3.org, pubmed, nngroup.com, arxiv.org, inf.ufrgs.br, adrianroselli.com and readthedocs.io.
-- **WebSearch** reached the shared session cap of 200 calls after about 25 of my queries.
+- **Web search** was rate-limited after about 25 queries.
 - **Package registries (PyPI, npm) were reachable.** I used them to read these primary data and texts:
   - Machado matrices, from the `colour-science` dataset;
   - APCA level definitions, from `apca-w3`;
@@ -444,7 +444,7 @@ Text size (CSS px on a 153-px/in phone) that reaches each CPS `[derived]`:
   - maximum A = 25 − 0.4 × age D.
 - Comfortable sustained near work uses about half the amplitude `[recalled; clinical rule]`.
 - Global presbyopia was ≈1.8 billion people in 2015 (Fricke et al. 2018, Ophthalmology) `[recalled]`.
-- Korean presbyopia prevalence by age: **unconfirmed** (not found this session).
+- Korean presbyopia prevalence by age: **unconfirmed** (not found at the time of writing).
 - The older retina receives much less light: ≈1/3 at 60 vs 20 (Weale) `[recalled]`. That reduces contrast sensitivity, so presbyopia interacts with PC-01 and PC-08.
 - Korea became "super-aged" with ≥20% of residents 65+ in December 2024 `[snippet via sibling motor-pointing brief]`.
 
@@ -986,7 +986,7 @@ Base rates are for **plausible scenario mixes**, not claims about real-user prev
 
 ## 6. Sources
 
-Access tag in brackets: how it was accessed in this session.
+Access tag in brackets: how it was accessed at the time of writing.
 
 **Standards and guidelines**
 - W3C. *WCAG 2.2 Understanding SC 1.4.3 Contrast (Minimum)*: 4.5:1 rationale, 20/40 ≈ age 80, 18 pt/14 pt bold, relative-luminance note (0.04045 vs 0.03928). w3.org/WAI/WCAG22/Understanding/contrast-minimum [snippet]

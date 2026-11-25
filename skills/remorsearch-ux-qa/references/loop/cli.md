@@ -72,6 +72,7 @@ python3 scripts/ux_loop.py fill DRAFT.json --evidence-root EVIDENCE \
 
 The host still authors context, inspected sources, constraints, conflicts, acknowledgements, intent decisions, grants, actors, reasons, timestamps, capture-time run revisions, outcomes, severity, statuses, accessibility/visual results and review records. `@auto` in any of those, an ambiguous or missing owner, a missing artifact, a concrete hash that would need rewriting, a patch that does not apply, a concrete revision that contradicts the computed chain, a missing workspace, or an unsafe path or output collision is a refusal: exit 2, nothing written. On success it writes only the sentinel payloads and the new packet, then runs `validate`, printing JSON `written`, `filled`, `valid`, `errors`. Exit 0 is valid; exit 1 means written but invalid, which is not acceptance. A draft without sentinels is preserved byte for byte with `filled: []`. Fill never records an applied fix; `improve` still applies and replays under the usual gates.
 
+Live order: `improve` applies reviewed patches itself, so a live run takes two packets. Packet A carries baselines, visual checks and fixes with `replays: []`; `improve` applies the fixes and stops `blocked` with no replay receipt, which is expected. Rebuild from that workspace, or confirm the build checkout matches each fix `after_revision` with `python3 scripts/ux_loop.py revision --workspace BUILD --path PATH`. Start every replay after the applied-fix time named in that stop; captures taken earlier, even of identical code, cannot support acceptance. Packet B keeps A's arrays as identical prefixes and appends replay runs, visual checks, the intent review and the regression. `fill` B against an unpatched copy of the scope, because the `improve` workspace is already patched, then run `resume --checkpoint CHECKPOINT --input packet-b.json`. A scenario added after the first run needs a new goal and checkpoint.
 First prepare a `ux-loop.v1` JSON packet following
 [`references/loop/provider-contract.md`](provider-contract.md). A live packet must
 contain actual, versioned provider receipts; do not relabel the demo as live.
@@ -171,7 +172,7 @@ Content hashes bind the declared `code_paths`, not every file in the product or 
 remote deployed build. Include every relevant source/configuration path and
 use an external provider that binds its running build to that exact scope. There
 is no broad shell-command runner, automatic deployment, UX aggregate score, raw
-community archive, or implicit claim of WCAG conformance. Editable Figma governs design; skill-authored proposals use no side accent bars/side-tab cards. Existing product QA needs task-trace harm to flag a bar. Community signals and
+community archive, or implicit claim of WCAG conformance. Editable Figma governs design under a Figma-first policy, and `policy.allow_side_accents` decides side accents in skill-authored proposals. Existing product QA needs task-trace harm to flag a bar. Community signals and
 synthetic personas cannot establish population prevalence or user preference.
 
 See [references/loop/provider-contract.md](provider-contract.md) for exact boundaries, and the repository

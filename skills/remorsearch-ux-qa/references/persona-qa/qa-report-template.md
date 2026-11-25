@@ -16,14 +16,21 @@ Writer guidance: keep at most three actions, each at most 25 words. Remove unuse
 | --- | --- |
 | `hold` | A P0 is verified on the current build; or no scenario could complete the primary task; or a P1 on the primary task has no workaround. |
 | `ship after fixes` | No P0; the primary task can be completed; P1 findings have concrete fixes. |
-| `ship` | The primary task and at least one recovery path were exercised on the current build on every device in scope, and no P0 or P1 remains. |
+| `ship` | The primary task and recovery were exercised, rendered readability/control checks passed on every scoped device/state/current build, and no P0 or P1 remains. |
 | `inconclusive` | The surface could not be exercised, the coverage minimum was not met, or evidence is stale. Name the blocker: browser failure, production gate, missing build access or missing current evidence. |
 
 A scoped inspection (named tasks, screens, devices) is a valid report with the same verdict rules; a task result is not whole-product release readiness or measured user benefit. Check evidence and coverage first. Where they cannot support the scoped verdict, use `inconclusive`. An empty findings list requires the same coverage proof as any other `ship` verdict. State remaining P2/P3 findings.
 
+Include rendered coverage by screen/state/viewport: separate alignment, spacing, typography, clipping, occlusion and figma_fidelity observations with exact visible text, coordinates and reasoned status. Name actual/reference viewed artifact IDs and readable regions/crops using `references/loop/provider-contract.md` section 3; do not invent schema fields. Capture alone is not viewing; no passed-only records. Missing reference leaves fidelity unverified. Functional success and DOM metrics cannot pass missing visual review. Required-text or control obstruction prevents `ship` even at P2; use `ship after fixes` or a stricter verdict. Replay the failing and adjacent states.
+
+For every product UI QA, include the component/screen matrices from `references/persona-qa/ui-quality.md` by section. Keep state coverage and task completion separate. Record reference URL/build/version, access boundary, observed rule and local evidence. Match component roles/states across different content/dimensions; exact diff requires matched frames. Figma can contain defects; distinguish source quality from fidelity. Spacing/hierarchy findings need repeated local rules or intent. A reference cannot pass an unreached state.
+
+
 For Korean reports keep this QA structure. Use 결론, 발견, 수정 전후, 시나리오와 점검 범위, 조사 방법, 부록 and 완료 점검. Verdict labels are 점검 범위 통과 (`ship`), 수정 후 범위 재검증 (`ship after fixes`), 보류 (`hold`), 판단 불가 (`inconclusive`). Use the Korean research template's wording self-check and quoting rules when community evidence was requested.
 
 ## Findings
+
+Automated analyzer warnings below P2 are not cards: give one row per rule and screen with counts, examples and evidence links (`ergo_qa.py swarm` `summaries`). Model-reviewed, state, timing and focus results stay cards.
 
 Order cards by P0, P1, P2, P3, then high, medium, low confidence within each severity. Include verified current-build observations here. Put unreproduced, stale or unverified cards in the annex and state the missing evidence. Severity follows user impact; confidence follows evidence quality. Research gate statuses govern community-derived scenario motivation; they never reduce the severity of an observed product failure.
 
@@ -36,9 +43,9 @@ Order cards by P0, P1, P2, P3, then high, medium, low confidence within each sev
 - **Where:** build [commit/version/deploy ID/page hash]; screen [state]; device [ID], viewport [width × height CSS px, DPR], input [touch/keyboard/etc.].
 - **Who:** persona or scenario [ID, brief-derived synthetic condition or supported basis]; task [completion condition].
 - **Steps:** 1. Open [start URL] in [starting state]. 2. [Action/input]. 3. [Action that exposes the failure]. Number every step needed to reproduce it.
-- **Expected:** [Intended behaviour; quote the relevant visible control/label. Mark proposed wording as proposed.]
+- **Expected:** [Intended behaviour; quote the relevant visible control/label. Mark proposed wording as proposed. A behaviour claimed as required cites its spec/standard or names the task step it blocks; otherwise record it as an observation, not a defect.]
 - **Observed:** [What happened after which action; quote the exact visible UI text. Distinguish a success banner from an intact completed task.]
-- **Evidence:** [Capture link and adjacent receipt; corresponding text-dump link; supporting trace/observation IDs.]
+- **Evidence:** [Original actual/reference viewed artifact IDs and receipts; region coordinates/scale and exact UI text; crop/text-dump/trace IDs; computed styles, loaded fonts, text bounds and clipping ancestors when relevant. Preserve failed/unknown observations; fixed height and viewport cutoff alone are candidates.]
 
 ```json
 {
@@ -108,6 +115,14 @@ Count executed scenarios even when the task failed. Give completion separately. 
 | Happy paths | [k/n planned device/task combinations] | [k/n] | [missing paths] |
 | Recovery paths | [k/n planned device/task combinations] | [k/n] | [at least one per device for ship] |
 | Accessibility checks | [k/n planned checks; standards apart] | [pass/fail/partial counts] | [keyboard, assistive technology, etc.] |
+
+For each committing task, add one row per task x viewport x input x probe (a Back/reopen resubmit, b keep on confirmation, c switch item/date/recipient, d error-fix-resubmit). Status is exactly `done`, `not applicable` or `not checked`; the other columns follow `drivers/web/README.md` section State-probe coverage. Absent rows count as `not checked`; carry gaps into the verdict, never count them as passed.
+
+| Task | Viewport, input | Probe | Status | Result | Run/step/capture/check | Reason or gap |
+| --- | --- | --- | --- | --- | --- | --- |
+| [task] | [CSS size, device ID, input] | [a-d] | [done/not applicable/not checked] | [pass/fail/-] | [run ID, step, snapshot, check ID, replay run_path] | [required unless done] |
+
+Summary: `done k, not applicable m, not checked j of n rows`.
 
 ## Method and limits
 

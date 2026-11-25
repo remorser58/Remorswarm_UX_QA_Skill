@@ -25,7 +25,7 @@ Lookup-only operational reference for React + Vite and paired Expo UI fixes duri
 ## 4. Reference Mining and 21st.dev Landing Adaptation
 
 - **4-Stage Reference Deconstruction**: Harvest 2 UX/IA refs (Mobbin, UIBowl) + 1 token/system ref (Figma, `horon-ai/design`) + 1–2 visual craft refs (Dribbble, Behance, Pinterest) + `21st.dev` (landing/intro pages). Extract quantitative metrics (type scale ratio, `55-70ch` measure, `4px` spacing base, hairline contrast, motion timing, touch height) before authoring JSX.
-- **21st.dev adaptation**: Replace `"use client"`, `next/image`, `next/link`, `@radix-ui/*`, and boxed `shadow-lg` cards with flat hairline grids, tonal featured pricing columns, `@base-ui/react` Tabs/Accordion/Switch, and `@tanstack/react-router` `<Link>`.
+- **21st.dev adaptation & licensing**: Treat the PolyForm Strict `horon-ai/design` repository as analysis-only with no code or asset import, and verify license terms per `21st.dev` item (including wrappers and upstream dependencies) before adaptation. Replace `"use client"`, `next/image`, `next/link`, `@radix-ui/*`, and boxed `shadow-lg` cards with flat hairline grids, tonal featured pricing columns, `@base-ui/react` Tabs/Accordion/Switch, and `@tanstack/react-router` `<Link>`.
 - **Shader guardrails**: Cap WebGL/Canvas `dpr <= 1.5`, pause offscreen loops via `IntersectionObserver`, render a static high-contrast frame under `prefers-reduced-motion`, and maintain `>= 4.5:1` text contrast.
 
 ## 5. React + Vite Optimization and Skeleton UI

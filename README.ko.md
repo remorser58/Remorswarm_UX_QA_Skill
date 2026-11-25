@@ -11,9 +11,9 @@ Remorsearch(리모서치, *ree-mor-search*) UX QA는 어느 정도 완성된 제
 | 구성 요소 | 하는 일 | 필요한 것 |
 | --- | --- | --- |
 | **research** | 커뮤니티·댓글·리뷰·공식 자료에서 과업과 관련된 경험, 우회 행동과 반대 사례를 찾고 원문 맥락과 조사 공백을 기록합니다. | 허용된 출처 접근 경로. 유튜브 댓글은 본인의 YouTube Data API 키(`REMORSEARCH_YOUTUBE_API_KEY`)를 사용합니다. |
-| **persona-qa** | 실제 제품에서 과업 완료, 입력 보존, 오류·복구, 키보드와 접근성을 확인합니다. 합성 페르소나는 서로 다른 테스트 조건을 만듭니다. | 접근 가능한 제품과 안전한 테스트 자료. 기본 웹 드라이버에는 Node.js 22와 Playwright가 필요합니다. |
-| **ergonomics**(실험적) | 시뮬레이션한 프로필로 도달, 터치, 지각, 시간과 배치를 선별 점검합니다. | 관련 시나리오. 모델 결과와 실제 기기·사람의 검증을 구분합니다. |
-| **loop** | 한도 안에서 수정, 현재 빌드 재실행, 회귀와 의도 보존 결과를 기록합니다. | 호스트의 브라우저·Figma 도구와 실제 실행 기록. 개선 요청에 포함된 권한을 로컬 수정 범위에 맞게 기록합니다. |
+| **persona-qa** | 실제 제품 또는 iOS XCTest 캡처에서 화면 레이아웃 스캔, 과업 완료, 상태 복구 프로브, 입력 보존, 오류·복구, 키보드와 접근성(KWCAG/WCAG)을 확인합니다. | 접근 가능한 제품과 안전한 테스트 자료. 기본 웹 드라이버에는 Node.js 22와 Playwright가 필요합니다. |
+| **ergonomics**(실험적) | 시뮬레이션한 프로필로 도달, 터치, 지각, 시간과 배치를 점검하고 경로 단위 경고 그룹화(`--list-threshold`)를 제공합니다. | 관련 시나리오. 모델 결과와 실제 기기·사람의 검증을 구분합니다. |
+| **loop** | 한도 안에서 수정, 표준 라이브러리 엄격 PNG·pixel-diff 검증, 현재 빌드 재실행, 회귀와 의도 보존 결과를 기록합니다. | 호스트의 브라우저·Figma 도구와 실제 실행 기록. 개선 요청에 포함된 권한을 로컬 수정 범위에 맞게 기록합니다. |
 
 제품 이해부터 수정·재검증까지 이어지는 호스트 에이전트 지침을 구현했습니다. CLI는 전달받은 근거를 검증하고 범위가 정해진 로컬 텍스트 패치를 적용하며, 검토된 단일 Python 어댑터로 소유 로컬 코어 과제를 실행할 수 있습니다. 브라우저 조작, Figma 작업과 빌드 실행은 호스트가 수행합니다. 실제 제품에서 요청부터 개선 완료까지 이어지는 전체 실행은 별도 검증이 필요합니다. 기존 픽스처와 구성 요소 검사만으로 전체 실행을 검증했다고 주장하지 않습니다.
 
@@ -67,6 +67,18 @@ npm ci && npx playwright install chromium
 ```
 
 Node.js 22를 쓰십시오. 고정된 Playwright 1.56.1에서는 Node.js 24.16 이상과 Node.js 26에서 `npx playwright install`이 다운로드 뒤 멈춥니다([microsoft/playwright#40724](https://github.com/microsoft/playwright/issues/40724), Playwright 1.60에서는 됩니다).
+
+Ubuntu 26.04 x64에서 `does not support chromium on ubuntu26.04-x64`로
+실패하면 Playwright의 Ubuntu 24.04 빌드를 명시적으로 사용합니다. 설치와
+드라이버 실행 모두 같은 환경 변수를 유지하세요.
+
+```sh
+export PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=ubuntu24.04-x64
+npx playwright install chromium
+```
+
+Ubuntu 26.04 정식 지원이 아닌 호환성 우회입니다. Node.js 22는 그대로
+사용하세요. 이 변수는 최신 Node의 설치 멈춤 문제를 해결하지 않습니다.
 
 ## 사용법
 
@@ -244,6 +256,9 @@ python3 scripts/check_release.py --output dist/release-check
 - 한국 플랫폼 상당수가 자동 수집을 제한하므로, 디시인사이드, 네이버, 쿠팡, X는 서면 허락과 함께 항목별 약관 확인을 기록하지 않으면 수집 공백으로 끝납니다. 유튜브는 본인의 키를 쓰는 API로만 읽습니다. 한국 팩은 법률 자문이 아닙니다.
 - ergonomics 모드의 엄지 도달 모델은 보정되지 않았고, 벤치마크 세트는 작으며 에이전트가 만들었습니다. 결과는 인증이 아니라 선별용으로 봅니다. `docs/validation/`을 보십시오.
   [기존 별도 평가](docs/validation/experiments/heldout-2-results.md)에서는 정상 시나리오당 P0–P2 문제 단위가 1.75건으로 사전 기준 0.35건을 넘었고, 조건 식별 목표도 충족하지 못했습니다. 이후 수정만으로 이 목표를 통과했다고 볼 수 없습니다. 발견 항목은 실제 수정 전에 검토해야 합니다.
+  이 checkout에는 `benchmarks/heldout-2/audience/*.json`만 있고 해당 평가의
+  fixture·scenario·정답 키는 없습니다. 공개된 수치를 이 checkout만으로
+  재현할 수 없으며 audience 파일만으로 실행 가능한 suite가 되지는 않습니다.
 - 웹 드라이버가 다루는 것은 Chromium 기기 에뮬레이션뿐입니다. 실제 iOS Safari, 네이티브 앱, 실제 기기는 다루지 않습니다.
 
 ## 라이선스

@@ -257,7 +257,7 @@ class FillTests(unittest.TestCase):
         self.assertEqual((self.fixture.site / 'index.html').read_text(), before)
 
     def test_invalid_written_packet_is_not_acceptance(self):
-        self.fixture.packet['policy']['figma_first'] = False
+        self.fixture.packet['policy']['raw_community_storage'] = True
         status, result = self.fill()
         self.assertEqual(status, 1, result)
         self.assertFalse(result['valid'])

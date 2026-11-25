@@ -29,9 +29,138 @@
     "checks": {
       "layout": "passed",
       "interaction_states": "passed",
+      "alignment": "passed",
+      "spacing": "passed",
       "typography": "passed",
+      "text_clipping": "passed",
+      "component_occlusion": "passed",
+      "figma_fidelity": "passed",
       "side_accents": "passed"
     },
     "reason": ""
-  }
+  },
+  "inspection": {
+    "viewed_artifact_ids": [
+      "artifact-replay-capture",
+      "artifact-reference"
+    ],
+    "image_tool": "authored-fixture-no-image-tool-executed",
+    "observations": [
+      {
+        "region": "synthetic-text",
+        "actual_box": [
+          20,
+          20,
+          350,
+          24
+        ],
+        "reference_box": [
+          20,
+          20,
+          350,
+          24
+        ],
+        "aspect": "alignment",
+        "status": "passed",
+        "observed": "The authored text anchor is x=20.",
+        "expected": "The synthetic reference text anchor is x=20."
+      },
+      {
+        "region": "synthetic-text",
+        "actual_box": [
+          20,
+          20,
+          350,
+          24
+        ],
+        "reference_box": [
+          20,
+          20,
+          350,
+          24
+        ],
+        "aspect": "spacing",
+        "status": "passed",
+        "observed": "The authored text baseline is y=40 with no adjacent element.",
+        "expected": "The synthetic reference baseline is y=40."
+      },
+      {
+        "region": "synthetic-text",
+        "actual_box": [
+          20,
+          20,
+          350,
+          24
+        ],
+        "reference_box": [
+          20,
+          20,
+          350,
+          24
+        ],
+        "aspect": "typography",
+        "status": "passed",
+        "observed": "The authored SVG uses the default font; no browser font was checked.",
+        "expected": "The synthetic reference uses the SVG default font."
+      },
+      {
+        "region": "synthetic-text",
+        "actual_box": [
+          20,
+          20,
+          350,
+          24
+        ],
+        "reference_box": [
+          20,
+          20,
+          350,
+          24
+        ],
+        "aspect": "text_clipping",
+        "status": "passed",
+        "observed": "The authored text region is inside the synthetic viewport.",
+        "expected": "The reference text region stays within 390x844 pixels."
+      },
+      {
+        "region": "synthetic-text",
+        "actual_box": [
+          20,
+          20,
+          350,
+          24
+        ],
+        "reference_box": [
+          20,
+          20,
+          350,
+          24
+        ],
+        "aspect": "component_occlusion",
+        "status": "passed",
+        "observed": "The authored SVG contains one visible text element.",
+        "expected": "No other visible element overlaps the synthetic reference text."
+      },
+      {
+        "region": "synthetic-text",
+        "actual_box": [
+          20,
+          20,
+          350,
+          24
+        ],
+        "reference_box": [
+          20,
+          20,
+          350,
+          24
+        ],
+        "aspect": "figma_fidelity",
+        "status": "passed",
+        "observed": "The authored structure is one text node at (20,40); the label difference is recorded in interaction_states.",
+        "expected": "The synthetic reference structure is one text node at (20,40); this is not a live Figma comparison."
+      }
+    ]
+  },
+  "fixture_notice": "Authored synthetic inspection records; no live image tool, browser or Figma was used."
 }

@@ -4072,7 +4072,7 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(ladder.RUNGS, ("R0", "R1", "R2", "R3"))
         self.assertEqual(ROBOTS_TOKEN, "RemorsearchUXQA")
         self.assertTrue(USER_AGENT.startswith("RemorsearchUXQA/") and PROJECT_URL in USER_AGENT)
-        self.assertEqual(PROJECT_URL, "https://github.com/remorser58/Remorsearch_UX_QA_Skill")
+        self.assertEqual(PROJECT_URL, "https://github.com/remorser58/Remorswarm_UX_QA_Skill")
         self.assertEqual(ladder.EXIT, {"read": 0, "refused": 2, "stopped": 3, "unread": 4, "deferred": 5})
         self.assertEqual(ladder.CONTEXTS, ("anonymous", "unknown", "signed_in"))
 

@@ -561,7 +561,7 @@ def _tier(o: dict[str, Any]) -> str | None:
 RULE_VARIANTS: dict[str, dict[str, Any]] = {
     "PC-04 without critical-print-size P3": {"obs": lambda o: not (o["check_id"] == "PC-04" and _tier(o) == "critical_print_size")},
     "PC-04 without platform-minimum P3": {"obs": lambda o: not (o["check_id"] == "PC-04" and _tier(o) == "platform_minimum" and o["severity"] == "P3")},
-    "PT-02 without one-hand 9.2 mm P3": {"obs": lambda o: not (o["check_id"] == "PT-02" and o["severity"] == "P3")},
+    "PT-02 without one-hand 9.2 mm P3": {"obs": lambda o: not (o["check_id"] == "PT-02" and o["severity"] == "P3" and (o.get("measurement") or {}).get("criterion") == "one_hand_reference")},
     "RH-01 without P3": {"obs": lambda o: not (o["check_id"] == "RH-01" and o["severity"] == "P3")},
     "GZ-02 without P3": {"obs": lambda o: not (o["check_id"] == "GZ-02" and o["severity"] == "P3")},
     "PT-04 profile-only findings removed": {"obs": lambda o: not (o["check_id"] == "PT-04" and ((o.get("measurement") or {}).get("baseline_miss_probability") or 0) < params.MISS_PROBABILITY_SEVERITY[-1][0])},

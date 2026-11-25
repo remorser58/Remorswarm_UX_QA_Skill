@@ -16,6 +16,7 @@
     "references/research/korea/overview.md": 10240,
     "references/research/workflow.md": 12288,
     "references/persona-qa/workflow.md": 14336,
+    "references/persona-qa/ui-quality.md": 12288,
     "references/ergonomics/workflow.md": 12288,
     "references/loop/workflow.md": 6144,
     "references/loop/product-improvement.md": 9216
@@ -151,6 +152,8 @@
         "references/agent-setup.md",
         "drivers/web/README.md",
         "references/ergonomics/visual-science.md",
+        "references/persona-qa/generated-ui-preflight.md",
+        "references/persona-qa/ui-quality.md",
         "references/loop/react-design-system.md"
       ],
       "later_conditions": {
@@ -239,6 +242,8 @@
         "references/agent-setup.md",
         "drivers/web/README.md",
         "references/ergonomics/visual-science.md",
+        "references/persona-qa/generated-ui-preflight.md",
+        "references/persona-qa/ui-quality.md",
         "references/loop/react-design-system.md"
       ],
       "later_conditions": {

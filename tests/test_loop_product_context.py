@@ -194,7 +194,9 @@ def add_second_scenario(p,e):
                 if 'scenario_digest' in value:value['scenario_digest']=digest(s)
                 if a['kind']=='steps':value['results']=new['steps']
                 elif a['kind']=='accessibility':value['results']=new['accessibility']
-                elif a['kind']=='visual_report':value['comparison']=visual
+                elif a['kind']=='visual_report':
+                    value['comparison']=visual
+                    value['inspection']['viewed_artifact_ids']=[visual['actual_artifact_id'],visual['reference_artifact_id']]
                 raw=(json.dumps(value,ensure_ascii=False,indent=2)+'\n').encode()
             a['sha256']=sha(raw);(e/a['path']).write_bytes(raw);p['artifacts'].append(a)
         p['browser_runs'].append(new);p['visual_checks'].append(visual)

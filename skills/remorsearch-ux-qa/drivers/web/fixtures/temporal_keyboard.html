@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Owned temporal and keyboard fixture</title>
+<style>
+body { font: 18px sans-serif; margin: 24px; }
+button, input { padding: 12px; margin: 8px; }
+:focus-visible { outline: 3px solid #174db5; outline-offset: 3px; }
+#detail-close:focus-visible { outline: none; }
+dialog { border: 2px solid #222; padding: 24px; }
+</style>
+<h1>Request desk</h1>
+<button id="save">Save request</button>
+<button id="open">Review request</button>
+<button id="validate">Check required field</button>
+<button id="details">View details</button>
+<button id="many">Show many updates</button>
+<div id="notice" role="status" hidden></div>
+<p id="receipt"></p>
+<p id="plain"></p>
+<div id="error" role="alert" hidden>Enter the required field.</div>
+<section id="detail" hidden><h2>Request details</h2><button id="detail-close">Close details</button></section>
+<dialog id="review"><h2>Review request</h2><button id="approve">Approve</button><button id="cancel">Cancel</button></dialog>
+<script>
+const $ = (id) => document.getElementById(id);
+$('save').onclick = () => {
+  $('notice').textContent = 'Request saved. Reference 2468.';
+  $('notice').hidden = false;
+  $('receipt').textContent = 'Request saved. Reference 2468.';
+  $('plain').textContent = 'Your saved request is available here.';
+  setTimeout(() => { $('notice').hidden = true; }, 700);
+};
+$('open').onclick = () => $('review').showModal();
+$('review').addEventListener('keydown', (event) => {
+  if (event.key !== 'Tab') return;
+  if (event.shiftKey && document.activeElement === $('approve')) {
+    event.preventDefault();
+    $('cancel').focus();
+  } else if (!event.shiftKey && document.activeElement === $('cancel')) {
+    event.preventDefault();
+    $('approve').focus();
+  }
+});
+$('cancel').onclick = () => $('review').close();
+$('approve').onclick = () => { $('review').close(); $('receipt').textContent = 'Request approved.'; };
+$('validate').onclick = () => { $('error').hidden = false; };
+$('details').onclick = () => { $('detail').hidden = false; };
+$('detail-close').onclick = () => { $('detail').hidden = true; };
+$('many').onclick = () => {
+  const section = document.createElement('section');
+  for (let i = 0; i < 150; i++) {
+    const text = document.createElement('span');
+    text.textContent = `Update ${i}. `;
+    section.append(text);
+  }
+  document.body.append(section);
+};
+</script>
+</html>

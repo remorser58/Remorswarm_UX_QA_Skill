@@ -22,9 +22,9 @@ Every claim carries a tag:
 
 | Tag | Meaning |
 |---|---|
-| **[P]** | Primary text read in this session. |
+| **[P]** | Primary text read at the time of writing. |
 | **[S]** | Search-engine snippet. The page was not opened. Snippets from secondary sites are marked **[S2]**. |
-| **[B]** | Background disciplinary knowledge, not re-verified this session. No numbers are given under [B]. |
+| **[B]** | Background disciplinary knowledge, not re-verified at the time of writing. No numbers are given under [B]. |
 | **[D]** | Derived by me from [P]/[S] material. |
 | **UNCONFIRMED** | A number or fact I could not confirm. Do not hard-code it as a gate. |
 
@@ -835,7 +835,7 @@ These must be recorded as `inferred` with an LLM rationale and screenshot crop, 
 
 ## 8. Sources
 
-### Primary, read this session [P]
+### Primary, read at the time of writing [P]
 
 - 전자상거래 등에서의 소비자보호에 관한 법률, 시행령, 시행규칙 (current: law as amended 2026-01-20, in force 2026-07-21). Via legalize-kr mirror of law.go.kr — https://github.com/legalize-kr/legalize-kr (kr/전자상거래등에서의소비자보호에관한법률/); canonical https://www.law.go.kr/법령/전자상거래등에서의소비자보호에관한법률
 - 개인정보 보호법 and 시행령 (current text; Art. 22, 22-2, 24-2; Decree Art. 17, 17-2) — legalize-kr kr/개인정보보호법/

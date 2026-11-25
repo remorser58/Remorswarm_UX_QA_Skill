@@ -13,9 +13,8 @@ written back into the same graph as source facts. OASIS agents herd more than
 humans, and more so as agent counts grow. The same author's earlier BettaFish
 (微舆, viral November 2025, GPL-2.0) is public-opinion analysis of real
 platforms, not persona simulation. Full notes:
-`docs/human-factors/llm-persona-simulation-validity.md` and
-`docs/mirofish-reference-review.md`.
-These are repository documents, not installed with the skill.
+`docs/human-factors/llm-persona-simulation-validity.md`, a repository document
+that is not installed with the skill.
 
 ## What the swarm is here
 

@@ -6,21 +6,21 @@ Brief for `ergoqa` (`docs/ergonomic-swarm-spec.md`, `ergo-profile.v1`). Prepared
 
 ## 0. How to read this brief (retrieval limits)
 
-This session had two constraints. Read them before you reuse any number.
+This brief was written in October 2026 under two retrieval limits. Read them before you reuse any number.
 
-1. **WebSearch budget ran out** after about a dozen searches in this sub-task. The session-wide cap is 200/200 calls, shared with sibling agents. After that, no more searches could run.
+1. **Web search was rate-limited** after about a dozen searches; no further searches could run.
 2. **WebFetch and curl were blocked** for almost every host by the egress proxy. Blocked hosts included huggingface.co, gallup.co.kr, kats.go.kr, sizekorea.kr, koreascience.kr, kosis.kr, law.go.kr, pubmed, pmc, mdpi, the NVIDIA blogs, namu.wiki and all Korean news sites. Only github.com, raw.githubusercontent.com, developer.android.com, developer.apple.com and microsoft.com could be reached.
 
 Every value therefore carries an evidence tag:
 
 | Tag | Meaning | Use for sampling? |
 |---|---|---|
-| **[P]** | Primary text read in this session (law text, standard text, device descriptor file, vendor doc) | Yes |
-| **[D]** | Computed by a third party from the full dataset. I read their output files in this session. | Yes, but pin the dataset revision |
+| **[P]** | Primary text read at the time of writing (law text, standard text, device descriptor file, vendor doc) | Yes |
+| **[D]** | Computed by a third party from the full dataset. I read their output files at the time of writing. | Yes, but pin the dataset revision |
 | **[S]** | Search-engine snippet only; fetching the page was blocked. The value is as the search engine summarised the named page. | Only as a provisional prior. Verify before release. |
 | **[2]** | Secondary source (news, community) seen via a snippet | Provisional. Label the source as secondary. |
 | **[X]** | Taken from a sibling brief (`research/handedness-grip-reach.md`). I did not re-verify it. | Provisional |
-| **[R]** | UNCONFIRMED recall. I did **not** retrieve it this session. It is listed only so a person can verify it. | **No.** Do not sample from it until someone confirms it. |
+| **[R]** | UNCONFIRMED recall. I did **not** retrieve it at the time of writing. It is listed only so a person can verify it. | **No.** Do not sample from it until someone confirms it. |
 | **NOT RETRIEVED** | No value was obtained | Use the stratified-coverage default only |
 
 ---
@@ -466,7 +466,7 @@ The NGC / Data Designer `ko_KR` PersonSampler asset documents *extra* Korea fiel
 
 ## Sources
 
-**Primary: read in this session**
+**Primary: read at the time of writing**
 
 - legalize-kr, Korean law mirror (law.go.kr source). https://github.com/legalize-kr/legalize-kr — `kr/장애인차별금지및권리구제등에관한법률/법률.md` (in force 2025-11-11), `시행령.md` (in force 2026-01-22), `kr/디지털포용법/법률.md`, `시행령.md`, `kr/지능정보화기본법/법률.md` (Arts. 46–49 deleted 2025-01-21). Commit 3969940.
 - 한국형 웹 콘텐츠 접근성 지침 2.2 (KS X OT0003:2022), unofficial HTML conversion. https://github.com/a11ykr/kwcag22 (commit 63b3b36). Official source: 국립전파연구원 https://www.rra.go.kr
@@ -476,7 +476,7 @@ The NGC / Data Designer `ko_KR` PersonSampler asset documents *extra* Korea fiel
 - Chrome DevTools `EmulatedDevices.ts`. https://github.com/ChromeDevTools/devtools-frontend (commit 2d671c5)
 - Android Developers, "Use window size classes". https://developer.android.com/develop/ui/compose/layouts/adaptive/use-window-size-classes
 
-**Third-party dataset analyses: read in this session [D]**
+**Third-party dataset analyses: read at the time of writing [D]**
 
 - SeanPresent, Nemotron-Personas-Korea deep EDA (2026-04-28). https://github.com/SeanPresent/Nemotron-Personas-Korea-EDA (commit 28f59bc)
 - eopchang, Nemotron-Personas-Korea joint-distribution audit (2026-05). https://github.com/eopchang/nemotron-personas-korea-audit (commit 99b064b)

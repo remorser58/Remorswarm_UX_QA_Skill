@@ -27,6 +27,18 @@ from .snapshot import is_number, validate_adaptation, validate_native_state
 
 SEVERITY_ORDER = {"P0": 0, "P1": 1, "P2": 2, "P3": 3}
 
+# Single-element geometry/readability rules can share a component-level finding.
+# Interaction, timing, task-state and multi-element relations remain separate.
+REPEATED_ELEMENT_CHECKS = frozenset({
+    "RH-01", "PT-01", "PT-02", "PT-04", "PC-01", "PC-02", "PC-04", "PC-05",
+    "GM-01", "GM-02", "GM-05", "LY-01",
+})
+
+# Task state, judgment, timing and keyboard-focus results are always listed as
+# findings. Other automated warnings below the report's list threshold are
+# summarized by rule and screen.
+ALWAYS_LISTED_CHECKS = frozenset({"TI-01", "PJ-01", "CG-02", "CG-03", "GM-03", "SM-05", "SM-06", "FM-02"})
+
 # Reach-zone labels (thumb-reach-v3); shared with the swarm's derived advice.
 ZONE_KO = {"out": "파지를 바꿔야 닿는", "stretch": "엄지를 크게 뻗어야 하는", "mild": "약간 불편한", "natural": "편한"}
 
@@ -293,6 +305,36 @@ LY01 = _register(CheckSpec(
     "Text clipped by its own box or a clipping container",
     ("REF-xctest-textclipped", "REF-wcag22-144", "REF-wcag22-1412"), ("web", "desktop"), "visual",
     "고정 높이·너비와 overflow:hidden을 풀어 글자가 늘어나도 다 보이게 하세요.",
+))
+LY02 = _register(CheckSpec(
+    "LY-02", "layout", "measured", "다른 요소에 계속 가려지는 텍스트",
+    "Text stays covered by a fixed bar or another box",
+    (), ("web", "desktop"), "visual",
+    "고정 헤더와 하단 바의 높이만큼 본문에 여백(padding, scroll-padding)을 주고, 겹쳐 놓은 배지나 라벨은 글자를 피해 배치하세요.",
+))
+LY03 = _register(CheckSpec(
+    "LY-03", "layout", "measured", "글자끼리 겹침",
+    "Text drawn over other text",
+    (), ("web", "desktop"), "visual",
+    "줄 간격(line-height)을 글자 크기 이상으로 두고, 음수 여백이나 절대 위치 때문에 글자가 겹치지 않게 하세요.",
+))
+LY04 = _register(CheckSpec(
+    "LY-04", "layout", "measured", "같은 열·행에서 몇 px 어긋난 블록",
+    "One block is a few pixels off the edge its siblings share",
+    (), ("web", "desktop"), "visual",
+    "같은 열이나 행의 블록이 같은 여백 값을 쓰게 해 시작선을 맞추세요.",
+))
+LY05 = _register(CheckSpec(
+    "LY-05", "layout", "measured", "반복 목록에서 간격 하나만 다름",
+    "One gap in a repeated list differs from the others",
+    (), ("web", "desktop"), "visual",
+    "반복 항목 사이 간격을 같은 값(gap 또는 같은 margin)으로 통일하세요.",
+))
+UI01 = _register(CheckSpec(
+    "UI-01", "visual", "measured", "아이콘 전용 조작 요소에 시각적 설명이 없음",
+    "Icon-only action has no visible tooltip or equivalent hover/focus explanation",
+    (), ("web", "desktop", "android", "ios"), "visual",
+    "아이콘만 있는 조작 요소에 짧은 툴팁이나 포커스 시 설명을 제공하고, 같은 기능의 컨트롤은 같은 이름과 표현을 쓰세요.",
 ))
 PJ01 = _register(CheckSpec(
     "PJ-01", "heuristic", "judgment", "페르소나 에이전트가 기대와 다른 결과/혼란을 기록",
@@ -644,9 +686,10 @@ def check_target_size(ctx: Context) -> list[Observation]:
                 False, "P1" if critical else "P2",
                 f"'{label}' 크기 {tbox['w']:.0f}×{tbox['h']:.0f}px로 WCAG 2.5.8 최소 24px 미달, 간격 예외도 불충족({reason}).",
             ))
-        if ctx.is_touch and critical and "game_control" not in _roles(element):
-            # Platform size guidance (44 pt / 48 dp / 9.2 mm one-thumb) is applied to the
-            # controls a task depends on; small secondary targets are covered by PT-01.
+        if ctx.is_touch and "game_control" not in _roles(element):
+            # Scan secondary controls too: passing WCAG's 24 px spacing exception
+            # does not imply comfortable touch size. Their platform-size advice is
+            # P3; stronger and one-thumb rules still require a critical/path target.
             w_mm, h_mm = _box_mm(ctx, tbox)
             side = min(w_mm, h_mm)
             severity = None
@@ -1644,27 +1687,48 @@ def check_choice_overload(ctx: Context) -> list[Observation]:
         box = element["box"]
         # Same look, not just a similar size: unrelated controls (a back chevron, date
         # chips and a stepper) were merged by size buckets alone (adjudication 2026-09-28).
-        # Choices are siblings in one container; when the driver gives no container id,
-        # fall back to identical fill and border.
-        parent = (element.get("ancestor_ids") or [None])[0]
-        look = ("parent", parent) if parent else ("look", element.get("color_bg"), element.get("border_color"))
+        # Fresh unmeasured captures abstain; only absent fields use legacy estimates.
+        scope = element.get("sibling_scope_id")
+        status = element.get("sibling_scope_status")
+        if "sibling_scope_id" not in element and "sibling_scope_status" not in element:
+            parent = (element.get("ancestor_ids") or [None])[0]
+            look = ("legacy_ancestor", parent) if parent else ("legacy_appearance", element.get("color_bg"), element.get("border_color"))
+        elif isinstance(scope, str) and scope.strip() and len(scope) <= 256 and ("sibling_scope_status" not in element or status == "measured"):
+            look = ("dom_sibling_structure", scope)
+        elif "sibling_scope_id" in element and scope is None and status == "none":
+            continue
+        else:
+            out.append(Observation(
+                "CG-01", ctx.run["run_id"], ctx.profile["profile_id"], ctx.snapshot.get("snapshot_id"), ctx.snapshot.get("step_index"),
+                [element["id"]], element_key(element),
+                {"name": "equal_choices", "value": None, "unit": "count", "threshold": params.CHOICE_OVERLOAD_MAX, "comparator": "<=",
+                 "grouping_basis": "unavailable", "grouping_status": "unavailable", "limitations": ["sibling_scope_unavailable"]},
+                False, None, "비교할 제어 요소의 그룹을 측정하지 못해 선택 과부하 판정을 보류했습니다.",
+                "hick-hyman-v1", extra={"verdict": "inconclusive"},
+            ))
+            continue
         key = (element.get("tag"), element.get("role"), round(box["w"] / 8), round(box["h"] / 8), element.get("font_weight"),
                element.get("font_size_px"), look)
         groups.setdefault(key, []).append(element)
-    for members in groups.values():
+    for key, members in groups.items():
         if len(members) <= params.CHOICE_OVERLOAD_MAX:
             continue
         labels = [(m.get("text") or m.get("name") or "").strip() for m in members]
         if sum(1 for t in labels if len(t) == 1 and t.isdigit()) >= 8:
             continue  # a numeric keypad: recall of a known code, not a choice among options
         decision_ms = cognition.hick_hyman_ms(len(members))
+        basis = key[-1][0]
+        legacy = basis.startswith("legacy_")
         out.append(Observation(
             "CG-01", ctx.run["run_id"], ctx.profile["profile_id"], ctx.snapshot.get("snapshot_id"), ctx.snapshot.get("step_index"),
             [m["id"] for m in members[:12]], element_key(members[0]),
             {"name": "equal_choices", "value": len(members), "unit": "count", "threshold": params.CHOICE_OVERLOAD_MAX, "comparator": "<=",
-             "hick_decision_ms": round(decision_ms)},
+             "hick_decision_ms": round(decision_ms), "grouping_basis": basis,
+             "grouping_status": "estimated" if legacy else "measured",
+             "limitations": (["legacy_grouping_estimate"] if legacy else []) + ["alternative_semantics_unverified"]},
             False, "P3",
-            f"동일한 모양의 선택지 {len(members)}개(힉-하이먼 예측 결정 시간 약 {decision_ms/1000:.1f}초).",
+            f"같은 모양의 제어 요소 {len(members)}개를 " + ("과거 캡처의 상위 요소·외형으로 추정해 묶었습니다. " if legacy else "DOM 구조로 묶었습니다. ")
+            + f"실제 선택 대안인지 확인이 필요합니다(힉-하이먼 예측 결정 시간 약 {decision_ms/1000:.1f}초).",
             "hick-hyman-v1",
         ))
     return out
@@ -1826,17 +1890,29 @@ def check_run_timing(run: dict[str, Any], profile: dict[str, Any], device: Any, 
             appearances = int(measured.get("appearances") or 0)
             offscreen = appearances > 0 and int(measured.get("offscreen_appearances") or 0) >= appearances
             failed = shortest + params.TIMING_JITTER_MS < need or has_action or offscreen
+            recovery = measured.get("recovery") or {}
+            recovered = (recovery.get("status") == "available" and recovery.get("basis") == "same_visible_text"
+                         and recovery.get("snapshot_id") in snapshots)
+            exception = declared.get("exception") or measured.get("exception")
+            # Same information available without a deadline is not information loss.
+            # Text recovery alone does not establish recovery of a timed action.
+            if recovered and not has_action:
+                failed = False
             critical = bool(element and _roles(element) & {"error_message", "critical_message"})
             severity = ("P1" if (has_action or (offscreen and critical)) else "P2") if failed else None
             out.append(Observation(
                 "CG-02", run_id, pid, None, None, [], key,
                 {"name": "visible_ms", "value": shortest, "unit": "ms", "threshold": round(need), "comparator": ">=", "chars": len(text), "offscreen": offscreen,
-                 "reading_rate_syll_per_min": reading_rate, "has_action": has_action},
+                 "reading_rate_syll_per_min": reading_rate, "has_action": has_action,
+                 "recovery": recovery, "exception_claimed": exception, "wcag_verdict": "not_determined"},
                 not failed, severity,
                 f"'{text[:30]}' 메시지가 {shortest:.0f}ms만 표시됨(느린 독자 기준 읽기 필요 시간 약 {need:.0f}ms)"
-                + (" — 동작이 포함된 메시지가 자동으로 사라짐(WCAG 2.2.1)." if has_action else ".")
+                + (" — 동작도 사라짐. WCAG 2.2.1 대체 경로·조정·예외를 별도 확인해야 합니다." if has_action else ".")
+                + (" 같은 정보가 화면에서 다시 확인되었습니다." if recovered else "")
+                + (" 예외는 작성자 주장으로, 적용 여부는 별도 검토해야 합니다." if exception else "")
                 + (" 게다가 화면 밖(뷰포트 바깥)에 나타나 보이지 않았습니다." if offscreen else ""),
                 "reading-time-v2",
+                {"verdict": "modeled_risk" if failed else "observed", "wcag_level": "2.2.1 A; 2.2.4 AAA"},
             ))
     samples = run.get("flash_samples") or []
     if samples:
@@ -2339,7 +2415,7 @@ def check_semantics(ctx: Context) -> list[Observation]:
     for e in dom:
         clip = e.get("clipped")
         box = e.get("box") or {}
-        if not isinstance(clip, dict) or e.get("interactive") or box.get("w", 0) < 4 or box.get("h", 0) < 4 or not (e.get("text") or "").strip():
+        if not isinstance(clip, dict) or box.get("w", 0) < 4 or box.get("h", 0) < 4 or not (e.get("text") or "").strip():
             continue
         if clip.get("animated"):
             continue  # tickers and marquees clip by design
@@ -2356,10 +2432,147 @@ def check_semantics(ctx: Context) -> list[Observation]:
         out.append(Observation(
             "LY-01", *base, [e["id"]], element_key(e),
             {"name": "text_clipped", "value": True, "unit": "flag", "threshold": False, "comparator": "==", "axis": "x" if clip.get("x") else "y", "ellipsis": bool(clip.get("ellipsis")),
-             "clipped_by": by, "act_59br37": clip.get("act")},
+             "clipped_by": by, "act_59br37": clip.get("act"), **({"label": clip["label"]} if clip.get("label") else {})},
             False, "P3" if clip.get("ellipsis") or clean else "P2",
             f"'{(e.get('text') or '')[:30]}' 글자가 {'바깥 상자(' + by + ')' if by else '상자'}에 잘립니다" + how,
             extra={"context_selectors": [by]} if by and by.startswith("#") else {},
+        ))
+    return out
+
+
+def check_layout(ctx: Context) -> list[Observation]:
+    """Covered text, overlapping text, near-miss alignment and uneven spacing (LY-02..05).
+
+    Measured from rendered geometry and profile-independent. Covered text counts only
+    when no scroll position reveals it: a fixed or sticky bar at the top while the page
+    is at its top, one at the bottom while the page is at its end, or a box in the normal
+    layout. Dialogs, popups and large overlays cover content on purpose and are skipped.
+    Alignment and spacing outliers are polish (P3) and are reported with the selectors
+    the driver recorded, since the misplaced block is often a card with no text of its own.
+    """
+    out: list[Observation] = []
+    base = (ctx.run["run_id"], ctx.profile["profile_id"], ctx.snapshot.get("snapshot_id"), ctx.snapshot.get("step_index"))
+    scroll = ctx.snapshot.get("surface", {}).get("scroll") or {}
+    _, vh = ctx.viewport
+    sy, sh = scroll.get("y"), scroll.get("height")
+    at_top = isinstance(sy, (int, float)) and sy <= 1
+    at_end = isinstance(sy, (int, float)) and isinstance(sh, (int, float)) and sy + vh >= sh - 1
+    for e in ctx.elements:
+        words = (e.get("text") or "").strip()
+        box = e.get("box") or {}
+        if e.get("source", "dom") != "dom" or not words or not e.get("visible", True) or box.get("w", 0) < 4 or box.get("h", 0) < 4:
+            continue
+        # Glyph sampling (five points per visible line) is the sharper measure; the
+        # element-box sample stands in when no line was found under a painted box. Text
+        # that paints nothing (ink false) cannot be seen covered.
+        glyph, occ, frac = e.get("glyph_cover"), e.get("occluder"), e.get("occluded_fraction")
+        basis = None
+        if isinstance(glyph, dict) and glyph.get("lines_covered") and not glyph.get("overlay"):
+            occ, frac, basis = glyph, float(glyph.get("fraction") or 0), "glyphs"
+        elif (isinstance(occ, dict) and isinstance(frac, (int, float)) and frac >= 0.2 and not occ.get("overlay")
+              and e.get("ink") is not False):
+            basis = "box"
+        if basis:
+            position = occ.get("position")
+            if position in ("fixed", "sticky"):
+                bar = occ.get("box") or {}
+                top_bar = bar.get("y", 0) + bar.get("h", 0) / 2 < vh / 2
+                # Only a bar attached to the screen edge keeps covering: content can scroll
+                # past a floating fixed element (a helper or chat bubble) to either side.
+                attached = bar.get("y", 0) <= 1 if top_bar else bar.get("y", 0) + bar.get("h", 0) >= vh - 1
+                reach = occ.get("scroller")
+                if not attached:
+                    permanent = False
+                elif isinstance(reach, dict) and isinstance(reach.get("top"), (int, float)) and isinstance(reach.get("max"), (int, float)):
+                    # The box that scrolls the covered text decides whether it can move out.
+                    permanent = reach["top"] <= 1 if top_bar else reach["top"] >= reach["max"] - 1
+                else:
+                    permanent = at_top if top_bar else at_end
+                where = ("상단 고정 바" if top_bar else "하단 고정 바") + ("(페이지 맨 위)" if top_bar else "(페이지 맨 끝)")
+            else:
+                permanent = True
+                where = "겹쳐 놓인 요소"
+            if permanent:
+                cover = occ.get("selector") or e.get("occluded_by")
+                share = (f"줄 {glyph.get('lines_covered')}/{glyph.get('lines')}개" if basis == "glyphs"
+                         else f"{round(frac * 100)}%")
+                out.append(Observation(
+                    "LY-02", *base, [e["id"]], element_key(e),
+                    {"name": "text_covered", "value": frac, "unit": "fraction", "threshold": 0.2, "comparator": ">=",
+                     "covered_by": cover, "position": position, "scroll_y": sy, "basis": basis},
+                    False, "P2" if basis == "glyphs" or frac >= 0.4 else "P3",
+                    f"'{words[:30]}' 글자 {share}가 {where} {cover}에 가려지고, 스크롤해도 드러나지 않습니다.",
+                    extra={"context_selectors": [cover]} if isinstance(cover, str) and cover.startswith("#") else {},
+                ))
+        overlap = e.get("text_overlap")
+        if isinstance(overlap, dict) and overlap.get("kind") in ("lines", "element"):
+            other = overlap.get("with")
+            out.append(Observation(
+                "LY-03", *base, [e["id"]], element_key(e),
+                {"name": "text_overlap", "value": overlap.get("overlap_px"), "unit": "css_px", "threshold": 1, "comparator": ">=",
+                 "kind": overlap["kind"], "with": other},
+                False, "P2",
+                f"'{words[:30]}' " + ("줄끼리 글자가 겹칩니다(줄 간격이 글자 크기보다 작음)." if overlap["kind"] == "lines"
+                                      else f"글자가 {other}의 글자와 겹칩니다."),
+                extra={"context_selectors": [other]} if isinstance(other, str) and other.startswith("#") else {},
+            ))
+    for o in ctx.snapshot.get("layout_outliers") or []:
+        if not isinstance(o, dict) or o.get("kind") not in ("alignment", "spacing"):
+            continue
+        selectors = [s for s in o.get("selectors") or [] if isinstance(s, str) and s]
+        if not selectors:
+            continue
+        label = (o.get("text") or "").strip()[:40]
+        container = o.get("container")
+        context = {"context_selectors": [container]} if isinstance(container, str) and container.startswith("#") else {}
+        if o["kind"] == "alignment":
+            offset = o.get("offset_px")
+            axis = "시작선" if o.get("axis") == "x" else "윗선"
+            out.append(Observation(
+                "LY-04", *base, [], f"{selectors[0]}|{label}",
+                {"name": "alignment_offset", "value": offset, "unit": "css_px", "threshold": 1.5, "comparator": ">=",
+                 "axis": o.get("axis"), "group_size": o.get("group_size"), "container": container},
+                False, "P3",
+                f"'{label[:30]}' 블록이 같은 묶음 {o.get('group_size')}개의 {axis}에서 {offset}px 어긋납니다.",
+                extra={"anchor_selectors": selectors, **context},
+            ))
+        else:
+            out.append(Observation(
+                "LY-05", *base, [], f"{selectors[-1]}|{label}",
+                {"name": "spacing_outlier", "value": o.get("gap_px"), "unit": "css_px", "typical": o.get("typical_px"),
+                 "threshold": 4, "comparator": ">=", "group_size": o.get("group_size"), "container": container},
+                False, "P3",
+                f"'{label[:30]}' 앞 간격이 {o.get('gap_px')}px로, 같은 목록의 다른 간격 {o.get('typical_px')}px와 다릅니다.",
+                extra={"anchor_selectors": selectors, **context},
+            ))
+    return out
+
+
+def check_ui_discoverability(ctx: Context) -> list[Observation]:
+    """UI-01: sighted users need an explanation for icon-only actions.
+
+    An accessible name alone serves assistive technology but does not prove that a
+    sighted pointer or keyboard user can discover an icon-only action. This stays P3:
+    the component may have a product-specific explanation outside the captured state.
+    """
+    out: list[Observation] = []
+    base = (ctx.run["run_id"], ctx.profile["profile_id"], ctx.snapshot.get("snapshot_id"), ctx.snapshot.get("step_index"))
+    controls = [e for e in ctx.elements if e.get("source", "dom") == "dom" and _present(e)
+                and e.get("interactive") and e.get("role") in ("button", "link", "menuitem", "tab")]
+    for e in controls:
+        a = e.get("a11y") or {}
+        visible = (a.get("visible_label") if a.get("visible_label") is not None else e.get("text") or "").strip()
+        if visible or not (a.get("icon_font") or e.get("tag") in ("button", "a")):
+            continue
+        if (a.get("tooltip") or "").strip():
+            continue
+        critical = _critical(ctx, e)
+        out.append(Observation(
+            "UI-01", *base, [e["id"]], element_key(e),
+            {"name": "icon_only_explanation", "value": False, "unit": "flag", "threshold": True, "comparator": "==",
+             "accessible_name": (e.get("name") or "")[:120], "icon_font": bool(a.get("icon_font")), "tooltip": None},
+            False, "P2" if critical else "P3",
+            f"아이콘만 보이는 '{e.get('name') or e.get('selector')}'에 툴팁이나 포커스 설명이 없습니다. 접근 가능한 이름은 있어도 시각적 발견 가능성은 확인되지 않습니다.",
         ))
     return out
 
@@ -2792,6 +3005,8 @@ SNAPSHOT_CHECKS: tuple[Callable[[Context], list[Observation]], ...] = (
     check_text_size,
     check_choice_overload,
     check_semantics,
+    check_layout,
+    check_ui_discoverability,
     check_focus_management,
 )
 
@@ -2810,7 +3025,8 @@ HYPOTHESIS_CHECKS = frozenset({"GZ-01", "GZ-04", "PC-05", "PT-05", "GM-06"})
 # Checks that read no profile attribute: one verdict per snapshot, reported as
 # "profile-independent" instead of a k/n coverage (STF-08).
 PROFILE_INVARIANT_CHECKS = frozenset({"TI-01", "PT-01", "PT-05", "PT-06", "PC-01", "PC-02", "CG-01", "CG-03", "GZ-03", "GM-05", "GM-06",
-                                      "SM-01", "SM-02", "SM-03", "SM-04", "SM-05", "SM-06", "SM-07", "SM-08", "LY-01", "RF-01", "RF-02", "RF-03",
+                                      "SM-01", "SM-02", "SM-03", "SM-04", "SM-05", "SM-06", "SM-07", "SM-08", "LY-01", "LY-02", "LY-03",
+                                      "LY-04", "LY-05", "UI-01", "RF-01", "RF-02", "RF-03",
                                       "FM-02"})
 
 
@@ -2864,13 +3080,14 @@ def check_task_integrity(run: dict[str, Any], profile: dict[str, Any], snapshots
         return []
     out = []
     for criterion in (run.get("success_detail") or {}).get("criteria", []):
-        if criterion.get("kind") != "task_check" or criterion.get("passed") is None:
+        if criterion.get("kind") != "task_check" or criterion.get("passed") is None or not criterion.get("basis"):
             continue
         snapshot = snapshots.get(criterion.get("snapshot_id"))
         if snapshot is None:
             continue
         passed = criterion["passed"]
         measurement = {key: criterion[key] for key in ("id", "selector", "property", "checkpoint", "result", "step_index", "snapshot_id", "severity", "consequence")}
+        measurement.update({key: criterion[key] for key in ("basis", "container", "relation", "replay", "input_cases") if key in criterion})
         message = ("명시한 과업 값 검사를 통과했습니다." if passed else
                    f"명시한 과업 값이 {criterion['checkpoint']} 시점의 화면 상태와 일치하지 않습니다. {criterion['consequence']}")
         out.append(Observation(
@@ -2878,7 +3095,7 @@ def check_task_integrity(run: dict[str, Any], profile: dict[str, Any], snapshots
             [criterion["element_id"]] if criterion.get("element_id") else [],
             f"{criterion['selector']}|{criterion['id']}", measurement, passed,
             None if passed else criterion["severity"], message,
-            extra={"anchor_selectors": [criterion["selector"]], "scope": "authored criteria on the recorded owner execution; field values omitted", "impact_basis": "authored; comparison does not establish downstream harm"},
+            extra={"anchor_selectors": [criterion.get("container", criterion["selector"])], "scope": "authored visible-state criteria; same-run invariants and explicitly linked fresh replay; field values omitted", "impact_basis": criterion["basis"]},
         ))
     return out
 

@@ -154,7 +154,33 @@ function checkBox(b, where) {
 
 export const SUCCESS_KEYS = ['selector_visible', 'url_contains', 'text_present', 'task_checks'];
 
-const TASK_CHECK_KEYS = new Set(['id', 'selector', 'property', 'after_step', 'expected', 'from_step', 'severity', 'consequence', 'redact']);
+const TASK_CHECK_KEYS = new Set(['id', 'selector', 'property', 'container', 'after_step', 'expected', 'from_step', 'from_check', 'delta', 'basis', 'follow_up', 'input_cases', 'severity', 'consequence', 'redact']);
+
+function taskBasis(value, at) {
+  if (!isPlainObject(value) || Object.keys(value).some((key) => !['kind', 'reference'].includes(key))
+    || !['product', 'task'].includes(value.kind) || typeof value.reference !== 'string'
+    || !value.reference.trim() || value.reference.length > 1000) usage(`${at} must name a product or task expectation and its reference (1..1000 characters, no field values)`);
+}
+
+function taskInputCases(value, steps, at, limit = steps.length) {
+  if (value === undefined) return;
+  if (!Array.isArray(value) || !value.length || value.length > 64) usage(`${at} must contain 1..64 authored input cases`);
+  const seen = new Set();
+  for (const [i, item] of value.entries()) {
+    const where = `${at}[${i}]`;
+    if (!isPlainObject(item) || Object.keys(item).some((key) => !['step', 'kind', 'expectation', 'basis', 'boundary'].includes(key))
+      || !Number.isInteger(item.step) || item.step > limit || steps[item.step - 1]?.action !== 'type' || seen.has(item.step)
+      || !['blank', 'boundary', 'documented_valid', 'invalid'].includes(item.kind)
+      || !['accept', 'reject'].includes(item.expectation)) usage(`${where} must classify a unique authored type action`);
+    seen.add(item.step);
+    taskBasis(item.basis, `${where}.basis`);
+    if (item.kind === 'blank' && steps[item.step - 1].text !== '') usage(`${where} blank must reference an empty input`);
+    if ((item.kind === 'boundary') !== (typeof item.boundary === 'string' && !!item.boundary.trim() && item.boundary.length <= 1000)
+      || (item.kind !== 'boundary' && item.boundary !== undefined)) usage(`${where}.boundary must describe the documented boundary only for boundary cases`);
+    if (item.kind === 'documented_valid' && item.expectation !== 'accept') usage(`${where} documented valid input must be expected to be accepted`);
+    if (item.kind === 'invalid' && item.expectation !== 'reject') usage(`${where} invalid input must be expected to be rejected`);
+  }
+}
 
 function taskChecks(value, steps, requireSteps) {
   if (!Array.isArray(value) || value.length < 1 || value.length > 64) usage('scenario.success.task_checks must contain 1..64 checks');
@@ -166,14 +192,48 @@ function taskChecks(value, steps, requireSteps) {
     if (typeof c.id !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(c.id) || ids.has(c.id)) usage(`${at}.id must be a unique identifier`);
     ids.add(c.id);
     if (!isTaskSelector(c.selector)) usage(`${at}.selector must be plain CSS without literals, escapes or credentials`);
-    if (!['value', 'text', 'checked'].includes(c.property)) usage(`${at}.property must be value, text or checked`);
+    if (!['value', 'text', 'checked', 'count'].includes(c.property)) usage(`${at}.property must be value, text, checked or count`);
+    if (c.property === 'count' ? !isTaskSelector(c.container) : c.container !== undefined) usage(`${at}.container is required only for visible record counts`);
     if (c.after_step !== undefined && (!Number.isInteger(c.after_step) || c.after_step < 1 || c.after_step > 10000 || (requireSteps && c.after_step > steps.length))) usage(`${at}.after_step must name a reachable 1-based action index`);
-    const checkpoint = JSON.stringify([c.selector, c.property, c.after_step ?? 'final']);
+    const checkpoint = JSON.stringify([c.selector, c.property, c.container ?? null, c.after_step ?? 'final']);
     if (checkpoints.has(checkpoint)) usage(`${at} duplicates a selector/property/checkpoint`);
     checkpoints.add(checkpoint);
-    if (('expected' in c) === ('from_step' in c)) usage(`${at} needs exactly one of expected or from_step`);
-    if ('expected' in c && (c.property === 'checked' ? typeof c.expected !== 'boolean' : typeof c.expected !== 'string' || c.expected.length > 5000)) usage(`${at}.expected has the wrong type or exceeds 5000 characters`);
-    if ('from_step' in c && (c.property === 'checked' || !Number.isInteger(c.from_step) || c.from_step < 1 || c.from_step > steps.length || steps[c.from_step - 1]?.action !== 'type' || (c.after_step !== undefined && c.from_step > c.after_step))) usage(`${at}.from_step must reference an authored type action at or before the checkpoint`);
+    if (['expected', 'from_step', 'from_check'].filter((key) => key in c).length !== 1) usage(`${at} needs exactly one of expected, from_step or from_check`);
+    if ('expected' in c && (c.property === 'checked' ? typeof c.expected !== 'boolean' : c.property === 'count'
+      ? !Number.isSafeInteger(c.expected) || c.expected < 0 : typeof c.expected !== 'string' || c.expected.length > 5000)) usage(`${at}.expected has the wrong type or exceeds its bound`);
+    if ('from_step' in c && (!['value', 'text'].includes(c.property) || !Number.isInteger(c.from_step) || c.from_step < 1 || c.from_step > steps.length || steps[c.from_step - 1]?.action !== 'type' || (c.after_step !== undefined && c.from_step > c.after_step))) usage(`${at}.from_step must reference an authored type action at or before the checkpoint`);
+    if ('from_check' in c) {
+      const source = value.slice(0, i).find((item) => item?.id === c.from_check);
+      if (!source || source.property !== c.property || (source.after_step ?? Infinity) >= (c.after_step ?? Infinity)) usage(`${at}.from_check must name an earlier checkpoint of the same property`);
+    }
+    if ('delta' in c && (!('from_check' in c) || c.property !== 'count' || !Number.isSafeInteger(c.delta))) usage(`${at}.delta requires a count relation and must be a safe integer`);
+    if (c.basis !== undefined) taskBasis(c.basis, `${at}.basis`);
+    taskInputCases(c.input_cases, steps, `${at}.input_cases`, c.after_step ?? steps.length);
+    let followUp;
+    if (c.follow_up !== undefined) {
+      const f = c.follow_up;
+      if (!isPlainObject(f) || Object.keys(f).some((key) => !['fixture', 'insertions', 'changes', 'input_cases'].includes(key))
+        || f.fixture !== true || !Array.isArray(f.insertions) || !f.insertions.length || f.insertions.length > 64
+        || !Array.isArray(f.changes) || !f.changes.length || new Set(f.changes).size !== f.changes.length
+        || f.changes.some((kind) => !['back', 'cancel', 'reentry', 'edit_resubmit'].includes(kind))) usage(`${at}.follow_up requires an owned synthetic fixture, a bounded full replay and named changes`);
+      const seenInsertions = new Set();
+      const insertions = f.insertions.map((insertion, index) => {
+        if (!isPlainObject(insertion) || Object.keys(insertion).some((key) => !['after_step', 'steps'].includes(key))
+          || !Number.isInteger(insertion.after_step) || insertion.after_step < 0 || insertion.after_step > (c.after_step ?? steps.length)
+          || seenInsertions.has(insertion.after_step) || !Array.isArray(insertion.steps) || !insertion.steps.length
+          || insertion.steps.length > 64) usage(`${at}.follow_up.insertions[${index}] must insert bounded actions at a unique source checkpoint`);
+        seenInsertions.add(insertion.after_step);
+        return { after_step: insertion.after_step, steps: insertion.steps.map((step, j) => normalizeAction(step, { strict: true, where: `${at}.follow_up.insertions[${index}].steps[${j}]` }).action) };
+      });
+      const replaySteps = [];
+      for (let n = 0; n <= (c.after_step ?? steps.length); n++) {
+        if (n) replaySteps.push(steps[n - 1]);
+        replaySteps.push(...(insertions.find((item) => item.after_step === n)?.steps || []));
+      }
+      if (replaySteps.length > 512) usage(`${at}.follow_up replay exceeds 512 actions`);
+      taskInputCases(f.input_cases, replaySteps, `${at}.follow_up.input_cases`);
+      followUp = { ...f, insertions };
+    }
     if (!['P0', 'P1', 'P2', 'P3'].includes(c.severity)) usage(`${at}.severity must be an authored P0..P3 task impact`);
     if (typeof c.consequence !== 'string' || !c.consequence.trim() || c.consequence.length > 1000) usage(`${at}.consequence must describe the task impact in 1..1000 characters without field values`);
     if (c.redact !== undefined && typeof c.redact !== 'boolean') usage(`${at}.redact must be a boolean`);
@@ -182,9 +242,13 @@ function taskChecks(value, steps, requireSteps) {
       if (!isTaskSelector(source.target) || source.target.startsWith('hotspot:')) usage(`${at}.from_step redaction requires plain CSS on the authored type action`);
       steps[c.from_step - 1] = normalizeAction({ ...source, redact: true }, { strict: true, where: `${at}.from_step` }).action;
     }
-    return { ...c };
+    return { ...c, ...(followUp ? { follow_up: followUp } : {}) };
   });
-  return checks.map((c) => ({ ...c, redact: c.redact === true || ('from_step' in c && steps[c.from_step - 1].redact === true) }));
+  const normalized = [];
+  for (const c of checks) normalized.push({ ...c, redact: c.redact === true
+    || ('from_step' in c && steps[c.from_step - 1].redact === true)
+    || ('from_check' in c && normalized.find((source) => source.id === c.from_check)?.redact === true) });
+  return normalized;
 }
 
 export function normalizeBuildId(value, where = 'build_id') {
@@ -282,13 +346,38 @@ export function normalizeScenario(doc, { base, requireSteps }) {
     windowIds.add(w.id);
     const measure = typeof w.measure === 'string' ? w.measure : 'visible_duration';
     if (measure !== 'visible_duration') warnings.push(`timing window ${w.id}: measure ${JSON.stringify(measure)} is not implemented; visible duration is measured instead`);
+    if (w.has_action !== undefined && typeof w.has_action !== 'boolean') usage(`timing window ${w.id}: has_action must be boolean`);
+    if (w.recovery !== undefined) {
+      if (!isPlainObject(w.recovery) || !isTaskSelector(w.recovery.selector)
+        || Object.keys(w.recovery).some((k) => !['selector', 'after_step'].includes(k))) usage(`timing window ${w.id}: recovery needs a plain visible CSS selector`);
+      if (w.recovery.after_step !== undefined && (!Number.isInteger(w.recovery.after_step) || w.recovery.after_step < 1
+        || (requireSteps && w.recovery.after_step > steps.length))) usage(`timing window ${w.id}: recovery.after_step must name a reachable action`);
+    }
+    if (w.exception !== undefined && (!isPlainObject(w.exception) || !['turn_off', 'adjust', 'extend', 'real_time', 'essential', 'twenty_hours'].includes(w.exception.kind)
+      || typeof w.exception.basis !== 'string' || !w.exception.basis.trim() || w.exception.basis.length > 1000
+      || Object.keys(w.exception).some((k) => !['kind', 'basis'].includes(k)))) usage(`timing window ${w.id}: exception needs a WCAG 2.2.1 kind and visible/task basis`);
     windows.push({
       id: w.id,
       selector: w.selector,
       measure,
       kind: typeof w.kind === 'string' ? w.kind : null,
       text: typeof w.text === 'string' ? w.text : null,
+      ...(w.has_action !== undefined ? { has_action: w.has_action } : {}),
+      ...(w.recovery ? { recovery: w.recovery } : {}),
+      ...(w.exception ? { exception: w.exception } : {}),
     });
+  }
+
+  const focusWalks = [];
+  if (doc.focus_walks !== undefined && (!Array.isArray(doc.focus_walks) || doc.focus_walks.length > 8)) usage('scenario.focus_walks must contain at most 8 replay checks');
+  for (const check of doc.focus_walks || []) {
+    if (!isPlainObject(check) || typeof check.id !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(check.id)
+      || focusWalks.some((c) => c.id === check.id) || !Number.isInteger(check.after_step) || check.after_step < 1
+      || (requireSteps && check.after_step > steps.length) || !['modal', 'validation_error', 'detail', 'confirmation'].includes(check.state)
+      || !isTaskSelector(check.selector) || (check.return_selector !== undefined && !isTaskSelector(check.return_selector))
+      || check.fixture !== true
+      || Object.keys(check).some((k) => !['id', 'after_step', 'state', 'selector', 'return_selector', 'fixture'].includes(k))) usage('scenario.focus_walks needs a valid replay check and fixture:true (owned synthetic data only)');
+    focusWalks.push({ ...check });
   }
 
   let success = null;
@@ -321,6 +410,7 @@ export function normalizeScenario(doc, { base, requireSteps }) {
       hotspots,
       steps,
       timing_windows: windows,
+      focus_walks: focusWalks,
       success,
       success_unevaluable: unevaluable,
     },

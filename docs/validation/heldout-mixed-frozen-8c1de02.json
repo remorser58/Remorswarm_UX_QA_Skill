@@ -6,56 +6,56 @@
    "scenario_id": "SC-hm-lesson-a",
    "exit": 0,
    "seconds": 21.0,
-   "run_dir": "/home/user/ux-research-qa-skills/.ergo-bench/heldout-frozen/runs/R-SC-hm-lesson-a-galaxy-tab-s9"
+   "run_dir": ".ergo-bench/heldout-frozen/runs/R-SC-hm-lesson-a-galaxy-tab-s9"
   },
   {
    "run_id": "R-SC-hm-lesson-b-galaxy-tab-s9",
    "scenario_id": "SC-hm-lesson-b",
    "exit": 0,
    "seconds": 26.8,
-   "run_dir": "/home/user/ux-research-qa-skills/.ergo-bench/heldout-frozen/runs/R-SC-hm-lesson-b-galaxy-tab-s9"
+   "run_dir": ".ergo-bench/heldout-frozen/runs/R-SC-hm-lesson-b-galaxy-tab-s9"
   },
   {
    "run_id": "R-SC-hm-signup-a-laptop-1440",
    "scenario_id": "SC-hm-signup-a",
    "exit": 0,
    "seconds": 30.8,
-   "run_dir": "/home/user/ux-research-qa-skills/.ergo-bench/heldout-frozen/runs/R-SC-hm-signup-a-laptop-1440"
+   "run_dir": ".ergo-bench/heldout-frozen/runs/R-SC-hm-signup-a-laptop-1440"
   },
   {
    "run_id": "R-SC-hm-signup-b-laptop-1440",
    "scenario_id": "SC-hm-signup-b",
    "exit": 0,
    "seconds": 30.8,
-   "run_dir": "/home/user/ux-research-qa-skills/.ergo-bench/heldout-frozen/runs/R-SC-hm-signup-b-laptop-1440"
+   "run_dir": ".ergo-bench/heldout-frozen/runs/R-SC-hm-signup-b-laptop-1440"
   },
   {
    "run_id": "R-SC-hm-starlight-a-iphone-15",
    "scenario_id": "SC-hm-starlight-a",
    "exit": 0,
    "seconds": 22.5,
-   "run_dir": "/home/user/ux-research-qa-skills/.ergo-bench/heldout-frozen/runs/R-SC-hm-starlight-a-iphone-15"
+   "run_dir": ".ergo-bench/heldout-frozen/runs/R-SC-hm-starlight-a-iphone-15"
   },
   {
    "run_id": "R-SC-hm-starlight-b-iphone-15",
    "scenario_id": "SC-hm-starlight-b",
    "exit": 0,
    "seconds": 21.8,
-   "run_dir": "/home/user/ux-research-qa-skills/.ergo-bench/heldout-frozen/runs/R-SC-hm-starlight-b-iphone-15"
+   "run_dir": ".ergo-bench/heldout-frozen/runs/R-SC-hm-starlight-b-iphone-15"
   },
   {
    "run_id": "R-SC-hm-transfer-a-galaxy-s24-ultra",
    "scenario_id": "SC-hm-transfer-a",
    "exit": 0,
    "seconds": 14.7,
-   "run_dir": "/home/user/ux-research-qa-skills/.ergo-bench/heldout-frozen/runs/R-SC-hm-transfer-a-galaxy-s24-ultra"
+   "run_dir": ".ergo-bench/heldout-frozen/runs/R-SC-hm-transfer-a-galaxy-s24-ultra"
   },
   {
    "run_id": "R-SC-hm-transfer-b-galaxy-s24-ultra",
    "scenario_id": "SC-hm-transfer-b",
    "exit": 0,
    "seconds": 14.3,
-   "run_dir": "/home/user/ux-research-qa-skills/.ergo-bench/heldout-frozen/runs/R-SC-hm-transfer-b-galaxy-s24-ultra"
+   "run_dir": ".ergo-bench/heldout-frozen/runs/R-SC-hm-transfer-b-galaxy-s24-ultra"
   }
  ],
  "run_failures": [],

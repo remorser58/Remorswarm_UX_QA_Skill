@@ -99,17 +99,18 @@ def record(scenario_path: Path, scenario: dict[str, Any], profile: dict[str, Any
         cmd += ["--flash-sample-ms", "1500"]
     started = time.time()
     proc = subprocess.run(cmd, capture_output=True, text=True, timeout=1200)
+    first_line = next((line.strip() for line in proc.stderr.splitlines() if line.strip()), "")
     return {"run_id": run_id, "scenario_id": scenario["scenario_id"], "exit": proc.returncode, "seconds": round(time.time() - started, 1),
-            "stderr_tail": proc.stderr[-600:], "run_dir": str(runs_dir / run_id)}
+            "stderr_first": first_line[:300], "stderr_tail": proc.stderr[-600:], "run_dir": str(runs_dir / run_id)}
 
 
 def evaluate(run_records: list[dict[str, Any]], profiles: list[dict[str, Any]], scenarios: dict[str, dict[str, Any]],
              key: dict[str, Any], mode: str, bases: dict[str, dict[str, Any]]) -> dict[str, Any]:
     analyses = []
     for rec in run_records:
-        run_dir = Path(rec["run_dir"])
-        if not (run_dir / "run.json").is_file():
+        if rec.get("failure"):
             continue
+        run_dir = Path(rec["run_dir"])
         run_doc = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
         scenario = scenarios.get(run_doc["scenario_id"])
         if mode == "swarm":
@@ -125,12 +126,17 @@ def evaluate(run_records: list[dict[str, Any]], profiles: list[dict[str, Any]], 
             analyses.append(result)
     used = profiles if mode == "swarm" else list(bases.values())
     findings = swarm.aggregate(analyses, used)
-    scored = bench.score(key, findings, used) if key else None
+    # Exact page-level matching (as ergo_eval.py scores): a page-level finding matches
+    # only a page-level key, never an arbitrary element.
+    scored = bench.score(key, findings, used, exact_viewport=True) if key else None
     return {"analyses": analyses, "findings": findings, "score": scored, "profiles": used}
 
 
 def provenance() -> dict[str, Any]:
-    """Detector/scorer identity: commit, dirty flag and a hash of the code that scored."""
+    """Detector/scorer identity: commit, dirty flag, a hash of the analysis code that scored
+    (also the analysis-cache key) and a hash of the browser driver that recorded, with its
+    pinned Playwright lockfile. The hashes identify the code where a commit SHA cannot, such
+    as in a copied or re-published tree."""
     import hashlib
 
     def git(*args: str) -> str:
@@ -143,8 +149,38 @@ def provenance() -> dict[str, Any]:
     for path in sorted((ROOT / "ergoqa").rglob("*.py")) + [ROOT / "scripts" / "ergo_bench.py"]:
         digest.update(path.relative_to(ROOT).as_posix().encode())
         digest.update(path.read_bytes())
+    driver = hashlib.sha256()
+    web = ROOT / "drivers" / "web"
+    for path in sorted(p for p in web.glob("*.mjs") if p.name != "selftest.mjs") + [web / "package-lock.json"]:
+        driver.update(path.relative_to(ROOT).as_posix().encode())
+        driver.update(path.read_bytes())
     return {"commit": git("rev-parse", "HEAD"), "dirty": bool(git("status", "--porcelain", "--", "ergoqa", "scripts", "drivers")),
-            "code_sha256": digest.hexdigest()}
+            "code_sha256": digest.hexdigest(), "driver_sha256": driver.hexdigest()}
+
+
+def check_capture(rec: dict[str, Any]) -> dict[str, Any]:
+    """Mark a run that cannot be scored: no run.json, no snapshot, a blocked recording or a
+    driver exit other than 0 (completed) or 3 (recorded, task unsuccessful). A failed
+    recording would otherwise count as misses and understate the detector."""
+    path = Path(rec["run_dir"]) / "run.json"
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        doc = None
+    if doc is None:
+        rec["failure"] = "no run.json"
+    elif not doc.get("snapshots"):
+        rec["failure"] = "no snapshot"
+    elif doc.get("status") == "blocked":
+        rec["failure"] = "blocked: " + "; ".join(str(r) for r in doc.get("blocked_reasons") or [])[:200]
+    elif rec.get("exit") not in (0, 3, None):
+        rec["failure"] = f"driver exit {rec.get('exit')}"
+    marker = Path(rec["run_dir"]) / "recorded-by.json"
+    try:
+        rec["driver_sha256"] = json.loads(marker.read_text(encoding="utf-8")).get("driver_sha256")
+    except (OSError, ValueError, AttributeError):
+        rec["driver_sha256"] = None
+    return rec
 
 
 def main() -> int:
@@ -190,6 +226,7 @@ def main() -> int:
     (work / "profiles.json").write_text(json.dumps({"profiles": profiles}, ensure_ascii=False, indent=1), encoding="utf-8")
 
     run_records = []
+    prov = provenance()
     with static_server(suite.parent) as base:
         for sid, sc in scenarios.items():
             for device_id in sc["device_ids"]:
@@ -204,7 +241,12 @@ def main() -> int:
                     shutil.rmtree(runs_dir / run_id)
                 rec = record(paths[sid], sc, recorder, runs_dir, base, work)
                 print(f"recorded {run_id}: exit {rec['exit']} in {rec['seconds']}s", flush=True)
+                if (runs_dir / run_id).is_dir():
+                    # Which driver recorded this run, for later --reuse-runs scoring.
+                    (runs_dir / run_id / "recorded-by.json").write_text(json.dumps({"driver_sha256": prov["driver_sha256"]}), encoding="utf-8")
                 run_records.append(rec)
+    for rec in run_records:
+        check_capture(rec)
 
     results = {}
     for mode in ("measured_only", "single_profile", "swarm"):
@@ -216,8 +258,11 @@ def main() -> int:
     swarm_res = results["swarm"]
     (work / "report.md").write_text(report.render(swarm_res["findings"], profiles, swarm_res["analyses"], title=f"벤치마크 {suite.name}"), encoding="utf-8")
 
-    summary = {"suite": suite.name, "provenance": provenance(), "runs": [{k: v for k, v in r.items() if k != "stderr_tail"} for r in run_records],
-               "run_failures": [r for r in run_records if r.get("exit") not in (0, 3, None)]}
+    # driver_sha256 names the checkout; recordings_driver_sha256 names the drivers that made
+    # the scored recordings (null for a reused run recorded before this marker existed).
+    prov["recordings_driver_sha256"] = sorted({r.get("driver_sha256") or "unknown" for r in run_records if not r.get("failure")})
+    summary = {"suite": suite.name, "provenance": prov, "runs": [{k: v for k, v in r.items() if k != "stderr_tail"} for r in run_records],
+               "run_failures": [r for r in run_records if r.get("failure")]}
     for mode, res in results.items():
         sc = res["score"] or {}
         summary[mode] = {k: v for k, v in sc.items() if not isinstance(v, (list, dict))}
@@ -232,6 +277,16 @@ def main() -> int:
         summary["missed_by_swarm"] = sorted({d["id"] for d in results["swarm"]["score"]["per_defect"]} - swarm_detected)
     (work / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=1), encoding="utf-8")
     print(json.dumps({k: v for k, v in summary.items() if k != "runs"}, ensure_ascii=False, indent=1))
+    failed = summary["run_failures"]
+    if failed:
+        # A failed recording scores as a miss, so these numbers understate the detector.
+        first = failed[0]
+        detail = f"{first['run_id']}: {first['failure']}" + (f" ({first['stderr_first']})" if first.get("stderr_first") else "")
+        print(f"error: {len(failed)} of {len(run_records)} runs failed, so the scores above are not valid. "
+              f"First failure: {detail}. "
+              f"If the driver is not prepared yet: (cd {ROOT / 'drivers' / 'web'} && npm ci && npx playwright install chromium).",
+              file=sys.stderr)
+        return 1
     return 0
 
 

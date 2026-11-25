@@ -118,6 +118,80 @@ def bind_fixture_profile(run_dir: Path, profile: dict) -> dict:
     return binding
 
 
+class TaskWalkTargetTests(unittest.TestCase):
+    def test_one_hand_ablation_preserves_secondary_platform_guidance(self) -> None:
+        from ergo_experiments import RULE_VARIANTS
+
+        keep = RULE_VARIANTS["PT-02 without one-hand 9.2 mm P3"]["obs"]
+        for criterion, severity, expected in (
+            ("platform_min", "P3", True),
+            ("one_hand_reference", "P3", False),
+            ("platform_min", "P2", True),
+            ("platform_floor", "P1", True),
+        ):
+            with self.subTest(criterion=criterion, severity=severity):
+                self.assertEqual(keep({
+                    "check_id": "PT-02", "severity": severity,
+                    "measurement": {"criterion": criterion},
+                }), expected)
+
+    def test_untapped_inner_screen_controls_are_reported_on_touch_only(self) -> None:
+        # A generic detail screen reached through #pay. None of its controls has
+        # a declared scenario role or appears in an action target.
+        controls = [
+            ("small", 22, 22, {}),
+            ("short", 80, 26, {}),
+            ("comfortable", 48, 48, {}),
+            ("disabled", 22, 22, {"enabled": False}),
+            ("hidden", 22, 22, {"visible": False}),
+            ("covered", 22, 22, {"occluded_fraction": 1.0}),
+            ("inert", 22, 22, {"inert_by_modal": True}),
+            ("labelled", 18, 18, {"hit_boxes": [{"x": 20, "y": 800, "w": 48, "h": 48}]}),
+            ("offscreen", 22, 22, {"in_viewport": False}),
+            ("game", 22, 22, {"roles": ["game_control"]}),
+        ]
+        for device_id in ("galaxy-s24", "laptop-1440"):
+            with self.subTest(device=device_id), tempfile.TemporaryDirectory() as tmp:
+                profiles = sample_profiles(1, 7, [device_id])
+                orientation = profiles[0]["attributes"]["orientation"]
+                run_dir = make_run(Path(tmp))
+                run_path = run_dir / "run.json"
+                run = json.loads(run_path.read_text())
+                run["device"]["id"] = device_id
+                run["device"]["orientation"] = orientation
+                run["timing_windows"] = []
+                run["persona_notes"] = []
+                run_path.write_text(json.dumps(run))
+                for index, path in enumerate(sorted(run_dir.glob("S-*.json"))):
+                    snap = json.loads(path.read_text())
+                    snap["device"]["id"] = device_id
+                    snap["device"]["orientation"] = orientation
+                    snap["elements"] = [
+                        el("pay", "button", (200, 10, 96, 64), name="Open detail", interactive=True, tag="button"),
+                    ]
+                    if index:
+                        for row, (name, width, height, fields) in enumerate(controls):
+                            element = el(name, "button", (20, 100 + row * 100, width, height),
+                                         name=name, interactive=True, tag="button")
+                            element.update(fields)
+                            snap["elements"].append(element)
+                    path.write_text(json.dumps(snap))
+                result = analyze.analyze_run(run_dir, profiles, gaze_enabled=False)
+                pointing = [o for o in result["observations"] if o["check_id"] == "PT-02"]
+                expected = {"#small", "#short", "#offscreen"} if device_id == "galaxy-s24" else set()
+                self.assertEqual({s for o in pointing for s in o["selectors"]}, expected)
+                for observation in pointing:
+                    self.assertEqual(observation["severity"], "P3")
+                    self.assertEqual(observation["snapshot_id"], "S-R-1-001")
+                    self.assertEqual(observation["measurement"]["threshold"], 7.0)
+                    self.assertEqual(observation["measurement"]["criterion"], "platform_min")
+                # These spaced targets satisfy WCAG's 24 px spacing exception
+                # (or its size rule); PT-02 is separate ergonomic guidance.
+                self.assertFalse([o for o in result["observations"] if o["check_id"] == "PT-01"])
+                findings = swarm.aggregate([result], profiles)
+                self.assertEqual({s for f in findings if f["check_id"] == "PT-02" for s in f["selectors"]}, expected)
+
+
 class PipelineTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -584,6 +658,7 @@ class AttachIntegrityTests(unittest.TestCase):
         self.receipts.mkdir()
         old_png = self.receipts / "original-qa.png"
         write_png(old_png)
+        old_png.chmod(0o600)
         self.qa["records"]["runs"][0].update(started_at="2026-09-28T11:00:00Z", ended_at="2026-09-28T11:00:05Z")
         self.qa["records"]["observations"][0]["receipt"] = {
             "artifact_path": old_png.name, "sha256": sha256_file(old_png), "captured_at": "2026-09-28T11:00:01Z",

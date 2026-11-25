@@ -6,28 +6,28 @@
    "scenario_id": "SC-admin-members-01-clean",
    "exit": 0,
    "seconds": 21.1,
-   "run_dir": "/home/user/ux-research-qa-skills/.ergo-bench/game-v2/runs/R-SC-admin-members-01-clean-desktop-1920"
+   "run_dir": ".ergo-bench/game-v2/runs/R-SC-admin-members-01-clean-desktop-1920"
   },
   {
    "run_id": "R-SC-admin-members-01-desktop-1920",
    "scenario_id": "SC-admin-members-01",
    "exit": 0,
    "seconds": 21.4,
-   "run_dir": "/home/user/ux-research-qa-skills/.ergo-bench/game-v2/runs/R-SC-admin-members-01-desktop-1920"
+   "run_dir": ".ergo-bench/game-v2/runs/R-SC-admin-members-01-desktop-1920"
   },
   {
    "run_id": "R-SC-game-run-01-clean-galaxy-s24",
    "scenario_id": "SC-game-run-01-clean",
    "exit": 0,
    "seconds": 24.7,
-   "run_dir": "/home/user/ux-research-qa-skills/.ergo-bench/game-v2/runs/R-SC-game-run-01-clean-galaxy-s24"
+   "run_dir": ".ergo-bench/game-v2/runs/R-SC-game-run-01-clean-galaxy-s24"
   },
   {
    "run_id": "R-SC-game-run-01-galaxy-s24",
    "scenario_id": "SC-game-run-01",
    "exit": 0,
    "seconds": 47.9,
-   "run_dir": "/home/user/ux-research-qa-skills/.ergo-bench/game-v2/runs/R-SC-game-run-01-galaxy-s24"
+   "run_dir": ".ergo-bench/game-v2/runs/R-SC-game-run-01-galaxy-s24"
   }
  ],
  "run_failures": [],

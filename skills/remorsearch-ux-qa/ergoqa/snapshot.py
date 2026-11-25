@@ -342,8 +342,19 @@ def _element(errors: _Errors, el: Any, path: str) -> None:
     errors.string(el, "id", path)
     errors.string(el, "role", path)
     errors.string(el, "name", path, required=False, nullable=True, nonempty=False)
-    for key in ("text", "tag", "selector"):
+    for key in ("text", "tag", "selector", "selector_family"):
         errors.string(el, key, path, required=False, nullable=True, nonempty=False)
+    errors.string(el, "sibling_scope_id", path, required=False, nullable=True)
+    scope = el.get("sibling_scope_id")
+    if isinstance(scope, str):
+        errors.require(len(scope) <= 256, f"{path}.sibling_scope_id", "must be at most 256 characters")
+    errors.enum(el, "sibling_scope_status", ("measured", "none", "unavailable"), path, required=False)
+    if "sibling_scope_status" in el:
+        errors.require("sibling_scope_id" in el, f"{path}.sibling_scope_id", "is required with sibling_scope_status")
+        if el["sibling_scope_status"] == "measured":
+            errors.require(_nonempty_str(scope), f"{path}.sibling_scope_id", "measured scope requires a non-empty string")
+        elif el["sibling_scope_status"] in ("none", "unavailable"):
+            errors.require(scope is None, f"{path}.sibling_scope_id", "must be null for none or unavailable scope")
     _box(errors, el.get("box"), f"{path}.box")
     if "visible_box" in el and el["visible_box"] is not None:
         _box(errors, el["visible_box"], f"{path}.visible_box")
@@ -354,8 +365,11 @@ def _element(errors: _Errors, el: Any, path: str) -> None:
             errors.require(el.get("visible_box") is None, f"{path}.visible_box", "must be null for empty or unsupported geometry")
         elif el["visible_geometry"] in ("measured", "ancestor_clipped"):
             errors.require(isinstance(el.get("visible_box"), dict), f"{path}.visible_box", "must be a finite box for measured geometry")
-    for key in ("interactive", "visible"):
-        errors.boolean(el, key, path)
+    errors.boolean(el, "interactive", path)
+    errors.boolean(el, "visible", path, nullable=True)
+    if el.get("visible") is None:
+        errors.require(el.get("visible_geometry") == "unsupported" and el.get("visible_box") is None,
+                       f"{path}.visible", "may be null only when visible_geometry is unsupported and visible_box is null")
     for key in ("enabled", "in_viewport"):
         errors.boolean(el, key, path, required=False)
     errors.number(el, "font_size_px", path, required=False, nullable=True, minimum=0)
@@ -696,7 +710,7 @@ def validate_run(doc: Any) -> list[str]:
             continue
         if check.get("kind") != "task_check":
             continue
-        allowed = {"kind", "id", "selector", "property", "checkpoint", "step_index", "snapshot_id", "element_id", "passed", "result", "reason", "severity", "consequence"}
+        allowed = {"kind", "id", "selector", "property", "container", "checkpoint", "step_index", "snapshot_id", "element_id", "passed", "result", "reason", "severity", "consequence", "basis", "comparison", "relation", "replay", "input_cases"}
         errors.require(set(check) <= allowed, path, "task checks may store only bounded outcome and capture metadata")
         _task_identity(errors, check, path, seen_checks)
         errors.number(check, "step_index", path, integer=True, minimum=0, maximum=10000)
@@ -705,9 +719,55 @@ def validate_run(doc: Any) -> list[str]:
         errors.enum(check, "result", ("pass", "fail", "unevaluable"), path)
         errors.boolean(check, "passed", path, nullable=True)
         errors.require((check.get("result"), check.get("passed")) in (("pass", True), ("fail", False), ("unevaluable", None)), path, "result and passed must agree")
-        errors.string(check, "snapshot_id", path, nullable=check.get("result") == "unevaluable")
+        errors.string(check, "snapshot_id", path, nullable=check.get("result") == "unevaluable" and "comparison" not in check)
         errors.string(check, "element_id", path, nullable=True)
-        errors.enum(check, "reason", ("action_failed", "source_step_unvisited", "source_step_failed", "source_input_mismatch", "capture_unavailable", "capture_state_changed", "protected_target", "hidden_target", "missing_target", "ambiguous_target", "unsupported_property", "evaluation_error", "checkpoint_unvisited"), path, nullable=check.get("result") != "unevaluable")
+        errors.enum(check, "reason", ("action_failed", "source_step_unvisited", "source_step_failed", "source_input_mismatch", "source_check_unavailable", "capture_unavailable", "capture_state_changed", "protected_target", "hidden_target", "missing_target", "ambiguous_target", "unsupported_property", "evaluation_error", "checkpoint_unvisited", "expectation_basis_missing", "replay_failed"), path, nullable=check.get("result") != "unevaluable")
+        errors.require(check.get("passed") is None or check.get("reason") is None, f"{path}.reason", "evaluated comparisons cannot also claim missing evidence")
+        if check.get("basis") is not None:
+            _task_basis(errors, check["basis"], f"{path}.basis")
+        if "comparison" in check:
+            errors.enum(check, "comparison", ("pass", "fail"), path)
+            errors.require(check.get("basis") is None and check.get("passed") is None and check.get("reason") == "expectation_basis_missing", path, "unconfirmed comparisons must remain expectation questions, not defects")
+        _task_input_cases(errors, check.get("input_cases"), [step.get("action", {}) for step in (steps or []) if isinstance(step, dict)], f"{path}.input_cases", recorded=True, limit=check.get("step_index"))
+        relation = check.get("relation")
+        if relation is not None:
+            if errors.require(isinstance(relation, dict), f"{path}.relation", "must be a relation object"):
+                errors.require(set(relation) == {"kind", "source_check_id", "delta", "snapshot_id", "step_index"}, f"{path}.relation", "has an invalid shape")
+                errors.enum(relation, "kind", ("equal", "delta"), f"{path}.relation")
+                errors.string(relation, "source_check_id", f"{path}.relation")
+                errors.number(relation, "delta", f"{path}.relation", integer=True, minimum=-(2**53 - 1), maximum=2**53 - 1)
+                errors.require((relation.get("kind") == "delta") == (check.get("property") == "count"), f"{path}.relation", "only count relations use delta")
+                errors.require(check.get("property") == "count" or relation.get("delta") == 0, f"{path}.relation.delta", "equality cannot apply a delta")
+                errors.string(relation, "snapshot_id", f"{path}.relation", nullable=True)
+                errors.number(relation, "step_index", f"{path}.relation", integer=True, minimum=0, maximum=10000, nullable=True)
+        replay = check.get("replay")
+        if replay is not None:
+            rp = f"{path}.replay"
+            if errors.require(isinstance(replay, dict), rp, "must be replay evidence"):
+                errors.require(set(replay) <= {"relation", "source_result", "changes", "run_id", "run_path", "check_id", "snapshot_id", "step_index", "result", "passed", "reason", "comparison"}, rp, "has an invalid shape")
+                errors.enum(replay, "relation", ("equal",), rp)
+                errors.enum(replay, "source_result", ("pass", "fail", "unevaluable"), rp)
+                errors.require(replay.get("run_path") == f"state-oracle/{check.get('id')}/run.json", f"{rp}.run_path", "must reference its dedicated fresh run")
+                errors.require(replay.get("check_id") == check.get("id"), f"{rp}.check_id", "must match the source check")
+                errors.string(replay, "run_id", rp)
+                errors.require(replay.get("run_id") != doc.get("run_id"), f"{rp}.run_id", "must identify a separate fresh execution")
+                errors.string(replay, "snapshot_id", rp, nullable=replay.get("result") == "unevaluable" and "comparison" not in replay)
+                errors.number(replay, "step_index", rp, integer=True, minimum=0, maximum=10000, nullable=replay.get("result") == "unevaluable" and "comparison" not in replay)
+                errors.enum(replay, "result", ("pass", "fail", "unevaluable"), rp)
+                errors.boolean(replay, "passed", rp, nullable=True)
+                errors.require((replay.get("result"), replay.get("passed")) in (("pass", True), ("fail", False), ("unevaluable", None)), rp, "result and passed must agree")
+                errors.require(replay.get("reason") is None if replay.get("passed") is not None else replay.get("reason") in ("replay_failed", "action_failed", "source_step_unvisited", "source_step_failed", "source_input_mismatch", "capture_unavailable", "capture_state_changed", "protected_target", "hidden_target", "missing_target", "ambiguous_target", "unsupported_property", "evaluation_error", "checkpoint_unvisited", "expectation_basis_missing"), f"{rp}.reason", "must explain an unevaluable replay only")
+                changes = replay.get("changes")
+                errors.require(isinstance(changes, list) and 1 <= len(changes) <= 4 and all(isinstance(item, str) and item in ("back", "cancel", "reentry", "edit_resubmit") for item in changes) and len(set(changes)) == len(changes), f"{rp}.changes", "must identify the authored transformations")
+                if "comparison" in replay:
+                    errors.enum(replay, "comparison", ("pass", "fail"), rp)
+                    errors.require(check.get("basis") is None and replay.get("reason") == "expectation_basis_missing", rp, "basis-free replay comparisons are candidates only")
+                if replay.get("passed") is False and check.get("basis") is not None:
+                    errors.require(check.get("passed") is False, path, "a failed replay relation requires task failure")
+                if check.get("basis") is not None and replay.get("source_result") in ("pass", "fail") and replay.get("result") in ("pass", "fail"):
+                    errors.require(check.get("passed") is (replay["source_result"] == "pass" and replay["result"] == "pass"), path, "task outcome must combine the original and fresh execution")
+                if replay.get("passed") is None and replay.get("reason") != "expectation_basis_missing":
+                    errors.require(check.get("passed") is not True, path, "an incomplete replay cannot establish success")
         if doc.get("success") is True:
             errors.require(check.get("result") == "pass" and check.get("passed") is True, path, "task success true requires every task check to pass")
         if check.get("result") == "fail":
@@ -729,6 +789,46 @@ def _target(errors: _Errors, target: Any, path: str, hotspot_ids: set[str]) -> N
         errors.add(path, "must be a selector string, 'hotspot:<id>' or {x, y}")
 
 
+def _task_basis(errors: _Errors, basis: Any, path: str) -> None:
+    if not errors.require(isinstance(basis, dict), path, "must name a product or task expectation"):
+        return
+    errors.require(set(basis) == {"kind", "reference"}, path, "must contain kind and reference only")
+    errors.enum(basis, "kind", ("product", "task"), path)
+    reference = basis.get("reference")
+    errors.require(isinstance(reference, str) and bool(reference.strip()) and len(reference) <= 1000, f"{path}.reference", "must cite the expectation without field values (1..1000 characters)")
+
+
+def _task_input_cases(errors: _Errors, cases: Any, steps: list, path: str, *, recorded: bool = False, limit: Any = None) -> None:
+    if cases is None:
+        return
+    if not errors.require(isinstance(cases, list) and 1 <= len(cases) <= 64, path, "must contain 1..64 authored input cases"):
+        return
+    seen = set()
+    for i, item in enumerate(cases):
+        at = f"{path}[{i}]"
+        if not errors.require(isinstance(item, dict), at, "must be an input case"):
+            continue
+        errors.require(set(item) <= {"step", "kind", "expectation", "basis", "boundary"}, at, "has an invalid shape")
+        step = item.get("step")
+        valid = _is_int(step) and 1 <= step <= len(steps) and isinstance(steps[step - 1], dict) and steps[step - 1].get("action") == "type"
+        valid = valid and (limit is None or (_is_int(limit) and step <= limit))
+        errors.require(valid and step not in seen, f"{at}.step", "must reference a unique authored type action")
+        if valid:
+            seen.add(step)
+            if item.get("kind") == "blank" and not (recorded and steps[step - 1].get("redact") is True):
+                errors.require(steps[step - 1].get("text") == "", at, "blank must reference empty input")
+        errors.enum(item, "kind", ("blank", "boundary", "documented_valid", "invalid"), at)
+        errors.enum(item, "expectation", ("accept", "reject"), at)
+        if item.get("kind") in ("documented_valid", "invalid"):
+            errors.require(item.get("expectation") == ("accept" if item["kind"] == "documented_valid" else "reject"), at, "classification and expected acceptance must agree")
+        _task_basis(errors, item.get("basis"), f"{at}.basis")
+        if item.get("kind") == "boundary":
+            boundary = item.get("boundary")
+            errors.require(isinstance(boundary, str) and bool(boundary.strip()) and len(boundary) <= 1000, f"{at}.boundary", "must describe the documented boundary")
+        else:
+            errors.require("boundary" not in item, at, "boundary description is only for boundary cases")
+
+
 def _task_identity(errors: _Errors, check: dict, path: str, seen: set[str]) -> None:
     identifier = check.get("id")
     valid = isinstance(identifier, str) and bool(re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", identifier))
@@ -737,7 +837,8 @@ def _task_identity(errors: _Errors, check: dict, path: str, seen: set[str]) -> N
         seen.add(identifier)
     selector = check.get("selector")
     errors.require(_task_selector(selector), f"{path}.selector", "must be plain CSS without literals, escapes or credentials")
-    errors.enum(check, "property", ("value", "text", "checked"), path)
+    errors.enum(check, "property", ("value", "text", "checked", "count"), path)
+    errors.require(_task_selector(check.get("container")) if check.get("property") == "count" else "container" not in check, f"{path}.container", "a plain CSS visible container is required only for count measurements")
     errors.enum(check, "severity", ("P0", "P1", "P2", "P3"), path)
     consequence = check.get("consequence")
     errors.require(isinstance(consequence, str) and bool(consequence.strip()) and len(consequence) <= 1000, f"{path}.consequence", "must describe the task impact without field values (1..1000 characters)")
@@ -818,6 +919,39 @@ def validate_scenario(doc: Any) -> list[str]:
         errors.string(window, "id", path)
         errors.string(window, "selector", path)
         errors.string(window, "measure", path)
+        errors.boolean(window, "has_action", path, required=False)
+        recovery = errors.obj(window, "recovery", path, required=False)
+        if recovery is not None:
+            errors.require(set(recovery) <= {"selector", "after_step"} and _task_selector(recovery.get("selector")),
+                           f"{path}.recovery", "needs a plain visible CSS selector")
+            if "after_step" in recovery:
+                errors.number(recovery, "after_step", f"{path}.recovery", integer=True, minimum=1, maximum=len(steps) if steps else 10000)
+        exception = errors.obj(window, "exception", path, required=False)
+        if exception is not None:
+            errors.require(set(exception) <= {"kind", "basis"}, f"{path}.exception", "has unknown keys")
+            errors.enum(exception, "kind", ("turn_off", "adjust", "extend", "real_time", "essential", "twenty_hours"), f"{path}.exception")
+            errors.string(exception, "basis", f"{path}.exception")
+            errors.require(isinstance(exception.get("basis"), str) and len(exception["basis"]) <= 1000, f"{path}.exception.basis", "must be at most 1000 characters")
+    focus_walks = errors.array(doc, "focus_walks", "$", required=False)
+    errors.require(len(focus_walks or []) <= 8, "$.focus_walks", "must contain at most 8 replay checks")
+    seen_focus = set()
+    for i, check in enumerate(focus_walks or []):
+        path = f"$.focus_walks[{i}]"
+        if not isinstance(check, dict):
+            errors.add(path, "must be an object")
+            continue
+        errors.require(set(check) <= {"id", "after_step", "state", "selector", "return_selector", "fixture"}, path, "has unknown keys")
+        errors.require(check.get("fixture") is True, f"{path}.fixture", "must authorize replay on owned synthetic data")
+        ident = check.get("id")
+        valid_id = isinstance(ident, str) and bool(re.fullmatch(r"[A-Za-z0-9_-]{1,64}", ident))
+        errors.require(valid_id and ident not in seen_focus, f"{path}.id", "must be a unique safe ID")
+        if valid_id:
+            seen_focus.add(ident)
+        errors.number(check, "after_step", path, integer=True, minimum=1, maximum=len(steps) if steps else 10000)
+        errors.enum(check, "state", ("modal", "validation_error", "detail", "confirmation"), path)
+        errors.require(_task_selector(check.get("selector")), f"{path}.selector", "must be plain CSS")
+        if "return_selector" in check:
+            errors.require(_task_selector(check["return_selector"]), f"{path}.return_selector", "must be plain CSS")
     success = errors.obj(doc, "success", "$", required=False, nullable=True)
     if success is not None:
         errors.require(len(success) > 0, "$.success", "must declare at least one success condition")
@@ -831,28 +965,85 @@ def validate_scenario(doc: Any) -> list[str]:
             if not isinstance(check, dict):
                 errors.add(path, "must be a task check object")
                 continue
-            allowed = {"id", "selector", "property", "after_step", "expected", "from_step", "severity", "consequence", "redact"}
+            allowed = {"id", "selector", "property", "container", "after_step", "expected", "from_step", "from_check", "delta", "basis", "follow_up", "input_cases", "severity", "consequence", "redact"}
             errors.require(set(check) <= allowed, path, "has an invalid shape")
             _task_identity(errors, check, path, seen_checks)
-            identity = (check.get("selector"), check.get("property"), check.get("after_step", "final"))
-            if all(isinstance(value, (str, int)) for value in identity):
+            identity = (check.get("selector"), check.get("property"), check.get("container"), check.get("after_step", "final"))
+            if all(value is None or isinstance(value, (str, int)) for value in identity):
                 errors.require(identity not in checkpoints, path, "duplicates a selector/property/checkpoint")
                 checkpoints.add(identity)
             if "after_step" in check:
                 errors.number(check, "after_step", path, integer=True, minimum=1, maximum=10000)
                 errors.require(_is_int(check["after_step"]) and (not steps or check["after_step"] <= len(steps)), f"{path}.after_step", "must name a reachable 1-based action index")
-            errors.require(("expected" in check) != ("from_step" in check), path, "needs exactly one of expected or from_step")
+            errors.require(sum(key in check for key in ("expected", "from_step", "from_check")) == 1, path, "needs exactly one of expected, from_step or from_check")
             if "expected" in check:
                 value = check["expected"]
-                errors.require(isinstance(value, bool) if check.get("property") == "checked" else isinstance(value, str) and len(value) <= 5000, f"{path}.expected", "has the wrong type or exceeds 5000 characters")
+                valid = isinstance(value, bool) if check.get("property") == "checked" else (
+                    _is_int(value) and 0 <= value <= 2**53 - 1 if check.get("property") == "count" else isinstance(value, str) and len(value) <= 5000)
+                errors.require(valid, f"{path}.expected", "has the wrong type or exceeds its bound")
             if "from_step" in check:
                 source = check["from_step"]
-                errors.require(check.get("property") != "checked" and _is_int(source) and 1 <= source <= len(steps or [])
+                errors.require(check.get("property") in ("value", "text") and _is_int(source) and 1 <= source <= len(steps or [])
                                and isinstance(steps[source - 1], dict) and steps[source - 1].get("action") == "type"
                                and ("after_step" not in check or (_is_int(check["after_step"]) and source <= check["after_step"])), f"{path}.from_step", "must reference an authored type action at or before the checkpoint")
                 if check.get("redact") is True and _is_int(source) and 1 <= source <= len(steps or []) and isinstance(steps[source - 1], dict):
                     target = steps[source - 1].get("target")
                     errors.require(_task_selector(target) and not target.startswith("hotspot:"), f"{path}.from_step", "redaction requires plain CSS on the authored type action")
+            if "from_check" in check:
+                source = next((item for item in task_checks[:i] if isinstance(item, dict) and item.get("id") == check["from_check"]), None)
+                before = source.get("after_step", math.inf) if source else None
+                after = check.get("after_step", math.inf)
+                errors.require(source is not None and source.get("property") == check.get("property")
+                               and isinstance(before, (int, float)) and isinstance(after, (int, float)) and before < after,
+                               f"{path}.from_check", "must name an earlier checkpoint of the same property")
+            if "delta" in check:
+                errors.require("from_check" in check and check.get("property") == "count" and _is_int(check["delta"]) and abs(check["delta"]) <= 2**53 - 1, f"{path}.delta", "requires a count relation and a safe integer")
+            if "basis" in check:
+                _task_basis(errors, check["basis"], f"{path}.basis")
+            _task_input_cases(errors, check.get("input_cases"), steps or [], f"{path}.input_cases", limit=check.get("after_step"))
+            if "follow_up" in check:
+                follow = check["follow_up"]
+                at = f"{path}.follow_up"
+                if isinstance(follow, dict):
+                    errors.require(set(follow) <= {"fixture", "insertions", "changes", "input_cases"}, at, "has an invalid shape")
+                    errors.require(follow.get("fixture") is True, f"{at}.fixture", "fresh replay requires an owned synthetic fixture")
+                    changes = follow.get("changes")
+                    errors.require(isinstance(changes, list) and 1 <= len(changes) <= 4 and all(isinstance(kind, str) and kind in ("back", "cancel", "reentry", "edit_resubmit") for kind in changes) and len(set(changes)) == len(changes), f"{at}.changes", "must identify unique authored transformations")
+                    insertions = follow.get("insertions")
+                    if errors.require(isinstance(insertions, list) and 1 <= len(insertions) <= 64, f"{at}.insertions", "must contain 1..64 insertions"):
+                        indexed = {}
+                        limit = check.get("after_step", len(steps or []))
+                        for j, insertion in enumerate(insertions):
+                            ip = f"{at}.insertions[{j}]"
+                            if not errors.require(isinstance(insertion, dict), ip, "must be an insertion"):
+                                continue
+                            errors.require(set(insertion) == {"after_step", "steps"}, ip, "must contain after_step and steps only")
+                            n = insertion.get("after_step")
+                            valid = _is_int(n) and _is_int(limit) and 0 <= n <= limit and n not in indexed
+                            errors.require(valid, f"{ip}.after_step", "must be a unique reachable source checkpoint")
+                            actions = insertion.get("steps")
+                            if not errors.require(isinstance(actions, list) and 1 <= len(actions) <= 64, f"{ip}.steps", "must contain 1..64 replay actions"):
+                                continue
+                            # The same scenario validator owns action validation; no replay-only action grammar.
+                            probe = {"schema_version": SCENARIO_SCHEMA, "scenario_id": "replay-contract",
+                                     "surface": {"kind": "web", "url": "http://127.0.0.1/"},
+                                     "task_goal_ko": "Generic replay action contract",
+                                     "device_ids": doc.get("device_ids", []), "hotspots": doc.get("hotspots", []),
+                                     "steps": actions}
+                            for issue in validate_scenario(probe):
+                                errors.add(ip, issue)
+                            if valid:
+                                indexed[n] = actions
+                        if _is_int(limit) and 0 <= limit <= len(steps or []):
+                            replay_steps = []
+                            for n in range(limit + 1):
+                                if n:
+                                    replay_steps.append(steps[n - 1])
+                                replay_steps.extend(indexed.get(n, []))
+                            errors.require(len(replay_steps) <= 512, at, "replay exceeds 512 actions")
+                            _task_input_cases(errors, follow.get("input_cases"), replay_steps, f"{at}.input_cases")
+                else:
+                    errors.add(at, "must be an owned-fixture replay object")
             errors.boolean(check, "redact", path, required=False)
     return errors.items
 
@@ -1088,6 +1279,8 @@ def load_run_dir(path: str | Path, *, verify_screenshots: bool = True) -> tuple[
                            for field, value in zip(("width_px", "height_px"), viewport))):
                 raise SnapshotError("adaptation capture is missing or does not match its recorded condition")
     steps_by_index = {step["step_index"]: step for step in run["steps"]}
+    task_results = {check["id"]: check for check in (run.get("success_detail") or {}).get("criteria", [])
+                    if check.get("kind") == "task_check"}
     for check in (run.get("success_detail") or {}).get("criteria", []):
         if check.get("kind") != "task_check" or check.get("snapshot_id") is None:
             continue
@@ -1103,6 +1296,39 @@ def load_run_dir(path: str | Path, *, verify_screenshots: bool = True) -> tuple[
             raise SnapshotError("task checkpoint must reference its executed action after-capture")
         if check.get("element_id") and not any(el["id"] == check["element_id"] for el in snap["elements"]):
             raise SnapshotError("task check element is absent from its capture")
+        relation = check.get("relation")
+        if relation is not None:
+            source = task_results.get(relation["source_check_id"])
+            if (source is None or source["property"] != check["property"]
+                    or source["checkpoint"] == "final" or source["step_index"] > check["step_index"]
+                    or (source["step_index"] == check["step_index"] and check["checkpoint"] != "final")
+                    or source["snapshot_id"] != relation["snapshot_id"]
+                    or source["step_index"] != relation["step_index"]):
+                raise SnapshotError("task relation source capture or property does not match")
+            if check["passed"] is not None and source["passed"] is not True and (source.get("replay") or {}).get("source_result") != "pass":
+                raise SnapshotError("task relation requires an established source expectation")
+        replay = check.get("replay")
+        if replay is not None and replay.get("snapshot_id") is not None:
+            child_path = resolve_within(run_dir, replay["run_path"])
+            child_doc = load_document(child_path, RUN_SCHEMA)
+            if any(item.get("replay") is not None for item in (child_doc.get("success_detail") or {}).get("criteria", [])):
+                raise SnapshotError("task replay cannot recursively create state oracles")
+            child, child_snapshots = load_run_dir(child_path.parent, verify_screenshots=verify_screenshots)
+            outcome = next((item for item in (child.get("success_detail") or {}).get("criteria", [])
+                            if item.get("kind") == "task_check" and item.get("id") == replay["check_id"]), None)
+            if (child["run_id"] != replay["run_id"] or child["status"] != "completed" or child["mode"] != "scripted"
+                    or any(step["result"] != "ok" for step in child["steps"])
+                    or child["scenario_id"] != run["scenario_id"] or child["profile_id"] != run["profile_id"]
+                    or child.get("device") != run.get("device")
+                    or outcome is None or outcome.get("checkpoint") != "final" or any(outcome.get(key) != replay.get(key)
+                                              for key in ("snapshot_id", "step_index", "result", "passed", "reason", "comparison"))
+                    or any(outcome.get(key) != check.get(key) for key in ("selector", "property", "container", "basis"))):
+                raise SnapshotError("task fresh replay does not match its source execution or recorded comparison")
+            child_capture = next((item for item in child_snapshots if item["snapshot_id"] == replay["snapshot_id"]), None)
+            if child_capture is None:
+                raise SnapshotError("task fresh replay capture is missing")
+            if child_capture.get("surface", {}).get("build_id") != snap.get("surface", {}).get("build_id"):
+                raise SnapshotError("task replay must compare the same product revision")
     snapshots.sort(key=lambda s: (s["step_index"], s["snapshot_id"]))
     return run, snapshots
 

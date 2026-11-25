@@ -8,7 +8,7 @@ Date: 2026-09-28. Written for engineers turning findings into (a) automated chec
 
 ## 0. Read this first: access limits and evidence tags
 
-**Access limits in this session.** The egress proxy blocked full-text fetches from dl.acm.org, arxiv.org, nngroup.com, aalto.fi, mit.edu, harvard.edu, stanford.edu, PMC, Wikipedia, huggingface.co and GitHub Pages. Only github.com and raw.githubusercontent.com could be fetched. The shared web-search budget for the session (200 calls) ran out partway through this work. Every claim below therefore comes from one of three places: search-engine result text attributed to the source, source code or READMEs fetched from GitHub, or the author's recall of well-known papers. The tags below say which. Before any number is hard-coded as `[paper]`, someone should open the primary source and check it.
+**Access limits at the time of writing.** The egress proxy blocked full-text fetches from dl.acm.org, arxiv.org, nngroup.com, aalto.fi, mit.edu, harvard.edu, stanford.edu, PMC, Wikipedia, huggingface.co and GitHub Pages. Only github.com and raw.githubusercontent.com could be fetched. Web search was rate-limited partway through this work. Every claim below therefore comes from one of three places: search-engine result text attributed to the source, source code or READMEs fetched from GitHub, or the author's recall of well-known papers. The tags below say which. Before any number is hard-coded as `[paper]`, someone should open the primary source and check it.
 
 Tags (they match the `ergoqa/params.py` scheme):
 
@@ -23,9 +23,9 @@ How well each item was verified:
 
 | Mark | Meaning |
 |---|---|
-| **V1** | Read from a primary artifact in this session (source code or README on GitHub) |
+| **V1** | Read from a primary artifact at the time of writing (source code or README on GitHub) |
 | **V2** | Appeared in search-result text attributed to the named source. The full text was not opened |
-| **UNCONFIRMED** | Recalled from the cited source by the author and not checked this session. Treat as provisional |
+| **UNCONFIRMED** | Recalled from the cited source by the author and not checked at the time of writing. Treat as provisional |
 | **UNKNOWN** | No source found |
 
 Epistemic rule for the repo: every result produced by the gaze simulation is `inferred` (basis `model`). It never counts as `observed` evidence of real-user behaviour, and it never says how common a behaviour is among real users. Only geometry facts measured on the screen are `observed`, for example "the error message is outside the viewport" or "the element is 41° from the touch point".
@@ -199,7 +199,7 @@ Recommended starting values. All are `[policy]` unless derived; replace them wit
   - The input is downsampled to about 64 px (V2 for 64×64).
   - In the uoip C++/Python port: 3×3 box filter on the log magnitude, and a 9×9 Gaussian with σ = 3 at a working width of 128 px ("has a great influence on the result") (V1, code).
 - On mobile UIs, classic parameter-free models showed a weak fit (Leiva 2020, V2). UEyes released improved data-driven models UMSI++, DeepGaze++ and PathGAN++ (V1 README).
-- **Sanity test in this session** (our observation, not literature): a pure-Python SR on a *perfectly flat* synthetic background with one dark button came out degenerate (the peak was at the image border and the button averaged 0.02). Adding ±0.25% luminance dither made the button edges the peak (mean 0.37 against 0.03 elsewhere). Flat-design screenshots have large uniform areas, so **add tiny dither before SR** and expect SR to highlight edges and corners rather than whole objects.
+- **Sanity test at the time of writing** (our observation, not literature): a pure-Python SR on a *perfectly flat* synthetic background with one dark button came out degenerate (the peak was at the image border and the button averaged 0.02). Adding ±0.25% luminance dither made the button edges the peak (mean 0.37 against 0.03 elsewhere). Flat-design screenshots have large uniform areas, so **add tiny dither before SR** and expect SR to highlight edges and corners rather than whole objects.
 
 **Operationalization**
 
@@ -227,7 +227,7 @@ Recommended starting values. All are `[policy]` unless derived; replace them wit
 **Sources**
 - Leiva 2020: text and images attract attention; colour and size less (V2).
 - Bylinskii et al., UIST 2017: neural models trained on human importance data, from BubbleView clicks and graphic-design annotations, predict the relative importance of elements in designs and visualisations; they were used for retargeting and thumbnails (V2). Fosco et al., UIST 2020 (UMSI): importance prediction across graphic-design types (V2 existence).
-- The pull of faces is a general scene-viewing finding: UNCONFIRMED in this session. It is not parameterised here.
+- The pull of faces is a general scene-viewing finding: UNCONFIRMED at the time of writing. It is not parameterised here.
 
 **Operationalization.** Element-type cue weights `[policy]`: heading text 1.0; image/illustration 0.8; face in image 1.0 (if a detector exists); body text 0.5; icon-only button 0.4; plain container 0.1. Combine with size and contrast as the existing `element_cue` already does. An optional heavier path is to run UMSI++ or DeepGaze++ from the UEyes repo offline. That breaks the no-dependency rule, so keep it as a benchmark mode.
 
@@ -682,7 +682,7 @@ Base rates in the table exist only to generate plausible persona combinations fo
 
 ## 10. Sources
 
-V1 = read in this session on GitHub; V2 = search-result text; U = recalled, not opened this session.
+V1 = read at the time of writing on GitHub; V2 = search-result text; U = recalled, not opened at the time of writing.
 
 **UI saliency, eye-tracking datasets and models**
 - Jiang, Leiva, Rezazadegan Tavakoli, Houssel, Kylmälä, Oulasvirta. *UEyes: Understanding Visual Saliency across User Interface Types.* CHI 2023. https://dl.acm.org/doi/10.1145/3544548.3581096 (V2); dataset and code README https://github.com/YueJiang-nj/UEyes-CHI2023 (V1); extended dataset paper https://arxiv.org/abs/2402.05202 (V2)

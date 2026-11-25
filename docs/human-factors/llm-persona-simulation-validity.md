@@ -5,17 +5,17 @@ looks at the screen and operates web, app and game UIs, and how to build human f
 
 ## How to read the evidence tags
 
-Network note: in this session WebFetch could reach only `github.com` / `raw.githubusercontent.com`.
+Network note: when this was written (October 2026), page fetches could reach only `github.com` / `raw.githubusercontent.com`.
 arXiv, Hugging Face, ACM DL, Nature, Semantic Scholar, ACL Anthology and project `*.github.io` pages were
-blocked by the egress proxy. The WebSearch budget ran out partway through the work. So the tags below
+blocked by the egress proxy. Web search was rate-limited partway through the work. So the tags below
 matter:
 
 | Tag | Meaning |
 |---|---|
-| **[V]** | Verified this session from a primary artifact: repo README, source code or leaderboard data file. |
+| **[V]** | Verified at the time of writing from a primary artifact: repo README, source code or leaderboard data file. |
 | **[S]** | Seen only in search-result snippets of the primary page (abstract/ACM/arXiv listing). The wording is probably right, but I did not read the full text. |
 | **[2nd]** | Secondary source (news, blog, third-party paper summary). |
-| **[M]** | From prior knowledge; not re-verified this session. **Treat any number carrying [M] as unconfirmed** until someone checks the primary source. |
+| **[M]** | From prior knowledge; not re-verified at the time of writing. **Treat any number carrying [M] as unconfirmed** until someone checks the primary source. |
 
 Vendor or self-reported benchmark numbers are marked "self-reported" no matter which tag they carry.
 
@@ -248,7 +248,7 @@ Backend services, from the repo tree [V]: `ontology_generator.py`, `graph_builde
 - Intended for synthetic data (math, instructions, NPCs, tools), not for population simulation.
 - Disclaimer: "may contain inaccuracies, unsafe content, or biases".
 - Contrast with Nemotron-Personas-Korea, which the repo uses because it is built to match Korean
-  demographic distributions (per NVIDIA's dataset description; not re-verified this session [M]).
+  demographic distributions (per NVIDIA's dataset description; not re-verified at the time of writing [M]).
   Persona Hub is diverse in *perspective*, not calibrated to *population*.
 
 **Microsoft TinyTroupe** (arXiv 2507.09788) [V README]
@@ -272,7 +272,7 @@ Backend services, from the repo tree [V]: `ontology_generator.py`, `graph_builde
 | **uxCUA**: "Training Computer Use Agents to Assess the Usability of GUIs" (arXiv 2604.26020, Apr 2026, UW/Reinecke) | Computer-use agent executing flows | A learned numeric usability score | States that prior CUAs "still struggle to provide accurate usability assessments"; trains on UIs paired with usability labels and human preferences [S]. |
 | **Avenir-UX** (arXiv 2604.09581) | Vision/GUI grounding | Automated UX evaluation | Title and abstract only [S]. |
 | **TinyTroupe** | Text only (no GUI) | Focus groups, surveys | Validator hooks exist; the README gazpacho and story-device examples compare against real survey data [V]. |
-| **Synthetic-user SaaS** (Synthetic Users and others) | Mostly chat or survey | Interview-like transcripts | No independent validation found this session. Nielsen Norman Group's 2024 "Synthetic Users" article warns that they are shallow, overly positive and cannot show behaviour [M]. |
+| **Synthetic-user SaaS** (Synthetic Users and others) | Mostly chat or survey | Interview-like transcripts | No independent validation found at the time of writing. Nielsen Norman Group's 2024 "Synthetic Users" article warns that they are shallow, overly positive and cannot show behaviour [M]. |
 
 ### DOM vs vision operation: the trade-off that matters for ergonomics
 
@@ -625,7 +625,7 @@ Tags as defined at the top. URLs are given even when the page itself was blocked
 - Santurkar et al. 2023, OpinionQA: https://github.com/tatsu-lab/opinions_qa [V repo; findings M]
 - Dominguez-Olmedo, Hardt & Mendler-Dünner, NeurIPS 2024: https://github.com/socialfoundations/surveying-language-models [V repo; findings M]
 - SILICA (Bin Tareaf, arXiv 2608.28182, 2026-08-28): https://arxiv.org/abs/2608.28182 [S]
-- Not re-verified this session [M]:
+- Not re-verified at the time of writing [M]:
   - Wang, Morgenstern & Dickerson 2025, *Nature Machine Intelligence* 7
   - Argyle et al. 2023, *Political Analysis*
   - Bisbee et al. 2024, *Political Analysis*
@@ -643,7 +643,7 @@ Tags as defined at the top. URLs are given even when the page itself was blocked
 - User-in-the-Box (UIST 2022, DOI 10.1145/3526113.3545689): https://github.com/aikkala/user-in-the-box [V]
 - SIM2VR (UIST 2024, DOI 10.1145/3654777.3676452): https://github.com/fl0fischer/sim2vr [V]
 - CRTypist (CHI 2024, DOI 10.1145/3613904.3642918): project page source https://raw.githubusercontent.com/crtypist/crtypist.github.io/main/index.html ; code https://github.com/kadensalem/crtypist [V]
-- Not re-verified this session [M]:
+- Not re-verified at the time of writing [M]:
   - Jokinen et al. CHI 2021, "Touchscreen Typing As Optimal Supervisory Control"
   - Oulasvirta, Jokinen & Howes CHI 2022, "Computational Rationality as a Theory of Interaction"
   - Bergstrom-Lehtovirta & Oulasvirta CHI 2014

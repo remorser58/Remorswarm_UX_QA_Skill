@@ -348,7 +348,8 @@ class AdvicePropagationTests(unittest.TestCase):
         cls.tmp.cleanup()
 
     def test_report_renders_the_derived_recommendations(self) -> None:
-        text = report.render(self.findings, self.profiles, [self.analysis])
+        # Advisory P3 warnings carry their derived recommendation when listed.
+        text = report.render(self.findings, self.profiles, [self.analysis], list_threshold="P3")
         self.assertIn("모델 동등 크기 비교", text)  # PT-04
         self.assertIn("짧은 변", text)  # PT-02
         self.assertIn("파지", text)  # RH-01 grip context

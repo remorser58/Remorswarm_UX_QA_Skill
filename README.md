@@ -17,9 +17,9 @@ artifacts between them. A research-only or review-only request keeps its scope.
 | Component | What it does | Needs |
 | --- | --- | --- |
 | **research** | Finds task-specific experiences, workarounds and counterexamples in communities, comments, reviews and official sources; preserves source context and gaps. | A permitted source route. YouTube comments use your own YouTube Data API key (`REMORSEARCH_YOUTUBE_API_KEY`). |
-| **persona-qa** | Exercises completion, input preservation, errors/recovery, keyboard and accessibility on the real product with synthetic test conditions. | An accessible product and safe fixtures; the bundled web driver needs Node.js 22 and Playwright. |
-| **ergonomics** *(experimental)* | Screens reach, touch, perception, timing and layout with simulated profiles. | Relevant scenarios; model results remain separate from real-device and human evidence. |
-| **loop** | Records bounded fixes, current-build replay, regression and preserved-intent checks. | Host browser/Figma tools and actual receipts. Existing improvement authority is recorded explicitly for scoped local patches. |
+| **persona-qa** | Exercises rendered UI layout scans, completion, state recovery probes, input preservation, errors/recovery, keyboard and accessibility (KWCAG/WCAG) on the real product or iOS XCTest captures. | An accessible product and safe fixtures; the bundled web driver needs Node.js 22 and Playwright. |
+| **ergonomics** *(experimental)* | Screens reach, touch, perception, timing and layout with simulated profiles and route-level warning grouping (`--list-threshold`). | Relevant scenarios; model results remain separate from real-device and human evidence. |
+| **loop** | Records bounded fixes, strict stdlib PNG/pixel-diff verification, current-build replay, regression and preserved-intent checks. | Host browser/Figma tools and actual receipts. Existing improvement authority is recorded explicitly for scoped local patches. |
 
 The host-agent instructions implement this integrated entry path. The CLI validates
 imported evidence, applies bounded local text patches and can execute owned core
@@ -88,6 +88,19 @@ Use Node.js 22. With the pinned Playwright 1.56.1, `npx playwright install` hang
 download on Node.js 24.16 or later and on Node.js 26
 ([microsoft/playwright#40724](https://github.com/microsoft/playwright/issues/40724);
 Playwright 1.60 works).
+
+On Ubuntu 26.04 x64, Playwright 1.56.1 can fail with
+`does not support chromium on ubuntu26.04-x64`. Use its Ubuntu 24.04 build
+explicitly, keeping the override in the environment for both installation and
+driver runs:
+
+```sh
+export PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=ubuntu24.04-x64
+npx playwright install chromium
+```
+
+This is a compatibility workaround, not native Ubuntu 26.04 support. Keep Node.js
+22; the platform override does not fix the newer-Node installation hang.
 
 ## Use
 
@@ -440,6 +453,9 @@ real-user benefit or equal coverage.
   missed its confirmatory noise limit (1.75 P0–P2 units per clean scenario;
   limit 0.35) and condition-identification target. Later fixes do not establish
   that those original targets now pass; review findings before acting on them.
+  This checkout includes only `benchmarks/heldout-2/audience/*.json`, not that
+  evaluation's fixtures, scenarios or answer key. Its published results cannot
+  be reproduced from this checkout; audience files are not a runnable suite.
 - Only Chromium device emulation is exercised by the web driver; no real iOS
   Safari, native apps or real devices.
 

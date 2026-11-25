@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/remorser58/Remorsearch_UX_QA_Skill/schemas/ux-research-persona-hypotheses.v1.schema.json",
+  "$id": "https://github.com/remorser58/Remorswarm_UX_QA_Skill/schemas/ux-research-persona-hypotheses.v1.schema.json",
   "title": "UX Research Persona Hypotheses v1",
   "description": "Agent-authored synthetic behavioral persona/scenario hypotheses linked to exact gated research claims. Values are exploratory test conditions, never population statistics.",
   "type": "object",

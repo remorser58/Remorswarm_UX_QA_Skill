@@ -409,6 +409,7 @@ def attach_run(
                         and all(new_observations[o]["epistemic_status"] == "observed"
                                 and new_observations[o]["basis"] == "measured"
                                 and new_observations[o]["build_identity_status"] == "recorded" for o in obs_ids))
+            summary = swarm.summarize_elements([new_observations[o] for o in obs_ids])
             record = {
                 "id": finding_id,
                 "scenario_id": profile_to_scenario[pair_profile],
@@ -417,7 +418,11 @@ def attach_run(
                 "epistemic_status": "observed" if verified else "inferred",
                 "verification_status": "verified" if verified else "unverified",
                 "check_id": finding["check_id"],
-                "summary": finding["summary_ko"],
+                "summary": summary["summary_ko"],
+                "element_count": summary["element_count"],
+                "examples": summary["examples"],
+                "screen_key": finding.get("screen_key", ""),
+                "selector_family": finding.get("selector_family", ""),
                 "basis": finding["basis"],
                 "analysis_kind": kind,
                 "coverage_label": finding["coverage_label"],

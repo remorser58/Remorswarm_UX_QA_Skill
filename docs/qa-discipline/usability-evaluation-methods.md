@@ -25,10 +25,10 @@ give a formula from memory, the text says so.
 
 **Local context read.** `skills/ergonomic-persona-swarm-qa/SKILL.md`;
 `references/human-factors-checks.md`, `persona-agent-protocol.md` and
-`validation-and-limits.md` (added during this session);
+`validation-and-limits.md` (added at the time of writing);
 `docs/ergonomic-swarm-spec.md` (§0, §2 profile, §6 observation, §7 finding,
 §12 and the new §12.1); the top-level summary of
-`docs/validation/heldout-mixed-frozen-8c1de02.json`; `COORDINATION.md`;
+`docs/validation/heldout-mixed-frozen-8c1de02.json`;
 `scripts/ergo_bench.py`; `scripts/ergo_experiments.py` (header and
 structure); `ergoqa/bench.py`; `ergoqa/swarm.py`; the strata in
 `ergoqa/profiles.py`; and the frozen held-out tool outputs
@@ -316,7 +316,7 @@ Think-aloud and task metrics
 - **Sauro & Lewis** recommend the adjusted-Wald binomial interval for
   completion rates, because the plain Wald interval "grossly understates" the
   width at small n [snippet]. The SUS mean of about 68 and the SEQ norms are
-  widely cited but were not verified this session;
+  widely cited but were not verified at the time of writing;
   `docs/human-factors/perception-cognition.md` lists them as recalled.
 - [opinion] An LLM agent's "think-aloud" is not a verbal protocol.
   `persona-agent-protocol.md` §7, which forbids agents from filling in SUS,

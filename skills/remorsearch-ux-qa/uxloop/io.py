@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import re
 import tempfile
@@ -61,8 +62,14 @@ def _pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
 def parse_json(raw: str | bytes) -> Any:
     def bad_constant(value: str) -> None:
         raise ContractError(f"Non-finite JSON number: {value}")
+    def finite_float(value: str) -> float:
+        result = float(value)
+        if not math.isfinite(result):
+            raise ContractError(f"Non-finite JSON number: {value}")
+        return result
     try:
-        return json.loads(raw, object_pairs_hook=_pairs, parse_constant=bad_constant)
+        return json.loads(raw, object_pairs_hook=_pairs, parse_constant=bad_constant,
+                          parse_float=finite_float)
     except (ValueError, UnicodeError, RecursionError) as exc:
         raise ContractError(f"Invalid JSON: {exc}") from exc
 

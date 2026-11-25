@@ -20,12 +20,12 @@ EXAMPLE = _paths.SKILL / "examples" / "audience" / "transit-card.audience.json"
 
 
 class RecordCLI(unittest.TestCase):
-    def run_record(self, suite: Path, out: Path) -> subprocess.CompletedProcess:
-        return subprocess.run(
-            [sys.executable, str(_paths.SKILL / "scripts" / "ergo_eval.py"),
-             "record", "--suite", str(suite), "--out", str(out), "--c5-seeds", "1"],
-            capture_output=True, text=True, timeout=15,
-        )
+    def run_record(self, suite: Path | None, out: Path) -> subprocess.CompletedProcess:
+        cmd = [sys.executable, str(_paths.SKILL / "scripts" / "ergo_eval.py"),
+               "record", "--out", str(out), "--c5-seeds", "1"]
+        if suite is not None:
+            cmd += ["--suite", str(suite)]
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=30)
 
     def test_empty_recording_fails_without_creating_output(self) -> None:
         for layout in ("missing", "audience-only", "empty-scenarios"):
@@ -99,6 +99,54 @@ class RecordCLI(unittest.TestCase):
             self.assertEqual(records[1]["run_id"], f"R-{pending}-galaxy-s24-p")
             self.assertEqual(records[1]["exit"], 0)
             self.assertEqual(saved.read_text(encoding="utf-8"), "{}")
+
+    def test_missing_suite_argument_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "out"
+            result = self.run_record(None, out)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("--suite", result.stderr)
+            self.assertFalse(out.exists())
+
+    def test_no_runnable_pairs_fail_without_recording_artifacts(self) -> None:
+        for layout in ("nonexistent", "missing-scenarios", "empty-scenarios"):
+            with self.subTest(layout=layout), tempfile.TemporaryDirectory() as tmp:
+                suite, out = Path(tmp) / "suite", Path(tmp) / "out"
+                if layout != "nonexistent":
+                    suite.mkdir()
+                if layout == "empty-scenarios":
+                    (suite / "scenarios").mkdir()
+                result = self.run_record(suite, out)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("no runnable scenario/device pairs", result.stderr)
+                self.assertIn(str(suite), result.stderr)
+                self.assertNotIn("Traceback", result.stderr)
+                self.assertFalse((out / "runs").exists())
+                self.assertFalse((out / "profiles").exists())
+                self.assertFalse((out / "record-log.json").exists())
+
+    def test_valid_suite_with_completed_runs_succeeds_without_new_recordings(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            suite, out = Path(tmp) / "suite", Path(tmp) / "out"
+            (suite / "scenarios").mkdir(parents=True)
+            sid = "SC-test-public-a"
+            scenario = {"scenario_id": sid, "device_ids": ["galaxy-s24"],
+                        "surface": {"kind": "web"}}
+            (suite / "scenarios" / "public.json").write_text(json.dumps(scenario), encoding="utf-8")
+            _, _, groups, _ = ergo_eval.configurations(ergo_eval.load_suite(suite))
+            self.assertIn("galaxy-s24|portrait", groups[sid])
+            for group in groups[sid]:
+                device_id, orientation = group.split("|")
+                run_dir = out / "runs" / f"R-{sid}-{device_id}-{orientation[0]}"
+                run_dir.mkdir(parents=True)
+                (run_dir / "run.json").write_text(json.dumps({"scenario_id": sid}), encoding="utf-8")
+            previous = [{"run_id": f"R-{sid}-galaxy-s24-p", "exit": 0}]
+            log_path = out / "record-log.json"
+            log_path.write_text(json.dumps(previous), encoding="utf-8")
+            result = self.run_record(suite, out)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertNotIn("recorded ", result.stdout)
+            self.assertEqual(json.loads(log_path.read_text(encoding="utf-8")), previous)
 
 
 def suite_two_products_one_device() -> dict:

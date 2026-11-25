@@ -300,8 +300,13 @@ class StorageReportsAndValidator(unittest.TestCase):
         legacy=json.loads((Path(__file__).parent/'fixtures/valid-bundle.json').read_text());self.assertEqual(validate_bundle(legacy),[]);self.assertTrue(bundle_warnings(legacy))
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp).resolve();raw=b'invented capture';(root/'capture.png').write_bytes(raw);run=legacy['records']['runs'][0];run['started_at']='2026-09-01T00:00:00Z';obs=legacy['records']['observations'][0];obs['receipt']=dict(artifact_path='capture.png',sha256=byte_digest(raw),captured_at='2026-09-01T00:00:01Z',surface_url=run['surface_ref'],build_id='diagnostic',device='phone',quoted_ui_text='Find order')
+            (root/'capture.png').chmod(0o600)
             finding=legacy['records']['findings'][0];finding['second_pass']=dict(reviewer='self',task_completed=True,control_name='Find order',omitted=[],severity='agree',inconclusive=False)
             self.assertEqual(validate_bundle(legacy,artifacts_root=root),[])
+            for mode in (0o620,0o602):
+                with self.subTest(mode=oct(mode)):
+                    (root/'capture.png').chmod(mode);self.assertTrue(validate_bundle(legacy,artifacts_root=root))
+            (root/'capture.png').chmod(0o600)
             for key,val in [('sha256','0'*64),('captured_at','2026-08-31T23:59:59Z'),('artifact_path','../missing')]:
                 b=copy.deepcopy(legacy);b['records']['observations'][0]['receipt'][key]=val;self.assertTrue(validate_bundle(b,artifacts_root=root))
             finding['second_pass']['severity']='disagree';self.assertTrue(validate_bundle(legacy,artifacts_root=root));finding['second_pass']['resolution']='Reviewed and retained.';self.assertEqual(validate_bundle(legacy,artifacts_root=root),[])
