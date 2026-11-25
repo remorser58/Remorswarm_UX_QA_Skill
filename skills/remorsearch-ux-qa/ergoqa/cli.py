@@ -338,11 +338,30 @@ def cmd_bench(args: argparse.Namespace) -> int:
     key = load_json(args.key)
     findings_doc = load_json(args.findings)
     profiles = _load_profiles(args.profiles)
-    result = bench.score(key, findings_doc["findings"], profiles)
+    result = bench.score(key, findings_doc["findings"], profiles, exact_viewport=True)
     if args.out:
         _write_json(Path(args.out), result)
     print(json.dumps({k: v for k, v in result.items() if not isinstance(v, list)}, ensure_ascii=False, indent=2))
     return EXIT_OK
+
+
+def cmd_scan(args: argparse.Namespace) -> int:
+    from . import scan
+
+    out = Path(args.out)
+    if out.exists() and any(out.iterdir()):
+        print(f"--out must be a new or empty directory: {out}", file=sys.stderr)
+        return EXIT_USAGE
+    devices = tuple(args.device or scan.DEFAULT_DEVICES)
+    for device_id in devices:
+        get_device(device_id)
+    result = scan.run_scan(args.url, out, devices=devices, tiles=args.tiles, node=args.node,
+                           allow_origins=tuple(args.allow_origin or ()))
+    print((out / "scan.md").read_text(encoding="utf-8"))
+    print(f"scan: {len(result['candidates'])} candidates -> {out / 'scan.json'}")
+    if not all(c.get("recorded") for c in result["coverage"]):
+        return EXIT_DEGRADED
+    return EXIT_FINDINGS if result["candidates"] else EXIT_OK
 
 
 def cmd_catalog(args: argparse.Namespace) -> int:
@@ -358,6 +377,16 @@ def cmd_android_snapshot(args: argparse.Namespace) -> int:
                                   run_id=args.run_id, step_index=args.step)
     _write_json(Path(args.out), snap)
     print(f"android snapshot ({len(snap['elements'])} elements) -> {args.out}")
+    return EXIT_OK
+
+
+def cmd_ios_import(args: argparse.Namespace) -> int:
+    from .drivers import ios
+
+    result = ios.import_ios_export(args.evidence, args.out, device_id=args.device, capture_id=args.capture_id,
+                                   scenario_id=args.scenario_id, profile_id=args.profile_id, route=args.route,
+                                   fixture_id=args.fixture_id, fixture_kind=args.fixture_kind)
+    print(f"ios import ({result['xcuitest_result']}, {len(result['captures'])} capture(s)) -> {args.out}")
     return EXIT_OK
 
 
@@ -540,6 +569,15 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("catalog", help="print the check catalog")
     p.set_defaults(func=cmd_catalog)
 
+    p = sub.add_parser("scan", help="rendered layout scan of one URL: phone and laptop, top to end, measured candidates with outlined crops")
+    p.add_argument("--url", required=True, help="http(s) URL of the page as users see it")
+    p.add_argument("--device", action="append", help="device id (repeatable; default galaxy-s24 and laptop-1440)")
+    p.add_argument("--tiles", type=int, default=8, help="scroll screens after the top one, before jumping to the end (default 8)")
+    p.add_argument("--node", default="node", help="Node.js 22 executable for the web driver")
+    p.add_argument("--allow-origin", action="append", help="another origin the page loads assets from, such as a font or image CDN (repeatable)")
+    p.add_argument("--out", required=True, help="new or empty directory")
+    p.set_defaults(func=cmd_scan)
+
     p = sub.add_parser("android-snapshot", help="build a snapshot from a uiautomator dump and screenshot")
     p.add_argument("--xml", required=True)
     p.add_argument("--png", required=True)
@@ -549,6 +587,18 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--step", type=int, default=0)
     p.add_argument("--out", required=True)
     p.set_defaults(func=cmd_android_snapshot)
+
+    p = sub.add_parser("ios-import", help="import an existing XCUITest evidence export as ergo runs")
+    p.add_argument("--evidence", required=True, help="native evidence directory with xcresult exports and summaries")
+    p.add_argument("--out", required=True, help="new output directory")
+    p.add_argument("--device", required=True, help="exact device catalog id (for example iphone-15)")
+    p.add_argument("--capture-id", required=True, help="exact producer capture UUID to import")
+    p.add_argument("--scenario-id", required=True)
+    p.add_argument("--profile-id", required=True)
+    p.add_argument("--route", required=True, help="explicit ios-app:// route path")
+    p.add_argument("--fixture-id", required=True, help="caller-bound fixture identity")
+    p.add_argument("--fixture-kind", choices=("synthetic_app_data", "runtime_app_data"), required=True)
+    p.set_defaults(func=cmd_ios_import)
     return parser
 
 

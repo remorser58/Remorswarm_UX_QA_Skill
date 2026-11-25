@@ -53,7 +53,7 @@
           "id": "source-1",
           "channel": "fixture",
           "source_ref": "fixture://not-real-user-research",
-          "access_basis": "public",
+          "access_basis": "fixture",
           "access_method": "authored-test-fixture",
           "public_scope": "synthetic-fixture",
           "retention_status": "retained"
@@ -290,7 +290,7 @@
     {
       "id": "artifact-baseline-visual",
       "path": "artifacts/artifact-baseline-visual.json",
-      "sha256": "e3893c599e29ea42b755fb48c3ff83f6223a5e74fc1b4b8fac94757f445f40e9",
+      "sha256": "d4e5d0617a6ba50652c55fef0f89bfca2df24b78fae854116b9c82a03f6f74a5",
       "kind": "visual_report",
       "provenance": "fixture",
       "created_at": "2026-09-14T00:01:00+00:00"
@@ -346,7 +346,7 @@
     {
       "id": "artifact-replay-visual",
       "path": "artifacts/artifact-replay-visual.json",
-      "sha256": "e2d54b03500f8628275b56b81a7b373a4ec625349b6d7622b73e64b443283a9e",
+      "sha256": "405046c036f0332205ffa5cfb02e37d2be4ea7b3dfa8c77b3140a1194db97e6b",
       "kind": "visual_report",
       "provenance": "fixture",
       "created_at": "2026-09-14T00:04:00+00:00"
@@ -563,7 +563,12 @@
       "checks": {
         "layout": "passed",
         "interaction_states": "failed",
+        "alignment": "passed",
+        "spacing": "passed",
         "typography": "passed",
+        "text_clipping": "passed",
+        "component_occlusion": "passed",
+        "figma_fidelity": "passed",
         "side_accents": "passed"
       },
       "reason": "Synthetic comparison: ambiguous action label."
@@ -594,7 +599,12 @@
       "checks": {
         "layout": "passed",
         "interaction_states": "passed",
+        "alignment": "passed",
+        "spacing": "passed",
         "typography": "passed",
+        "text_clipping": "passed",
+        "component_occlusion": "passed",
+        "figma_fidelity": "passed",
         "side_accents": "passed"
       },
       "reason": ""

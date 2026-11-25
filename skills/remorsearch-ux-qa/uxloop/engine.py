@@ -63,7 +63,9 @@ def current_replay(state: dict) -> dict:
     for replay in state["packet"]["replays"]:
         if replay["round_id"] == round_id:
             return replay
-    raise GateStop("blocked", f"No replay receipt for {round_id}; run the same scenarios against the changed build, then append evidence")
+    applied = state["applied_fixes"]
+    start = f", starting after the last applied fix ({applied[-1]['at']})" if applied else ""
+    raise GateStop("blocked", f"No replay receipt for {round_id}; run the same scenarios against the changed build{start}, then append evidence")
 
 
 def revision(state: dict) -> str:
@@ -119,7 +121,8 @@ def apply_fixes(state: dict, evidence: Evidence, checkpoint: Path) -> None:
         capability = fix["kind"]
         if capability not in state["permissions"]:
             raise GateStop("blocked", f"Fix {fix['id']} requires explicit {capability}; bundle/provider claims cannot grant it")
-        evidence.figma(fix["figma_id"])
+        if fix["figma_id"] is not None:
+            evidence.figma(fix["figma_id"])
         if capability != "code_write":
             raise GateStop("blocked", f"{capability} is granted but its live integration is not implemented; no write performed")
         try:
@@ -191,7 +194,7 @@ def replay_gate(state: dict, evidence: Evidence) -> None:
         covered_findings.update(fix["finding_ids"])
         affected = {evidence.records["findings"][x]["scenario_id"] for x in fix["finding_ids"]}
         for run_id in replay["run_ids"]:
-            if evidence.runs[run_id]["scenario_id"] in affected:
+            if fix["figma_id"] is not None and evidence.runs[run_id]["scenario_id"] in affected:
                 compared = {x["figma_id"] for x in packet["visual_checks"] if x["run_id"] == run_id}
                 if fix["figma_id"] not in compared:
                     raise GateStop("unknown", f"Replay does not use fix {fix['id']}'s approved Figma baseline")

@@ -11,8 +11,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 import _paths  # noqa: E402,F401  (puts the skill folder on sys.path)
 
-from ergoqa import audience, report, swarm  # noqa: E402
+from ergoqa import audience, bundle, report, swarm  # noqa: E402
 from ergoqa.profiles import validate_profile  # noqa: E402
+from validate_bundle import validate_bundle  # noqa: E402
 
 EXAMPLE = _paths.SKILL / "examples" / "audience" / "transit-card.audience.json"
 
@@ -49,6 +50,45 @@ class ValidateAudience(unittest.TestCase):
 
 
 class Compose(unittest.TestCase):
+    def test_export_separates_composition_from_explicit_or_malformed_research_refs(self) -> None:
+        profiles = audience.compose(load(), 2, floors=[])["profiles"]
+        composition = copy.deepcopy(profiles[0]["audience_ref"])
+        cases = [
+            ("standalone", composition, True),
+            ("empty-claims", {**composition, "claim_ids": []}, False),
+            ("linked-claims", {**composition, "claim_ids": ["CLM-existing"]}, False),
+            ("null-claims", {**composition, "claim_ids": None}, False),
+            ("invalid-claims", {**composition, "claim_ids": "CLM-existing"}, False),
+            ("invalid-segment", {**composition, "segment_id": None}, False),
+            ("empty-ref", {}, False),
+            ("null-ref", None, False),
+            ("invalid-ref", [], False),
+        ]
+        for name, ref, standalone in cases:
+            with self.subTest(case=name):
+                profiles[0]["audience_ref"] = copy.deepcopy(ref)
+                original = copy.deepcopy(profiles)
+                exported = bundle.to_evidence_bundle("audience-export", [], [], profiles)
+                for index, (profile, persona) in enumerate(zip(profiles, exported["records"]["personas"])):
+                    if standalone or index == 1:
+                        self.assertNotIn("audience_ref", persona)
+                        self.assertEqual(persona["scenario_assumptions"]["audience_composition"], profile["audience_ref"])
+                    else:
+                        self.assertEqual(persona["audience_ref"], ref)
+                        self.assertNotIn("audience_composition", persona["scenario_assumptions"])
+                    self.assertEqual(persona["basis"], "synthetic")
+                self.assertEqual(profiles, original)
+                errors = validate_bundle(exported)
+                if standalone:
+                    self.assertEqual(errors, [])
+                elif name == "empty-claims":
+                    self.assertIn("audience_ref references unknown research segment", errors)
+                elif name == "linked-claims":
+                    self.assertIn("audience_ref.claim_ids[0] references an unknown record", errors)
+                    self.assertIn("audience_ref references unknown research segment", errors)
+                else:
+                    self.assertTrue(any("audience_ref" in e for e in errors), errors)
+
     def test_budget_respected_and_profiles_valid(self) -> None:
         doc = load()
         for budget in (1, 2, 3, 5, 8, 12, 16):

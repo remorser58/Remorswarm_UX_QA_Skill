@@ -41,9 +41,17 @@ def _persona_record(profile: dict[str, Any], strategy: str, seed: int | None) ->
         "original_attributes": {k: v for k, v in ref.items()},
         "scenario_assumptions": assumptions,
     }
-    if profile.get("audience_ref"):
-        # Which Stage-0 segment and facet the synthetic profile stands for (still synthetic).
-        record["audience_ref"] = profile["audience_ref"]
+    if "audience_ref" in profile:
+        audience_ref = profile["audience_ref"]
+        # Only complete composition refs without claim_ids are synthetic context.
+        # Explicit research refs and malformed refs retain top-level validation.
+        if (profile.get("origin") == "audience_composed" and isinstance(audience_ref, dict)
+                and "claim_ids" not in audience_ref
+                and all(isinstance(audience_ref.get(k), str) and audience_ref[k]
+                        for k in ("audience_id", "segment_id", "facet"))):
+            assumptions["audience_composition"] = audience_ref
+        else:
+            record["audience_ref"] = audience_ref
     return record
 
 

@@ -5,6 +5,7 @@
 // page reports is treated as data; nothing from the page or from HTTP requests
 // is evaluated as code.
 
+import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -62,6 +63,14 @@ const AMBIENT_MOVE_LEVEL = 4;
 const SCROLL_REVERSAL_MIN_CSS = 4;
 const FOCUS_MASK_LEVEL = 4;
 const STEP_PROBE_MAX = 16; // focus probes before clicks, per run
+// --analyze shares 110s across finish, leaving 10s for the 120s HTTP client.
+// Browser work gets at most 75s, reserving 30s for analysis and 5s for recording.
+const ANALYZE_FINISH_BUDGET_MS = 110_000;
+const ANALYZE_TIMEOUT_MS = 30_000;
+const ANALYZE_RECORD_MARGIN_MS = 5_000;
+const ANALYZE_ERR_CAP = 16384;
+const LOCATOR_FIELDS = new Set(['selector', 'selectors', 'target', 'to', 'anchor_selectors', 'dom_id', 'ancestor_ids',
+  'controls', 'described_by', 'error_message']);
 
 // Reflow (WCAG 1.4.10, AUT-06): each distinct screen's DOM is copied as the run goes
 // and re-rendered after the run at 320 CSS px wide with scripts off (a static copy,
@@ -843,10 +852,11 @@ function focusInfo() {
 }
 
 export class WebSession {
-  constructor({ pw, pwInfo, scenario, deviceRequest, profileId, profileBinding, runId, runDir, mode, options, warnings }) {
+  constructor({ pw, pwInfo, scenario, timingWindowActions = {}, profile, deviceRequest, profileId, profileBinding, runId, runDir, mode, options, warnings }) {
     this.pw = pw;
     this.pwInfo = pwInfo;
     this.scenario = scenario;
+    this.profile = profile || null; // full source profile doc; the analyzer needs complete provenance
     this.deviceRequest = deviceRequest;
     this.profileId = profileId;
     this.profileBinding = profileBinding;
@@ -861,6 +871,8 @@ export class WebSession {
     this.authoredInputs = new Set();
     this.mismatchedInputs = new Set();
     this.privateValues = new Set();
+    this.privateLocators = new Map();
+    this.recordFiles = new Set();
     this.redactSelectors = new Set();
     for (const action of scenario.steps) this.rememberPrivateAction(action);
     for (const check of scenario.success?.task_checks || []) {
@@ -911,6 +923,36 @@ export class WebSession {
     const allowed = new Set(['http:', 'https:'].includes(scenario.origin.protocol) ? [scenario.origin.origin] : []);
     for (const o of options.allowOrigins || []) allowed.add(o);
     this.allowedOrigins = allowed;
+    // --analyze freezes its allowlisted source context in memory at startup.
+    // Only its sanitized copy is refreshed as interactive private values arrive;
+    // original input files are never reread or written. The scenario artifact is a sanitized
+    // analytical context (identity, roles and timing windows): typed step inputs,
+    // success task_check expectations and arbitrary extra fields are never
+    // persisted; timing text also comes from the finished, redacted run because
+    // interactive input can become private after startup.
+    this.analysisInputs = null;
+    if (options.analyze) {
+      this.analysisInputs = {
+        profiles: path.join(runDir, 'analyze-profiles.json'),
+        scenario: path.join(runDir, 'analyze-scenario.json'),
+      };
+      writeJsonAtomic(this.analysisInputs.profiles, [this.profile], 0o600);
+      this.analysisContext = JSON.stringify({
+        schema_version: 'ergo-scenario.v1',
+        scenario_id: this.scenario.scenario_id,
+        // Task evidence and the actual URL come from run.json, not a replay copy.
+        surface: { kind: this.scenario.surface_kind, url: 'http://localhost/' },
+        task_goal_ko: 'Analyze recorded task evidence.',
+        device_ids: [...new Set([...this.scenario.device_ids, this.deviceRequest.id])],
+        targets: this.scenario.targets, steps: [], success: null,
+        hotspots: this.scenario.hotspots.map((h) => ({ id: h.id, box: h.box, roles: h.roles })),
+        timing_windows: this.scenario.timing_windows.map((w) => ({
+          id: w.id, selector: w.selector, measure: w.measure || 'visible_duration', kind: w.kind,
+          ...(typeof timingWindowActions[w.id] === 'boolean' ? { has_action: timingWindowActions[w.id] } : {}),
+        })),
+      });
+      writeJsonAtomic(this.analysisInputs.scenario, this.redactRecord(JSON.parse(this.analysisContext)), 0o600);
+    }
   }
 
   warnOnce(key, msg) {
@@ -937,13 +979,50 @@ export class WebSession {
   redactRecord(record, key = '') {
     if (typeof record === 'string') {
       if (key === 'notes' && record === 'task_check_final') return record;
+      // Inspection retains raw, whitespace-separated IDREF attributes as well as objects.
+      if (key === 'aria_describedby' || key === 'aria_errormessage') {
+        return record.replace(/\S+/g, (id) => this.redactRecord(id, 'dom_id'));
+      }
+      if (LOCATOR_FIELDS.has(key)) {
+        if (this.privateLocators.has(record)) return this.privateLocators.get(record);
+        if ([...this.privateValues].some((value) => record.includes(value))) {
+          const alias = `__ergo_private_locator_${this.privateLocators.size / 2 + 1}__`;
+          this.privateLocators.set(record, alias);
+          this.privateLocators.set(alias, alias);
+          this.warnOnce('private-locators', 'Private locator text was replaced by stable analysis bindings; these locators cannot be replayed against the page.');
+          return alias;
+        }
+        return record;
+      }
       if (key && !['text', 'value', 'selected', 'described_by_text', 'name', 'title', 'error', 'message', 'stack', 'intent', 'expected', 'observed', 'consequence', 'description', 'note', 'notes', 'warnings', 'blocked_reasons', 'console_errors'].includes(key)) return record;
       for (const value of this.privateValues) record = record.split('[redacted]').map((part) => part.split(value).join('[redacted]')).join('[redacted]');
       return record;
     }
     if (Array.isArray(record)) return record.map((value) => this.redactRecord(value, key));
-    if (record && typeof record === 'object') return Object.fromEntries(Object.entries(record).map(([field, value]) => [field, key === 'driver' && field === 'name' ? value : this.redactRecord(value, field)]));
+    if (record && typeof record === 'object') return Object.fromEntries(Object.entries(record).map(([field, value]) => [field,
+      key === 'driver' && field === 'name' ? value : this.redactRecord(value,
+        field === 'id' && (key === 'described_by' || key === 'error_messages') ? 'dom_id' :
+        key === 'targets' || (field === 'path' && ('selector' in record || 'dom_id' in record)) ? 'selector' : field)]));
     return record;
+  }
+
+  refreshPrivateRecords() {
+    if (this.privateValues.size) {
+      for (const file of this.recordFiles) {
+        const record = JSON.parse(fs.readFileSync(file, 'utf8'));
+        writeJsonAtomic(file, this.redactRecord(record), fs.statSync(file).mode & 0o777);
+      }
+    }
+    if (this.analysisInputs) {
+      writeJsonAtomic(this.analysisInputs.scenario, this.redactRecord(JSON.parse(this.analysisContext)), 0o600);
+    }
+  }
+
+  stopFinishBrowser(reason) {
+    this.finishProbesStopped = true;
+    this.warnOnce('finish-browser-budget', reason);
+    this.finishBrowserClosing ??= this.browser?.close().catch(() => {}) ?? Promise.resolve();
+    return this.finishBrowserClosing;
   }
 
   // ------------------------------------------------------------------ lifecycle
@@ -1133,6 +1212,7 @@ export class WebSession {
     });
     writeFileAtomic(path.join(this.runDir, `${id}.png`), png);
     writeJsonAtomic(path.join(this.runDir, `${id}.json`), snap);
+    this.recordFiles.add(path.join(this.runDir, `${id}.json`));
     this.snapshots.push({ snapshot_id: id, step_index: snap.step_index, path: `${id}.json`, png: `${id}.png` });
     return id;
   }
@@ -1140,7 +1220,7 @@ export class WebSession {
   async adaptationPass() {
     if (!this.reflowScreens.length) return;
     let context;
-    const deadline = epochNow() + REFLOW_BUDGET_MS;
+    const deadline = Math.min(epochNow() + REFLOW_BUDGET_MS, this.finishBrowserDeadline ?? Infinity);
     try {
       context = await this.browser.newContext({ ...this.dev.contextOptions, javaScriptEnabled: false,
         locale: this.opts.locale, timezoneId: this.opts.timezoneId, colorScheme: 'light', serviceWorkers: 'block', acceptDownloads: false });
@@ -1180,7 +1260,8 @@ export class WebSession {
             rec.status = rec.evaluable ? 'measured' : 'unevaluable';
             if (rec.evaluable) rec.lost = after.lost;
           } catch (err) {
-            rec.status = 'unevaluable'; rec.evaluable = false; rec.lost = []; rec.gaps.push('probe_failed');
+            rec.status = 'unevaluable'; rec.evaluable = false; rec.lost = [];
+            rec.gaps.push(this.finishProbesStopped || epochNow() >= deadline ? 'budget_exhausted' : 'probe_failed');
             this.warnOnce('adaptation-failed', `adaptation copy failed: ${firstLine(err.message)}`);
           }
         }
@@ -1201,7 +1282,7 @@ export class WebSession {
     }
     if (!this.reflowScreens.length) return;
     let context = null;
-    const deadline = epochNow() + REFLOW_BUDGET_MS;
+    const deadline = Math.min(epochNow() + REFLOW_BUDGET_MS, this.finishBrowserDeadline ?? Infinity);
     try {
       const touch = this.dev.snapshotDevice.input === 'touch';
       context = await this.browser.newContext({
@@ -1421,7 +1502,7 @@ export class WebSession {
   async focusWalk(page, phase, snapshotId) {
     const stops = [];
     let ended = 'max_stops';
-    const deadline = epochNow() + FOCUS_WALK_BUDGET_MS;
+    const deadline = Math.min(epochNow() + FOCUS_WALK_BUDGET_MS, this.finishBrowserDeadline ?? Infinity);
     // Smooth scrolling would leave focused elements mid-animation when measured.
     await page.addStyleTag({ content: 'html, body { scroll-behavior: auto !important; }' }).catch(() => {});
     // Reset the sequential focus navigation starting point to the top of the document
@@ -1726,6 +1807,22 @@ export class WebSession {
 
   /** Run a walk with a hard deadline; a hung page cannot stop run.json from being written. */
   async boundedWalk(fn, phase) {
+    if (this.opts.analyze) {
+      const remaining = (this.finishBrowserDeadline ?? Infinity) - epochNow();
+      if (this.finishProbesStopped || remaining <= 0) {
+        this.warnOnce(`finish-focus-${phase}`, `focus walk (${phase}) skipped: finish browser budget exhausted`);
+        return;
+      }
+      const timer = setTimeout(() => this.stopFinishBrowser(`focus walk (${phase}) stopped at its finish budget`),
+        Math.min(FOCUS_WALK_BUDGET_MS + 5000, remaining));
+      try { await fn(); }
+      catch (err) { this.warnings.push(`focus walk (${phase}) stopped: ${firstLine(err.message)}`); }
+      finally {
+        clearTimeout(timer);
+        await this.finishBrowserClosing;
+      }
+      return;
+    }
     let timer = null;
     try {
       await Promise.race([fn(), new Promise((_, reject) => {
@@ -2102,6 +2199,7 @@ export class WebSession {
     const inspection = path.join(this.runDir, `I-${this.runId}-${String(this.inspectSeq++).padStart(3, '0')}.json`);
     const record = { run_id: this.runId, step_index: this.steps.length, last_snapshot_id: this.lastSnapshotId, observed_at: isoNow(), ...state };
     writeJsonAtomic(inspection, this.redactRecord(record), 0o600);
+    this.recordFiles.add(inspection);
     return { result: 'ok', inspection, ...this.redactRecord(record) };
   }
 
@@ -2256,6 +2354,7 @@ export class WebSession {
       focus_point: this.focusPoint,
       focus: ex.focus,
       layers: ex.layers,
+      layout_outliers: ex.layout_outliers || [],
       console_errors: this.consolePending.splice(0),
       notes: allNotes,
     };
@@ -2265,6 +2364,7 @@ export class WebSession {
     if (cssCopy) writeFileAtomic(path.join(this.runDir, `${id}.css.png`), cssCopy.png);
     const safeSnap = this.redactRecord(snap);
     writeJsonAtomic(jsonPath, safeSnap);
+    this.recordFiles.add(jsonPath);
     this.snapshots.push({ snapshot_id: id, step_index: stepIndex, path: `${id}.json`, png: `${id}.png` });
     this.lastSnapshotId = id;
     if (taskCheckpoint !== undefined) await this.evaluateTaskChecks(taskCheckpoint, { id, snap: safeSnap }, taskStepResult, taskSamples);
@@ -3082,8 +3182,126 @@ export class WebSession {
     return { success, detail: { criteria: results, unevaluable } };
   }
 
+  /**
+   * Run ergo_qa.py swarm on this exact run (opt-in --analyze). Never throws: a
+   * requested analysis that cannot launch or complete is an explicit failure in
+   * the returned receipt, so it can neither be swallowed nor count as verified.
+   * The scenario/profile inputs were frozen into this run's directory at startup.
+   */
+  async runAnalysis() {
+    const { python, script } = this.opts.analyze;
+    const outDir = path.join(this.runDir, 'swarm');
+    const { profiles: profilesPath, scenario: scenarioPath } = this.analysisInputs;
+    const timeoutMs = Math.max(0, Math.min(ANALYZE_TIMEOUT_MS, Math.floor((this.finishDeadline ?? Infinity) - epochNow())));
+    const result = {
+      requested: true, status: 'failed', exit_code: null, signal: null, timed_out: false, report_dir: outDir,
+      timeout_ms: timeoutMs,
+      reports: { analyses: null, findings: null, report: null }, screening_counts: null, error: null,
+    };
+    if (timeoutMs <= 0) {
+      result.timed_out = true;
+      result.error = 'finish budget exhausted before analysis; analyzer was not started';
+      return result;
+    }
+    const reportPath = (name) => {
+      const file = path.join(outDir, name);
+      const stat = fs.lstatSync(file, { throwIfNoEntry: false });
+      return stat?.isFile() ? file : null;
+    };
+    if (fs.lstatSync(outDir, { throwIfNoEntry: false })) {
+      result.error = `swarm report directory ${outDir} already exists; prior reports are never overwritten`;
+      return result;
+    }
+    // Argument array only: no shell, no string interpolation into a command line.
+    const argv = [script, 'swarm', '--runs', this.runDir, '--profiles', profilesPath, '--scenario', scenarioPath, '--out', outDir];
+    let code;
+    let signal = null;
+    let timedOut = false;
+    let stderr = '';
+    try {
+      ({ code, signal } = await new Promise((resolve, reject) => {
+        const child = spawn(python, argv, { shell: false, stdio: ['ignore', 'ignore', 'pipe'] });
+        const timer = setTimeout(() => {
+          timedOut = true;
+          child.kill('SIGKILL');
+          child.stderr.destroy(); // inherited pipes must not extend the analysis budget
+        }, timeoutMs);
+        child.stderr.on('data', (d) => { stderr = (stderr + d).slice(0, ANALYZE_ERR_CAP); });
+        child.once('error', (err) => { clearTimeout(timer); reject(err); });
+        child.once('close', (c, s) => { clearTimeout(timer); resolve({ code: c, signal: s }); });
+      }));
+    } catch (err) {
+      result.error = `cannot launch ${python}: ${firstLine(err.message)}`;
+      return result;
+    }
+    result.exit_code = code;
+    result.signal = signal;
+    result.timed_out = timedOut;
+    result.reports = { analyses: reportPath('analyses.json'), findings: reportPath('findings.json'), report: reportPath('report.md') };
+    if (timedOut || code === null) {
+      result.error = timedOut
+        ? `ergo_qa.py swarm exceeded ${timeoutMs === ANALYZE_TIMEOUT_MS ? '30s' : `${timeoutMs}ms of remaining finish budget`} and was stopped`
+        : `ergo_qa.py swarm terminated by signal ${signal ?? 'unknown'}`;
+      return result;
+    }
+    if (code !== 0) {
+      result.error = `ergo_qa.py swarm exited with code ${code}${stderr ? `: ${firstLine(stderr)}` : ''}`;
+      return result;
+    }
+    // Exit 0 alone is not a completed screening: every promised report must exist
+    // with a known minimal shape, so fake success or missing output fails.
+    const missing = Object.entries(result.reports).filter(([, file]) => !file).map(([name]) => name);
+    if (missing.length) {
+      result.error = `analysis reports missing after exit 0: ${missing.join(', ')}`;
+      return result;
+    }
+    try {
+      const doc = JSON.parse(fs.readFileSync(path.join(outDir, 'findings.json'), 'utf8'));
+      const analysesDoc = JSON.parse(fs.readFileSync(path.join(outDir, 'analyses.json'), 'utf8'));
+      const report = fs.readFileSync(path.join(outDir, 'report.md'), 'utf8');
+      const isObj = (v) => typeof v === 'object' && v !== null && !Array.isArray(v);
+      const severityKeys = ['P0', 'P1', 'P2', 'P3'];
+      const severities = (v) => isObj(v) && severityKeys.every((k) => Number.isInteger(v[k]) && v[k] >= 0);
+      const problems = [];
+      const a = analysesDoc?.analyses?.[0];
+      if (!isObj(analysesDoc) || !Array.isArray(analysesDoc.analyses) || analysesDoc.analyses.length !== 1
+        || !isObj(a) || a.run_id !== this.runId || a.scenario_id !== this.scenario.scenario_id
+        || a.owner_profile_id !== this.profileId || !Array.isArray(a.profiles_evaluated)
+        || a.profiles_evaluated.length !== 1 || a.profiles_evaluated[0] !== this.profileId || !Array.isArray(a.observations)) {
+        problems.push('analyses.json: expected one analysis of the recorded run/scenario/profile');
+      }
+      if (!isObj(doc) || !Array.isArray(doc.findings) || !doc.findings.every(isObj)) problems.push('findings.json: findings is not an object array');
+      if (!isObj(doc) || !Array.isArray(doc.units) || !doc.units.every(isObj)) problems.push('findings.json: units is not an object array');
+      if (!severities(doc?.severity_counts)) problems.push('findings.json: severity_counts is incomplete');
+      if (!severities(doc?.unit_severity_counts)) problems.push('findings.json: unit_severity_counts is incomplete');
+      if (!report.trimStart().startsWith('# ')) problems.push('report.md: report heading is missing');
+      if (problems.length) {
+        result.error = `analysis report shape is invalid: ${problems.join('; ')}`;
+        return result;
+      }
+      // Screening counts: they describe the swarm reports, never a QA verdict.
+      result.screening_counts = {
+        findings: doc.findings.length,
+        units: doc.units.length,
+        severity_counts: Object.fromEntries(severityKeys.map((k) => [k, doc.severity_counts[k]])),
+        unit_severity_counts: Object.fromEntries(severityKeys.map((k) => [k, doc.unit_severity_counts[k]])),
+      };
+      result.status = 'completed';
+    } catch (err) {
+      result.error = `analysis reports are unreadable (${err.code || err.name})`;
+    }
+    return result;
+  }
+
   async finish({ personaSuccess, reason } = {}) {
     if (this.finished) return this.finished;
+    let browserTimer = null;
+    if (this.opts.analyze) {
+      this.finishDeadline = epochNow() + ANALYZE_FINISH_BUDGET_MS;
+      this.finishBrowserDeadline = this.finishDeadline - ANALYZE_TIMEOUT_MS - ANALYZE_RECORD_MARGIN_MS;
+      browserTimer = setTimeout(() => this.stopFinishBrowser('finish browser budget exhausted; remaining optional probes were skipped'),
+        Math.max(0, this.finishBrowserDeadline - epochNow()));
+    }
     const finishing = (async () => {
       if (reason) this.block(reason);
       for (const t of this.twPollers) clearInterval(t);
@@ -3102,6 +3320,12 @@ export class WebSession {
       } catch (err) {
         this.warnings.push(`success evaluation failed: ${firstLine(err.message)}`);
       }
+      let finalUrl = null;
+      let title = null;
+      try {
+        finalUrl = this.page.url();
+        title = await this.page.title();
+      } catch { /* page gone */ }
       // Focus walks run after the task (so they never delay step 1) and only when the
       // run ended normally: at the end state, then the initial screen in a fresh context.
       if (this.focusWalkEnabled() && !reason && !this.crashed && this.page && !this.blockReasons.length) {
@@ -3109,23 +3333,22 @@ export class WebSession {
         await this.boundedWalk(() => this.focusWalkFresh(), 'load');
       }
       if (!reason && !this.crashed && !this.blockReasons.length && this.dev && this.reflowEnabled()) {
-        await this.adaptationPass().catch((err) => this.warnOnce('adaptation-pass', `adaptation pass failed: ${firstLine(err.message)}`));
-        await this.reflowPass();
+        if (!this.finishProbesStopped && epochNow() < (this.finishBrowserDeadline ?? Infinity)) {
+          await this.adaptationPass().catch((err) => this.warnOnce('adaptation-pass', `adaptation pass failed: ${firstLine(err.message)}`));
+        } else this.warnOnce('finish-adaptation-budget', 'adaptation pass skipped: finish browser budget exhausted');
+        if (!this.finishProbesStopped && epochNow() < (this.finishBrowserDeadline ?? Infinity)) {
+          await this.reflowPass();
+        } else this.warnOnce('finish-reflow-budget', 'reflow pass skipped: finish browser budget exhausted');
       }
       if (success === null && !detail && typeof personaSuccess === 'boolean') {
         success = personaSuccess;
         basis = 'judgment';
       }
-      let finalUrl = null;
-      let title = null;
-      try {
-        finalUrl = this.page.url();
-        title = await this.page.title();
-      } catch { /* page gone */ }
       let status = 'completed';
       if (this.blockReasons.length) status = 'blocked';
       else if (this.mode === 'scripted' && this.steps.some((s) => s.result !== 'ok')) status = 'failed';
       if (status !== 'completed') success = false;
+      this.refreshPrivateRecords();
       const flashCov = this.flashCoverage();
       const run = {
         schema_version: 'ergo-run.v1',
@@ -3207,19 +3430,41 @@ export class WebSession {
         blocked_reasons: this.blockReasons,
         warnings: this.warnings,
       };
+      if (!run.device) run.device = this.deviceRequest.fallbackDevice;
+      const recordedRun = this.redactRecord(run);
       try {
-        if (!run.device) run.device = this.deviceRequest.fallbackDevice;
-        writeJsonAtomic(path.join(this.runDir, 'run.json'), this.redactRecord(run));
+        writeJsonAtomic(path.join(this.runDir, 'run.json'), recordedRun);
       } finally {
         if (this.browserTransport) await this.browserTransport.close([this.context]);
+        clearTimeout(browserTimer);
+      }
+      // The analyzer runs only here: run.json is persisted, the browser is closed,
+      // and the memoized promise above allows one attempt per run. The receipt adds
+      // report paths/status/counts for the analysis itself (completed/failed), never
+      // a QA-pass claim, and never analysis text built from DOM evidence.
+      let analysis = null;
+      if (this.opts.analyze) {
+        try {
+          analysis = await this.runAnalysis();
+        } catch (err) {
+          analysis = { requested: true, status: 'failed', exit_code: null, report_dir: path.join(this.runDir, 'swarm'),
+            reports: { analyses: null, findings: null, report: null }, screening_counts: null, error: firstLine(err.message) };
+        }
       }
       let exitCode = 3;
       if (status === 'blocked') exitCode = 4;
       else if (status === 'completed' && success === true) exitCode = 0;
-      return { status, success, runPath: path.join(this.runDir, 'run.json'), exitCode, run };
+      // A requested analysis that did not produce its reports is a driver-level
+      // failure; the raw run product above (status/success/run.json) stays as measured.
+      if (analysis && analysis.status !== 'completed') exitCode = 4;
+      return { status, success, runPath: path.join(this.runDir, 'run.json'), exitCode, run: recordedRun,
+        ...(analysis ? { analysis: this.redactRecord(analysis) } : {}) };
     })();
-    this.finished = finishing;
-    return finishing;
+    this.finished = finishing.finally(async () => {
+      clearTimeout(browserTimer);
+      await this.finishBrowserClosing;
+    });
+    return this.finished;
   }
 }
 

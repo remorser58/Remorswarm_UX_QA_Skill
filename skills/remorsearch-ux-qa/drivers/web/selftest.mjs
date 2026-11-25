@@ -1575,9 +1575,50 @@ async function reflowTest(base, tmp) {
   check('reflow: text in a 90vh overflow:hidden shell is not lost because of a shorter viewport alone', !lost.includes('shell-note')
     && recs.every((x) => x.lost_height === 780), recs.map((x) => x.lost_height));
   const first = JSON.parse(fs.readFileSync(path.join(outDir, 'R-reflow', run.snapshots[0].path), 'utf8'));
+  const clippedControl = (id) => first.elements.find((e) => e.dom_id === id);
+  check('clipping: button and link labels retain clipping evidence',
+    ['clipped-button', 'clipped-link'].every((id) => clippedControl(id)?.interactive
+      && clippedControl(id)?.clipped?.x === true && clippedControl(id)?.clipped?.act === 'failed'));
+  check('clipping: a readable button remains clean and ellipsis remains an exception',
+    !clippedControl('clean-button')?.clipped && clippedControl('ellipsis-button')?.clipped?.ellipsis === true
+      && clippedControl('ellipsis-button')?.clipped?.act === 'passed');
+  check('clipping: overflowing decoration does not clip the readable control label',
+    !!clippedControl('decorated-button') && !clippedControl('decorated-button').clipped);
+  check('clipping: a tagged child label is not also counted through its readable parent text',
+    !clippedControl('child-label-button')?.clipped && clippedControl('tagged-label')?.clipped?.x === true);
   const chip = first.elements.find((e) => e.dom_id === 'chip-t');
   check('LY-01 data: text cut by a clipping ancestor records the ancestor', !!chip && chip.clipped && chip.clipped.x === true && chip.clipped.by === '#chip-l',
     chip && chip.clipped);
+  const scaledClean = clippedControl('scaled-clean');
+  check('LY-01 data: a scaled control is measured on screen (a fitting label is clean, a long one is cut)',
+    !!scaledClean && !scaledClean.clipped && clippedControl('scaled-cut')?.clipped?.x === true,
+    [scaledClean && scaledClean.clipped, clippedControl('scaled-cut')?.clipped]);
+  check('LY-03 data: transparent sizing text never collides; gradient text drawn over text does',
+    !clippedControl('mirror-label')?.text_overlap && !clippedControl('ink-label')?.text_overlap
+      && clippedControl('gradient-b')?.text_overlap?.with === '#gradient-a' && !clippedControl('gradient-a')?.glyph_cover,
+    ['mirror-label', 'ink-label', 'gradient-a', 'gradient-b'].map((id) => [id, clippedControl(id)?.text_overlap, clippedControl(id)?.glyph_cover]));
+  check('LY-02 data: text that paints nothing is marked so box sampling skips it',
+    clippedControl('mirror-label')?.ink === false && clippedControl('ink-label')?.ink === undefined,
+    [clippedControl('mirror-label')?.ink, clippedControl('ink-label')?.ink]);
+  const spanCut = clippedControl('span-cut');
+  check('LY-01 data: a control reports a cut label that sits in a span; a fitting one stays clean',
+    spanCut?.clipped?.x === true && spanCut.clipped.by === null && typeof spanCut.clipped.label === 'string'
+      && !!clippedControl('span-clean') && !clippedControl('span-clean').clipped,
+    [spanCut && spanCut.clipped, clippedControl('span-clean')?.clipped]);
+  check('LY-03 data: text drawn over a control label that sits in a span collides',
+    clippedControl('span-over')?.text_overlap?.with === '#span-link', clippedControl('span-over')?.text_overlap);
+  const rec = clippedControl;
+  check('LY-01 data: a control with direct text still reports a cut span label; a hidden 1 px helper is not a cut',
+    rec('mixed-cut')?.clipped?.x === true && typeof rec('mixed-cut').clipped.label === 'string'
+      && !!rec('helper-link') && !rec('helper-link').clipped,
+    [rec('mixed-cut')?.clipped, rec('helper-link')?.clipped]);
+  check('LY-01 data: a fallback symbol font and a display: contents label are still measured',
+    rec('stack-cut')?.clipped?.x === true && rec('contents-cut')?.clipped?.x === true,
+    [rec('stack-cut')?.clipped, rec('contents-cut')?.clipped]);
+  check('LY-01 data: a nested tabindex control owns its cut label; the outer link does not',
+    rec('inner-tab')?.clipped?.x === true && !!rec('outer-link') && !rec('outer-link').clipped,
+    [rec('inner-tab')?.clipped, rec('outer-link')?.clipped]);
+  check('LY-02 data: a control whose only text paints nothing is marked', rec('ghost-btn')?.ink === false, rec('ghost-btn')?.ink);
 }
 
 async function reflowCopyTest(base, tmp) {
@@ -1719,6 +1760,20 @@ async function dialogTest(base, tmp) {
     ctl('#chip-hot') && ctl('#chip-hot').control === false && ctl('#chip-hot').contains_control === false && ctl('#chip-hot').ancestor_ids.includes('chips')
     && ctl('#chip-ok-t') && ctl('#chip-ok-t').control === true && ctl('#open-bad').control === true,
     { hot: ctl('#chip-hot'), ok: ctl('#chip-ok-t') });
+  const initialControls = (snaps[0]?.elements || []).filter((e) => e.interactive);
+  const rowButtons = initialControls.filter((e) => /^회원 [0-5] (편집|삭제)$/.test(String(e.text || '')));
+  const rowScopes = new Map();
+  for (const item of rowButtons) rowScopes.set(item.sibling_scope_id, (rowScopes.get(item.sibling_scope_id) || 0) + 1);
+  check('choice scope: six anonymous rows keep two actions per measured sibling scope',
+    rowButtons.length === 12 && rowScopes.size === 6 && [...rowScopes.values()].every((count) => count === 2)
+      && rowButtons.every((e) => e.visible && e.enabled && e.in_viewport && e.sibling_scope_status === 'measured')
+      && [...rowScopes.keys()].every((scope) => typeof scope === 'string' && scope.length > 0),
+    { buttons: rowButtons.length, scopes: [...rowScopes] });
+  const options = initialControls.filter((e) => /^결제수단 [0-9]$/.test(String(e.text || '')));
+  check('choice scope: ten wrapped options share a boundary despite hidden, inert and disabled auxiliary controls',
+    options.length === 10 && options.every((e) => e.visible && e.enabled && e.in_viewport
+      && e.sibling_scope_status === 'measured' && e.sibling_scope_id === '#scope-options'),
+    options.map((e) => ({ text: e.text, scope: e.sibling_scope_id, status: e.sibling_scope_status })));
 }
 
 function runReader(args, { reader = path.join(HERE, 'read_page.mjs'), env = process.env } = {}) {
@@ -2030,6 +2085,411 @@ async function connectTest(base, tmp) {
     for (const client of clients) if (client.child.exitCode === null && client.child.signalCode === null) client.child.kill('SIGKILL');
     await Promise.all(clients.map((client) => client.exited));
   }
+}
+
+function privateIdrefsTest() {
+  const secret = 'PRIVATE-IDREF-73196';
+  const session = Object.create(WebSession.prototype);
+  Object.assign(session, { privateValues: new Set([secret]), privateLocators: new Map(), warned: new Set(), warnings: [] });
+  const record = {
+    run_id: 'R-idrefs', scenario_id: 'SC-idrefs', profile_id: 'EP-idrefs',
+    snapshot: { snapshot_id: 'S-idrefs', step_index: 1, surface: { kind: 'web' },
+      focus: { dom_id: 'trigger', expanded: true, controls: [secret, 'public-control'], on_body: false },
+      layers: [{ dom_id: secret, selector: '#owned-panel', kind: 'dialog', contains_focus: false, box: { x: 0, y: 0, w: 300, h: 300 } }],
+      elements: [
+        { id: 'field', tag: 'input', name: 'Email', visible: true, box: { x: 0, y: 0, w: 80, h: 20 },
+          a11y: { name_source: 'label', invalid: true, described_by: [secret, 'public-help'], error_message: secret } },
+        { id: 'error', dom_id: secret, text: 'Please try again.', roles: ['error_message'], visible: true,
+          box: { x: 0, y: 700, w: 200, h: 40 } },
+      ] },
+    inspection: { fields: [{ dom_id: 'field', aria_describedby: `${secret}  public-help`, aria_errormessage: `public-error\t${secret}`,
+      described_by: [{ id: secret, text: 'Owned description', exists: true }, { id: 'public-help', text: 'Help', exists: true }],
+      error_messages: [{ id: secret, text: 'Owned error', exists: true }] }] },
+  };
+  const safe = session.redactRecord(record);
+  const alias = safe.snapshot.layers[0].dom_id;
+  const refs = safe.inspection.fields[0];
+  check('analysis IDREF privacy: controls, a11y and inspection references share the DOM ID alias',
+    alias !== secret && safe.snapshot.focus.controls[0] === alias
+    && safe.snapshot.elements[0].a11y.described_by[0] === alias && safe.snapshot.elements[0].a11y.error_message === alias
+    && safe.snapshot.elements[1].dom_id === alias && refs.described_by[0].id === alias && refs.error_messages[0].id === alias
+    && refs.aria_describedby === `${alias}  public-help` && refs.aria_errormessage === `public-error\t${alias}`
+    && !JSON.stringify(safe).includes(secret));
+  const structural = { run_id: secret, scenario_id: secret, profile_id: secret, snapshot_id: secret,
+    elements: [{ id: secret }], other: { id: secret } };
+  check('analysis IDREF privacy: structural IDs and public references stay unchanged; redaction is idempotent',
+    JSON.stringify(session.redactRecord(structural)) === JSON.stringify(structural)
+    && safe.snapshot.focus.controls[1] === 'public-control' && refs.described_by[1].id === 'public-help'
+    && JSON.stringify(session.redactRecord(safe)) === JSON.stringify(safe));
+  const py = spawnSync(process.env.ERGOQA_PYTHON || 'python3', ['-c', [
+    'import copy, json, sys',
+    'from ergoqa.checks import Context, check_focus_management, check_semantics',
+    'docs = json.load(sys.stdin)',
+    'def findings(doc):',
+    '    ctx = Context(run={"run_id": doc["run_id"]}, snapshot=doc["snapshot"], previous={"layers": []}, step={"action": {"action": "tap"}}, profile={"profile_id": doc["profile_id"]}, device=None, scenario=None)',
+    '    return {o.check_id for o in check_focus_management(ctx) + check_semantics(ctx)} & {"FM-02", "SM-04"}',
+    'for doc in docs:',
+    '    assert not findings(doc)',
+    '    for field in ("described_by", "error_message"):',
+    '        one = copy.deepcopy(doc); one["snapshot"]["elements"][0]["a11y"].pop(field)',
+    '        assert not findings(one), field',
+    '    broken = copy.deepcopy(doc); broken["snapshot"]["focus"]["controls"] = []',
+    '    broken["snapshot"]["elements"][0]["a11y"].update(described_by=[], error_message=None)',
+    '    assert findings(broken) == {"FM-02", "SM-04"}',
+    'print("FM-02/SM-04 relations preserved; broken-reference controls detected")',
+  ].join('\n')], { cwd: REPO, input: JSON.stringify([record, safe]), encoding: 'utf8' });
+  check('analysis IDREF privacy: Python FM-02/SM-04 retain both valid associations without false positives',
+    py.status === 0, py.stderr || py.stdout);
+}
+
+async function analyzeTest(base, tmp) {
+  privateIdrefsTest();
+  const python = process.env.ERGOQA_PYTHON || 'python3';
+  const script = path.join(REPO, 'scripts', 'ergo_qa.py');
+  const outDir = path.join(tmp, 'analysis runs'); // spaces stay inside argv entries
+  const source = path.join(tmp, 'analysis-source.json');
+  const profilePath = path.join(tmp, 'analysis-profile.json');
+  const p = profile('EP-ANALYZE', 'galaxy-s24');
+  const sentinel = 'ANALYZE-PRIVATE-INPUT-28491';
+  const extras = 'ANALYZE-PRIVATE-EXTRA-39184';
+  const privateLocator = `#summary:not([data-token="${sentinel}"])`;
+  const sc = { schema_version: 'ergo-scenario.v1', scenario_id: 'SC-analysis',
+    surface: { kind: 'web', url: `${base}/task-integrity.html` }, task_goal_ko: 'Preserve the owned input.',
+    device_ids: ['galaxy-s24'], targets: { primary: ['#copy'], status: ['#summary', privateLocator] },
+    steps: [{ action: 'type', target: '#memo', text: sentinel, redact: true, delay_ms: 0 }, { action: 'tap', target: `#copy:not([data-token="${sentinel}"])` }],
+    timing_windows: [{ id: 'summary', selector: privateLocator, measure: 'visible_duration', kind: 'transient_text', text: 'owned timing text', has_action: true }],
+    private_extras: { value: extras },
+    success: { selector_visible: '#summary', task_checks: [
+      { id: 'retained', selector: '#summary', property: 'text', from_step: 1, after_step: 2, severity: 'P2', consequence: 'The owned input must survive.' },
+      { id: 'private-choice', selector: '#choice', property: 'value', expected: 'CHOICE-PRIVATE-51983', redact: true,
+        after_step: 2, severity: 'P2', consequence: 'The owned choice must survive.' },
+    ] } };
+  const restoreSources = () => { writeJson(source, sc); writeJson(profilePath, p); };
+  restoreSources();
+  const noPrivate = (value) => [sentinel, extras, 'CHOICE-PRIVATE-51983', 'EXPECTED-PRIVATE-UNMATCHED-92184'].every((s) => !value.includes(s));
+  const privateFiles = (dir) => fs.readdirSync(dir, { withFileTypes: true }).every((entry) => {
+    const file = path.join(dir, entry.name);
+    return entry.isDirectory() ? privateFiles(file) : noPrivate(fs.readFileSync(file).toString('utf8'));
+  });
+  const { pw, info } = loadPlaywright();
+  const { scenario: normalized } = normalizeScenario(sc, { requireSteps: true });
+  const dir = path.join(outDir, 'R-analysis-once');
+  fs.mkdirSync(dir, { recursive: true });
+  const timingWindowActions = { summary: true };
+  const session = new WebSession({ pw, pwInfo: info, scenario: normalized, profile: p, profileId: p.profile_id,
+    timingWindowActions,
+    runDir: dir, runId: 'R-analysis-once', deviceRequest: { id: 'galaxy-s24' }, mode: 'scripted', warnings: [],
+    options: { analyze: { python, script }, headed: false, settleMs: 0, feedbackTimeoutMs: 0, focusWalk: false, reflow: false,
+      visualFeedback: false, locale: 'ko-KR', timezoneId: 'Asia/Seoul' } });
+  const frozenScenario = fs.readFileSync(session.analysisInputs.scenario, 'utf8');
+  const frozenProfiles = fs.readFileSync(session.analysisInputs.profiles, 'utf8');
+  const context = JSON.parse(frozenScenario);
+  normalizeScenario(context, { requireSteps: false });
+  check('analysis: startup context is valid, preserves identity/roles/timing and omits private task inputs',
+    context.scenario_id === sc.scenario_id && JSON.stringify(context.targets.primary) === JSON.stringify(sc.targets.primary)
+    && context.targets.status[0] === '#summary' && context.targets.status[1] !== privateLocator
+    && context.timing_windows[0].selector === context.targets.status[1]
+    && JSON.stringify(context.timing_windows) === JSON.stringify(sc.timing_windows.map(({ id, selector, measure, kind, has_action }) =>
+      ({ id, selector: context.targets.status[1], measure, kind, has_action }))) && context.steps.length === 0
+    && context.success === null && !('private_extras' in context) && noPrivate(frozenScenario));
+  check('analysis: complete profile provenance is frozen', JSON.stringify(JSON.parse(frozenProfiles)) === JSON.stringify([p]));
+  const validContext = spawnSync(python, ['-c',
+    'import json, sys; from ergoqa.snapshot import validate_scenario; errors = validate_scenario(json.load(open(sys.argv[1]))); print(errors); sys.exit(bool(errors))',
+    session.analysisInputs.scenario], { cwd: REPO, encoding: 'utf8' });
+  check('analysis: Python accepts the sanitized scenario context', validContext.status === 0, validContext.stdout + validContext.stderr);
+  let attempts = 0;
+  const analyze = session.runAnalysis.bind(session);
+  session.runAnalysis = async () => {
+    attempts++;
+    check('analysis: analyzer starts after run.json is written and the browser context closes',
+      fs.existsSync(path.join(dir, 'run.json')) && session.page.isClosed());
+    check('analysis: browser finish reserves analysis and recording time inside the shared budget',
+      session.finishDeadline - session.finishBrowserDeadline === 35000);
+    session.finishDeadline = Date.now() + 20000;
+    const result = await analyze();
+    check('analysis: analyzer timeout is capped by the remaining finish budget', result.timeout_ms > 0 && result.timeout_ms <= 20000);
+    return result;
+  };
+  try {
+    await session.start();
+    timingWindowActions.summary = false;
+    writeJson(source, { ...sc, scenario_id: 'SC-edited-during-run', timing_windows: [] });
+    writeJson(profilePath, { ...p, profile_id: 'EP-edited-during-run' });
+    const changedSource = fs.readFileSync(source, 'utf8');
+    const changedProfile = fs.readFileSync(profilePath, 'utf8');
+    for (const action of normalized.steps) await session.act(action);
+    const [first, second] = await Promise.all([session.finish(), session.finish()]);
+    const third = await session.finish({ personaSuccess: false, reason: 'late duplicate finish' });
+    check('analysis: successful finish is memoized and invokes the existing analyzer once',
+      first === second && first === third && attempts === 1 && first.exitCode === 0
+      && first.status === 'completed' && first.success === true && first.analysis?.status === 'completed', first.analysis);
+    check('analysis: frozen inputs and edited original source files survive finish unchanged',
+      fs.readFileSync(session.analysisInputs.scenario, 'utf8') === frozenScenario
+      && fs.readFileSync(session.analysisInputs.profiles, 'utf8') === frozenProfiles
+      && fs.readFileSync(source, 'utf8') === changedSource && fs.readFileSync(profilePath, 'utf8') === changedProfile);
+    check('analysis: all generated files and finish receipt omit explicit private input, expectation and extra sentinels',
+      privateFiles(dir) && noPrivate(JSON.stringify(first)));
+    check('analysis: locator aliases preserve structural IDs and align the run with its analytical context',
+      first.run.run_id === 'R-analysis-once' && first.run.scenario_id === sc.scenario_id && first.run.profile_id === p.profile_id
+      && first.run.timing_windows[0].selector === context.targets.status[1]
+      && first.run.steps[1].action.target.startsWith('__ergo_private_locator_')
+      && first.run.warnings.some((w) => w.includes('cannot be replayed')));
+  } finally { await session.finish(); }
+  restoreSources();
+  const args = ['--scenario', source, '--profile', profilePath, '--out', outDir, '--analyze',
+    '--no-focus-walk', '--no-reflow', '--no-visual-feedback', '--feedback-timeout-ms', '0', '--settle-ms', '0'];
+  let r = await runDriver(['run', '--scenario', source, '--device', 'galaxy-s24', '--out', outDir, '--analyze']);
+  check('analysis usage: --analyze requires an explicit profile', r.code === 2 && /requires --profile/.test(r.err));
+  r = await runDriver(['run', '--scenario', source, '--profile', profilePath, '--out', outDir, '--python', python]);
+  check('analysis usage: --python requires --analyze', r.code === 2 && /requires --analyze/.test(r.err));
+  writeJson(profilePath, null);
+  r = await runDriver(['run', ...args, '--device', 'galaxy-s24', '--run-id', 'R-analysis-invalid-profile']);
+  check('analysis usage: a null profile cannot silently become a device-only run',
+    r.code === 2 && !fs.existsSync(path.join(outDir, 'R-analysis-invalid-profile')));
+  const fake = path.join(tmp, 'fake python');
+  for (const [name, interpreter, body, reason] of [
+    ['success', python, null, null],
+    ['product-failure', python, null, null],
+    ['missing', path.join(tmp, 'missing-python'), null, /cannot launch/],
+    ['empty', fake, 'process.exit(0);', /reports missing after exit 0/],
+    ['shape', fake, `const fs = require('node:fs'); const path = require('node:path');
+      const out = process.argv[process.argv.indexOf('--out') + 1]; fs.mkdirSync(out, { recursive: true });
+      fs.writeFileSync(path.join(out, 'analyses.json'), '{"analyses":[]}');
+      fs.writeFileSync(path.join(out, 'findings.json'), '{}'); fs.writeFileSync(path.join(out, 'report.md'), '# Fake report');`, /report shape is invalid/],
+    ['signal', fake, "process.kill(process.pid, 'SIGTERM');", /terminated by signal SIGTERM/],
+    ['timeout', fake, 'setInterval(() => {}, 1000);', /exceeded 30s/],
+  ]) {
+    restoreSources();
+    const measuredSuccess = name !== 'product-failure';
+    if (!measuredSuccess) {
+      const mismatch = structuredClone(sc);
+      delete mismatch.success.task_checks[0].from_step;
+      Object.assign(mismatch.success.task_checks[0], { expected: 'EXPECTED-PRIVATE-UNMATCHED-92184', redact: true });
+      writeJson(source, mismatch);
+    }
+    if (body) fs.writeFileSync(fake, `#!${process.execPath}\n${body}\n`, { mode: 0o700 });
+    r = await runDriver(['run', ...args, '--run-id', `R-analysis-${name}`, '--python', interpreter]);
+    const fin = r.lines.find((line) => line.event === 'finished');
+    check(`analysis CLI ${name}: receipt and real exit retain the measured product result`,
+      r.code === (reason ? 4 : measuredSuccess ? 0 : 3) && fin?.exit_code === r.code && fin.status === 'completed' && fin.success === measuredSuccess
+      && fin.analysis?.status === (reason ? 'failed' : 'completed') && (!reason || reason.test(fin.analysis.error)), r);
+    if (name === 'signal' || name === 'timeout') check(`analysis CLI ${name}: timeout and other signals stay distinct`,
+      fin?.analysis?.timed_out === (name === 'timeout') && fin?.analysis?.signal === (name === 'timeout' ? 'SIGKILL' : 'SIGTERM')
+      && fin?.analysis?.timeout_ms === 30000);
+    check(`analysis CLI ${name}: generated files and stdout receipt are private`,
+      privateFiles(path.join(outDir, `R-analysis-${name}`)) && noPrivate(r.out + r.err));
+  }
+  const agent = path.join(tmp, 'analysis-agent.json');
+  writeJson(agent, { model_family: 'selftest', input_channel: 'screenshot' });
+  for (const name of ['success', 'missing', 'preexisting']) {
+    let resolveReady;
+    const readyP = new Promise((resolve) => { resolveReady = resolve; });
+    const proc = runDriver(['serve', ...args, '--run-id', `R-analysis-http-${name}`, '--agent-json', agent, '--port', '0',
+      ...(name === 'missing' ? ['--python', path.join(tmp, 'missing-python')] : [])], {
+      env: { ...process.env, ERGOQA_PYTHON: python }, onLine: (line) => { if (line.event === 'ready') resolveReady(line); },
+    });
+    proc.then(() => resolveReady(null));
+    const ready = await readyP;
+    if (!check(`analysis HTTP ${name}: session starts`, !!ready)) { console.log((await proc).err); continue; }
+    const active = [ready, (await request(ready.port, 'GET', '/snapshot')).json];
+    for (const action of sc.steps) active.push((await request(ready.port, 'POST', '/act', { body: action })).json);
+    check(`analysis HTTP ${name}: active screenshot channel carries no analysis or DOM fields`, active.every((reply) => reply
+      && ['analysis', 'snapshot', 'elements', 'target_element_id', 'target_hit', 'feedback_latency_ms', 'feedback_source'].every((key) => !(key in reply))));
+    const stale = path.join(ready.run_dir, 'swarm');
+    if (name === 'preexisting') fs.mkdirSync(stale);
+    const fin = await request(ready.port, 'POST', '/finish', { body: { success: false } });
+    const done = await proc;
+    const stdout = done.lines.find((line) => line.event === 'finished');
+    check(`analysis HTTP ${name}: /finish and stdout agree on post-finish reports and real exit`,
+      fin.status === 200 && fin.json?.status === 'completed' && fin.json.success === true
+      && fin.json.exit_code === (name === 'success' ? 0 : 4) && done.code === fin.json.exit_code
+      && fin.json.analysis?.status === (name === 'success' ? 'completed' : 'failed')
+      && JSON.stringify(fin.json.analysis) === JSON.stringify(stdout?.analysis), { fin, done });
+    if (name === 'preexisting') check('analysis: preexisting output directory is rejected and preserved',
+      /already exists/.test(fin.json.analysis.error) && fs.readdirSync(stale).length === 0);
+    check(`analysis HTTP ${name}: all generated files and replies omit private sentinels`,
+      privateFiles(ready.run_dir) && noPrivate(JSON.stringify(active) + fin.text + done.out + done.err));
+  }
+  await analyzeTimingTest(base, tmp);
+  await analyzePrivacyBudgetTest(base, tmp);
+}
+
+async function analyzeTimingTest(base, tmp) {
+  const python = process.env.ERGOQA_PYTHON || 'python3';
+  const script = path.join(REPO, 'scripts', 'ergo_qa.py');
+  const source = path.join(tmp, 'analysis-timing-source.json');
+  const profilePath = path.join(tmp, 'analysis-timing-profile.json');
+  const outDir = path.join(tmp, 'timing-analysis-runs');
+  const publicText = 'An owned public timed message with an action that must remain available.';
+  const windowSelector = '#summary:has(~ label #option:not(:checked))';
+  const sc = { schema_version: 'ergo-scenario.v1', scenario_id: 'SC-analysis-timing',
+    surface: { kind: 'web', url: `${base}/task-integrity.html` }, task_goal_ko: 'Check the owned timed message.',
+    device_ids: ['galaxy-s24'], targets: {},
+    steps: [{ action: 'tap', target: '#option' }, { action: 'wait', ms: 200 }],
+    timing_windows: [
+      { id: 'action-message', selector: windowSelector, measure: 'visible_duration', kind: 'transient_text', text: publicText, has_action: true },
+      { id: 'notice', selector: windowSelector, measure: 'visible_duration', kind: 'transient_text', text: publicText, has_action: false },
+    ], success: { selector_visible: '#summary' } };
+  writeJson(source, sc);
+  writeJson(profilePath, profile('EP-ANALYZE-TIMING', 'galaxy-s24'));
+  const args = ['--scenario', source, '--profile', profilePath, '--out', outDir, '--analyze', '--python', python,
+    '--no-focus-walk', '--no-reflow', '--no-visual-feedback', '--feedback-timeout-ms', '0', '--settle-ms', '0'];
+  const scripted = await runDriver(['run', ...args, '--run-id', 'R-public-timing']);
+  const finished = scripted.lines.find((line) => line.event === 'finished');
+  if (!check('analysis timing: public run completes analysis', scripted.code === 0 && finished?.analysis?.status === 'completed', scripted)) return;
+  const dir = path.join(outDir, 'R-public-timing');
+  const context = JSON.parse(fs.readFileSync(path.join(dir, 'analyze-scenario.json'), 'utf8'));
+  check('analysis timing: raw authored true and false survive startup while timing text is omitted',
+    context.timing_windows[0].has_action === true && context.timing_windows[1].has_action === false
+    && context.timing_windows.every((w) => !('text' in w)));
+  const manualDir = path.join(tmp, 'timing-manual-swarm');
+  const manual = spawnSync(python, [script, 'swarm', '--runs', dir,
+    '--profiles', path.join(dir, 'analyze-profiles.json'), '--scenario', source, '--out', manualDir],
+    { encoding: 'utf8', timeout: 30000 });
+  if (check('analysis timing: existing manual swarm completes on the same public recording', manual.status === 0, manual.stderr)) {
+    const automaticRows = JSON.parse(fs.readFileSync(finished.analysis.reports.analyses, 'utf8')).analyses[0].observations
+      .filter((o) => o.check_id === 'CG-02');
+    const manualRows = JSON.parse(fs.readFileSync(path.join(manualDir, 'analyses.json'), 'utf8')).analyses[0].observations
+      .filter((o) => o.check_id === 'CG-02');
+    check('analysis timing: public CG-02 output matches manual swarm, including text and action semantics',
+      automaticRows.length === 2 && JSON.stringify(automaticRows) === JSON.stringify(manualRows)
+      && automaticRows.every((o) => o.measurement.chars === publicText.length)
+      && automaticRows.some((o) => o.measurement.has_action === true && o.severity === 'P1')
+      && automaticRows.some((o) => o.measurement.has_action === false && o.severity === 'P2'), automaticRows);
+  }
+
+  const sentinel = 'ANALYZE-LATE-PRIVATE-TIMING-62518';
+  writeJson(source, { ...sc, scenario_id: 'SC-analysis-late-private', steps: [],
+    timing_windows: [{ ...sc.timing_windows[0], text: sentinel }] });
+  const agent = path.join(tmp, 'analysis-timing-agent.json');
+  writeJson(agent, { model_family: 'selftest', input_channel: 'screenshot' });
+  let resolveReady;
+  const readyP = new Promise((resolve) => { resolveReady = resolve; });
+  const proc = runDriver(['serve', ...args, '--run-id', 'R-late-private-timing', '--agent-json', agent, '--port', '0'], {
+    onLine: (line) => { if (line.event === 'ready') resolveReady(line); },
+  });
+  proc.then(() => resolveReady(null));
+  const ready = await readyP;
+  if (!check('analysis timing privacy: interactive session starts without any authored private input', !!ready)) { console.log((await proc).err); return; }
+  const filesArePrivate = () => fs.readdirSync(ready.run_dir, { recursive: true }).every((name) => {
+    const file = path.join(ready.run_dir, name);
+    return !fs.statSync(file).isFile() || !fs.readFileSync(file).includes(Buffer.from(sentinel));
+  });
+  check('analysis timing privacy: startup files omit text before the input is marked private', filesArePrivate());
+  const typed = await request(ready.port, 'POST', '/act', { body: { action: 'type', target: '#memo', text: sentinel, redact: true, delay_ms: 0 } });
+  const tapped = await request(ready.port, 'POST', '/act', { body: sc.steps[0] });
+  const waited = await request(ready.port, 'POST', '/act', { body: sc.steps[1] });
+  const fin = await request(ready.port, 'POST', '/finish', { body: { success: true } });
+  const done = await proc;
+  check('analysis timing privacy: analysis still completes after interactive redaction',
+    typed.json?.result === 'ok' && tapped.json?.result === 'ok' && waited.json?.result === 'ok'
+    && fin.status === 200 && fin.json?.analysis?.status === 'completed' && done.code === 0, { fin, done });
+  const recorded = JSON.parse(fs.readFileSync(path.join(ready.run_dir, 'run.json'), 'utf8'));
+  check('analysis timing privacy: finished run supplies redacted timing text to the analyzer',
+    recorded.timing_windows[0].text === '[redacted]' && recorded.steps[0].action.text === '[redacted]');
+  const privateRows = fin.json?.analysis?.status === 'completed'
+    ? JSON.parse(fs.readFileSync(fin.json.analysis.reports.analyses, 'utf8')).analyses[0].observations.filter((o) => o.check_id === 'CG-02') : [];
+  check('analysis timing privacy: CG-02 uses the redacted run text and preserves the authored action',
+    privateRows.length === 1 && privateRows[0].measurement.chars === '[redacted]'.length
+    && privateRows[0].measurement.has_action === true && privateRows[0].severity === 'P1', privateRows);
+  check('analysis timing privacy: every generated file and reply omits the later-private value',
+    filesArePrivate() && ![JSON.stringify(ready), typed.text, tapped.text, waited.text, fin.text, done.out, done.err].join('').includes(sentinel));
+}
+
+async function analyzePrivacyBudgetTest(base, tmp) {
+  const { pw, info } = loadPlaywright();
+  const python = process.env.ERGOQA_PYTHON || 'python3';
+  const script = path.join(REPO, 'scripts', 'ergo_qa.py');
+  const p = profile('EP-ANALYZE-SAFETY', 'galaxy-s24');
+  const sc = { schema_version: 'ergo-scenario.v1', scenario_id: 'SC-analysis-safety',
+    surface: { kind: 'web', url: `${base}/task-integrity.html` }, task_goal_ko: 'Check owned recorded evidence.',
+    device_ids: ['galaxy-s24'], targets: {}, steps: [], success: { selector_visible: '#memo' } };
+  const make = (runId, source, options = {}) => {
+    const runDir = path.join(tmp, 'analysis-safety', runId);
+    fs.mkdirSync(runDir, { recursive: true });
+    return new WebSession({ pw, pwInfo: info, scenario: normalizeScenario(source, { requireSteps: false }).scenario,
+      profile: p, profileId: p.profile_id, runId, runDir, deviceRequest: { id: 'galaxy-s24' }, mode: 'interactive', warnings: [],
+      options: { analyze: { python, script }, headed: false, settleMs: 0, feedbackTimeoutMs: 0, focusWalk: false, reflow: false,
+        visualFeedback: false, locale: 'ko-KR', timezoneId: 'Asia/Seoul', ...options } });
+  };
+  const sentinel = 'LATE-LOCATOR-SENTINEL-47361';
+  const selector = `#${sentinel}`;
+  const session = make('R-private-locators', { ...sc, targets: { status: [selector] },
+    timing_windows: [{ id: 'owned-window', selector, measure: 'visible_duration', kind: 'transient_text' }] });
+  const frozen = session.analysisContext;
+  try {
+    await session.start();
+    await session.page.locator('#unrelated').evaluate((el, id) => { el.id = id; }, sentinel);
+    const before = await session.snapshot(0, []);
+    const beforeElement = before.snap.elements.find((e) => e.selector === selector);
+    const inspected = await session.inspect();
+    check('analysis locator privacy: earlier owned snapshot and inspection contain the not-yet-private locator',
+      !!beforeElement && fs.readFileSync(before.jsonPath, 'utf8').includes(sentinel)
+      && fs.readFileSync(inspected.inspection, 'utf8').includes(sentinel));
+    const action = await session.act({ action: 'type', target: '#memo', text: sentinel, redact: true, delay_ms: 0 });
+    const fin = await session.finish();
+    check('analysis locator privacy: late-private locators retain a working analysis', fin.exitCode === 0 && fin.analysis?.status === 'completed', fin.analysis);
+    const context = JSON.parse(fs.readFileSync(session.analysisInputs.scenario, 'utf8'));
+    const saved = JSON.parse(fs.readFileSync(before.jsonPath, 'utf8'));
+    const alias = context.targets.status[0];
+    check('analysis locator privacy: context, old snapshot, inspection and run use the same safe binding',
+      alias !== selector && context.timing_windows[0].selector === alias && fin.run.timing_windows[0].selector === alias
+      && saved.elements.find((e) => e.id === beforeElement?.id)?.selector === alias
+      && JSON.parse(fs.readFileSync(inspected.inspection, 'utf8')).fields.some((field) => field.selector === alias)
+      && (fs.statSync(inspected.inspection).mode & 0o777) === 0o600);
+    check('analysis locator privacy: immutable context and structural run/scenario/profile/capture IDs survive',
+      session.analysisContext === frozen && fin.run.run_id === session.runId && fin.run.scenario_id === sc.scenario_id
+      && fin.run.profile_id === p.profile_id && saved.snapshot_id === before.id && saved.run_id === session.runId);
+    const safeFiles = fs.readdirSync(session.runDir, { recursive: true }).every((name) => {
+      const file = path.join(session.runDir, name);
+      return !fs.statSync(file).isFile() || !fs.readFileSync(file).includes(Buffer.from(sentinel));
+    });
+    check('analysis locator privacy: every generated file and post-redaction result omits the sentinel',
+      safeFiles && !JSON.stringify({ action, fin }).includes(sentinel));
+    const savedValues = session.privateValues;
+    session.privateValues = new Set(['a']);
+    const ids = session.redactRecord({ run_id: 'a', scenario_id: 'a', profile_id: 'a', snapshot_id: 'a', id: 'a', selector: '#a' });
+    session.privateValues = savedValues;
+    check('analysis locator privacy: short private values never rewrite structural IDs',
+      ids.run_id === 'a' && ids.scenario_id === 'a' && ids.profile_id === 'a' && ids.snapshot_id === 'a' && ids.id === 'a' && ids.selector !== '#a');
+  } finally { await session.finish(); }
+
+  const marker = path.join(tmp, 'spent-budget-analyzer-started');
+  const fake = path.join(tmp, 'spent-budget-python');
+  fs.writeFileSync(fake, `#!${process.execPath}\nrequire('node:fs').writeFileSync(${JSON.stringify(marker)}, 'started');\n`, { mode: 0o700 });
+  const budget = make('R-spent-finish-budget', sc, { focusWalk: true, reflow: true, analyze: { python: fake, script } });
+  let probeSettled = false;
+  let probeCancelled = false;
+  let otherProbes = 0;
+  try {
+    await budget.start();
+    const walk = budget.boundedWalk.bind(budget);
+    budget.boundedWalk = (fn, phase) => {
+      if (phase === 'end') budget.finishBrowserDeadline = Date.now() + 50;
+      return walk(fn, phase);
+    };
+    budget.focusWalk = async () => {
+      try { await budget.page.waitForTimeout(5000); }
+      finally {
+        probeCancelled = budget.page.isClosed();
+        probeSettled = true;
+        budget.finishDeadline = 0; // simulate the remaining shared budget being spent
+      }
+    };
+    budget.focusWalkFresh = budget.adaptationPass = budget.reflowPass = async () => { otherProbes++; };
+    const [fin, again] = await Promise.all([budget.finish(), budget.finish()]);
+    check('analysis finish budget: cancelled browser work is awaited and later optional probes are skipped',
+      probeCancelled && probeSettled && otherProbes === 0 && fin === again && budget.finishProbesStopped === true);
+    check('analysis finish budget: exhaustion fails analysis without spawning or changing measured product truth',
+      fin.exitCode === 4 && fin.status === 'completed' && fin.success === true && fin.run.success_basis === 'measured'
+      && fin.analysis?.status === 'failed' && fin.analysis.timeout_ms === 0 && fin.analysis.timed_out === true
+      && /budget exhausted before analysis/.test(fin.analysis.error) && !fs.existsSync(marker)
+      && !fs.existsSync(fin.analysis.report_dir), fin.analysis);
+    check('analysis finish budget: skipped coverage is recorded explicitly',
+      fin.run.warnings.some((w) => /focus walk.*budget/.test(w))
+      && fin.run.warnings.some((w) => /adaptation pass skipped.*budget/.test(w))
+      && fin.run.warnings.some((w) => /reflow pass skipped.*budget/.test(w)));
+  } finally { await budget.finish(); }
 }
 
 async function taskIntegrityTest(base, tmp) {
@@ -2441,7 +2901,7 @@ async function typographyTest(base, tmp) {
 async function main() {
   const keep = process.argv.includes('--keep');
   // --only a,b: run just these groups (scripted, actions, layers, focus, focus2, feedback, native-feedback,
-  // read, reflow, reflow-copy, viewport, dialog, serve, tooling, exit, connect) while iterating on one part.
+  // read, reflow, reflow-copy, viewport, dialog, serve, tooling, exit, connect, analyze) while iterating on one part.
   const oi = process.argv.indexOf('--only');
   const only = oi > 0 && process.argv[oi + 1] ? new Set(process.argv[oi + 1].split(',')) : null;
   const want = (g) => !only || only.has(g);
@@ -2455,6 +2915,7 @@ async function main() {
     writeJson(path.join(tmp, 'p-desk.json'), profile('EP-DESK', 'desktop-1920'));
     deviceTableTest();
     if (want('connect')) await connectTest(base, tmp);
+    if (want('analyze')) await analyzeTest(base, tmp);
     if (want('integrity')) await taskIntegrityTest(base, tmp);
     if (want('painted')) await paintedStateTest(base, tmp);
     if (want('gaze')) await gazeGeometryTest(tmp);

@@ -808,10 +808,6 @@ in `ablation-dev-8707b70.json`. "heldout-2" = the new blind suite being authored
 4. STF-10–STF-12 (agent sessions).
 5. STF-02 and STF-24, once adjudication and audience data exist.
 
-`COORDINATION.md` asks this branch to add new files only while the folders are
-being reorganised. The code changes above should land after the reorganisation
-commit.
-
 A minimal extension of the finding contract (`ergo-finding.v2`, sketch):
 
 ```json

@@ -76,7 +76,7 @@
       "driver_success": true,
       "task_assessment": "관찰한 과업 성공",
       "operator": {
-        "model": "GPT-6 (host identity; exact model id unavailable)",
+        "model": "host-reported model (exact model id unavailable)",
         "model_family": "openai",
         "effort": "host supplied; not exposed",
         "seed": 1,
@@ -109,7 +109,7 @@
       "driver_success": true,
       "task_assessment": "관찰한 과업 성공",
       "operator": {
-        "model": "GPT-6 (host identity; exact model id unavailable)",
+        "model": "host-reported model (exact model id unavailable)",
         "model_family": "openai",
         "effort": "host supplied; not exposed",
         "seed": 1,
@@ -142,7 +142,7 @@
       "driver_success": true,
       "task_assessment": "명시한 보충 과업만 완료",
       "operator": {
-        "model": "GPT-6 (host identity; exact model id unavailable)",
+        "model": "host-reported model (exact model id unavailable)",
         "model_family": "openai",
         "effort": "host supplied; not exposed",
         "seed": 1,
@@ -175,7 +175,7 @@
       "driver_success": true,
       "task_assessment": "요청 보존 실패; 결제 완료",
       "operator": {
-        "model": "GPT-6 (host identity; exact model id unavailable)",
+        "model": "host-reported model (exact model id unavailable)",
         "model_family": "openai",
         "effort": "host supplied; not exposed",
         "seed": 1,
@@ -208,7 +208,7 @@
       "driver_success": true,
       "task_assessment": "요청 재입력 대처 뒤 완료",
       "operator": {
-        "model": "GPT-6 (host identity; exact model id unavailable)",
+        "model": "host-reported model (exact model id unavailable)",
         "model_family": "openai",
         "effort": "host supplied; not exposed",
         "seed": 1,
@@ -241,7 +241,7 @@
       "driver_success": true,
       "task_assessment": "필수 부위 키보드 접근 실패",
       "operator": {
-        "model": "GPT-6 (host identity; exact model id unavailable)",
+        "model": "host-reported model (exact model id unavailable)",
         "model_family": "openai",
         "effort": "host supplied; not exposed",
         "seed": 1,
@@ -274,7 +274,7 @@
       "driver_success": true,
       "task_assessment": "명시한 보충 과업만 완료",
       "operator": {
-        "model": "GPT-6 (host identity; exact model id unavailable)",
+        "model": "host-reported model (exact model id unavailable)",
         "model_family": "openai",
         "effort": "host supplied; not exposed",
         "seed": 1,

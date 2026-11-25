@@ -1,10 +1,12 @@
 import copy
 import json
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-from loop_factory import ROOT, make_packet
+from loop_factory import ROOT, SKILL, make_packet, replace_artifact, write_json
 from scripts.validate_bundle import validate_bundle
 from uxloop.contracts import merge_packet, validate_packet
 from uxloop.io import ContractError, parse_json, safe_relative
@@ -79,6 +81,49 @@ class ContractTests(unittest.TestCase):
     def test_visual_pass_cannot_hide_side_accent_failure(self):
         self.packet['visual_checks'][1]['checks']['side_accents'] = 'failed'
         self.assertTrue(validate_packet(self.packet))
+
+    def test_figma_baseline_is_required_only_by_a_figma_first_policy(self):
+        self.packet['fixes'][0]['figma_id'] = None
+        self.assertTrue(any('Figma-first policy' in x for x in validate_packet(self.packet)))
+        self.packet['policy']['figma_first'] = False
+        self.assertEqual(validate_packet(self.packet), [])
+
+    def test_visual_pass_requires_all_six_semantic_checks(self):
+        for field in ('alignment', 'spacing', 'typography', 'text_clipping', 'component_occlusion', 'figma_fidelity'):
+            packet = copy.deepcopy(self.packet)
+            packet['visual_checks'][1]['checks'].pop(field)
+            self.assertTrue(validate_packet(packet), field)
+
+    def test_optional_pixel_tolerance_is_schema_validated(self):
+        check = self.packet['visual_checks'][1]
+        check['method'] = 'pixel_diff'
+        for tolerance in ({'channel_delta': 0, 'max_changed_fraction': 0},
+                          {'channel_delta': 64, 'max_changed_fraction': 0.1}):
+            check['tolerance'] = tolerance
+            self.assertEqual(validate_packet(self.packet), [])
+        for tolerance in (None, [], {}, {'channel_delta': 0}, {'channel_delta': True, 'max_changed_fraction': 0},
+                          {'channel_delta': 65, 'max_changed_fraction': 0},
+                          {'channel_delta': 0, 'max_changed_fraction': 0.11},
+                          {'channel_delta': 0, 'max_changed_fraction': float('inf')},
+                          {'channel_delta': 0, 'max_changed_fraction': 0, 'extra': True}):
+            check['tolerance'] = tolerance
+            self.assertTrue(validate_packet(self.packet), repr(tolerance))
+
+    def test_cli_validate_admits_optional_pixel_tolerance(self):
+        check = self.packet['visual_checks'][1]
+        check.update(method='pixel_diff', tolerance={'channel_delta': 12, 'max_changed_fraction': 0.01})
+        replace_artifact(self.packet, self.root, check['comparison_artifact_id'], lambda value: value.update(comparison=check))
+        write_json(self.root / 'packet.json', self.packet)
+        command = [sys.executable, str(SKILL / 'scripts/ux_loop.py'), 'validate', str(self.root / 'packet.json'),
+                   '--evidence-root', str(self.root)]
+        result = subprocess.run(command, capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertTrue(json.loads(result.stdout)['valid'])
+        check['tolerance']['channel_delta'] = 65
+        write_json(self.root / 'packet.json', self.packet)
+        result = subprocess.run(command, capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertFalse(json.loads(result.stdout)['valid'])
 
     def test_run_pass_cannot_hide_step_failure(self):
         self.packet['browser_runs'][1]['steps'][0]['outcome'] = 'failed'

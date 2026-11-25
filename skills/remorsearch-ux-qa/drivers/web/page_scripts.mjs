@@ -588,6 +588,15 @@ export function extractSnapshot(args) {
         }
       })(),
       described_by: ids('aria-describedby').slice(0, 8),
+      // A visible label is the primary affordance. Icon-only controls also need a
+      // discoverable hover/focus explanation; record native title or an associated
+      // role=tooltip when it is present in the captured state.
+      tooltip: (() => {
+        const title = (el.getAttribute('title') || '').trim();
+        if (title) return title.slice(0, 200);
+        return ids('aria-describedby').map((id) => byId(el, id)).filter((node) => node && node.getAttribute('role') === 'tooltip')
+          .map((node) => text(node)).filter(Boolean).join(' ').slice(0, 200);
+      })(),
       visible_label: tag === 'textarea' ? '' : visibleInnerText(el),
       // Hidden from assistive technology (aria-hidden or inert on it or an ancestor).
       hidden: !!(el.closest && (el.closest('[aria-hidden="true"]') || el.closest('[inert]'))),
@@ -600,9 +609,8 @@ export function extractSnapshot(args) {
       })(),
       // Visible text drawn by an icon font (ligatures such as "menu"): not a text label.
       icon_font: (() => {
-        const ICON = /icon|material|awesome|symbol|glyph|fontello|ionicon|bootstrap-icons/i;
         const nodes = [el, ...el.querySelectorAll('span, i, em')].slice(0, 6);
-        return nodes.some((n) => n.textContent && n.textContent.trim() && ICON.test(style(n).fontFamily || ''));
+        return nodes.some((n) => n.textContent && n.textContent.trim() && iconFont(style(n).fontFamily));
       })(),
       error_message: ids('aria-errormessage')[0] || null,
       required: el.required === true || el.getAttribute('aria-required') === 'true',
@@ -611,32 +619,160 @@ export function extractSnapshot(args) {
     };
   };
   // Text cut off by its own box (XCTest textClipped; WCAG 1.4.4/1.4.12 symptoms).
-  const clippedOf = (el, cs) => {
+  // Glyph boxes of the text an element owns. A block's box and its text differ: a
+  // nowrap line can run past the edge of a block that itself stays inside its column.
+  const ownTextRects = (el) => {
+    const rects = [];
+    for (const node of el.childNodes) {
+      if (node.nodeType !== 3 || !node.nodeValue.trim()) continue;
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      rects.push(...[...range.getClientRects()].filter((r) => r.width > 0 && r.height > 0));
+    }
+    return rects;
+  };
+  const unionRect = (rects) => rects.reduce((u, r) => ({ left: Math.min(u.left, r.left), top: Math.min(u.top, r.top),
+    right: Math.max(u.right, r.right), bottom: Math.max(u.bottom, r.bottom) }),
+  { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity });
+  // Boxes that clip on purpose: carousels, sliders and scroll-snap rows show part of the
+  // next item, and a disclosure (named by a control's aria-controls) shows a preview.
+  const DESIGNED_TRACK = /carousel|swiper|slick|splide|flickity|glide|embla|marquee|ticker|slider/i;
+  const designedClip = (n) => {
+    const rd = (n.getAttribute('aria-roledescription') || '').toLowerCase();
+    if (rd.includes('carousel') || rd.includes('slide')) return true;
+    const snap = style(n).scrollSnapType;
+    if (snap && snap !== 'none') return true;
+    if (n.id) {
+      try {
+        if (n.getRootNode().querySelector(`[aria-controls~="${CSS.escape(n.id)}"]`)) return true;
+      } catch (e) { /* an unusual id never hides a cut */ }
+    }
+    return DESIGNED_TRACK.test(`${n.id || ''} ${typeof n.className === 'string' ? n.className : ''}`);
+  };
+  // Text that paints nothing (a transparent fill with no stroke, shadow or background
+  // clipped to the glyphs, such as a sizing mirror behind a field, or text hidden by
+  // visibility or a zero opacity, such as a width-reserving copy of a bold label) cannot
+  // be cut, covered or drawn over another text.
+  const ICON_FONT = /icon|material|awesome|symbol|glyph|fontello|ionicon|bootstrap-icons/i;
+  // An icon font leads its stack; a symbol font later in a system stack (Bootstrap's
+  // "Segoe UI Symbol") only backs up ordinary text.
+  const iconFont = (family) => ICON_FONT.test(String(family || '').split(',')[0].replace(/["']/g, ''));
+  const inkCache = new Map();
+  const paintsInk = (el) => {
+    if (inkCache.has(el)) return inkCache.get(el);
+    const cs = style(el);
+    const fill = parseColor(cs.webkitTextFillColor || cs.color);
+    const stroke = parseColor(cs.webkitTextStrokeColor);
+    let ink = !fill || fill.a > 0 || (!!cs.textShadow && cs.textShadow !== 'none')
+      || ((parseFloat(cs.webkitTextStrokeWidth) || 0) > 0 && (!stroke || stroke.a > 0));
+    for (let n = el; !ink && n && n.nodeType === 1; n = parentOf(n)) {
+      const ncs = style(n);
+      if (ncs.backgroundClip === 'text' || ncs.webkitBackgroundClip === 'text') ink = true;
+    }
+    // display: contents has no box of its own, so the nearest box above it is tested.
+    let probe = el;
+    while (probe && probe.nodeType === 1 && style(probe).display === 'contents') probe = parentOf(probe);
+    if (ink && cs.visibility !== 'visible') ink = false;
+    if (ink && probe && probe.nodeType === 1 && typeof probe.checkVisibility === 'function'
+      && !probe.checkVisibility({ opacityProperty: true, visibilityProperty: true })) ink = false;
+    inkCache.set(el, ink);
+    return ink;
+  };
+  // Rectangles and glyph boxes are on screen while client sizes are in the element's own
+  // units; their ratio is the scale on screen. Under rotation, skew or a 3D transform a
+  // rectangle is only a bounding box, so such text is left unmeasured (null).
+  const screenScale = (el) => {
+    for (let p = el; p && p.nodeType === 1; p = p.assignedSlot || parentOf(p)) {
+      const pcs = style(p);
+      if (pcs.rotate && pcs.rotate !== 'none') return null;
+      if (pcs.transform && pcs.transform !== 'none') {
+        let m = null;
+        try {
+          m = new DOMMatrixReadOnly(pcs.transform);
+        } catch (e) {
+          return null;
+        }
+        if (!m.is2D || Math.abs(m.b) > 1e-6 || Math.abs(m.c) > 1e-6) return null;
+      }
+    }
+    const r = el.getBoundingClientRect();
+    return { sx: el.offsetWidth ? r.width / el.offsetWidth : 1, sy: el.offsetHeight ? r.height / el.offsetHeight : 1 };
+  };
+  // The padding box on screen, where overflow clips.
+  const paddingBoxOf = (n, r, sc) => ({ left: r.left + n.clientLeft * sc.sx, top: r.top + n.clientTop * sc.sy,
+    right: r.left + (n.clientLeft + n.clientWidth) * sc.sx, bottom: r.top + (n.clientTop + n.clientHeight) * sc.sy });
+  // owner: the element reported for the text (a control whose label sits in spans); a cut
+  // by its own box reads as its own (by: null).
+  const clippedOf = (el, cs, directLabel = false, owner = el) => {
     const hide = (v) => v === 'hidden' || v === 'clip';
-    let x = hide(cs.overflowX) && el.scrollWidth > el.clientWidth + 1;
-    let y = hide(cs.overflowY) && el.scrollHeight > el.clientHeight + 1;
+    if (!paintsInk(el)) return null;
+    const sc = screenScale(el);
+    if (!sc) return null;
+    // A control's scroll size includes decoration and nested labels. Measure only
+    // the text this candidate owns; tagged descendants are captured separately.
+    const rects = ownTextRects(el);
+    if (directLabel && !rects.length) return null;
+    const cuts = (a, axis) => rects.some((r) => axis === 'x'
+      ? r.right > a.right + 1 || r.left < a.left - 1
+      : r.bottom > a.bottom + 1 || r.top < a.top - 1);
+    // Overflow does not apply to an inline box.
+    const clipsSelf = cs.display !== 'inline' && cs.display !== 'contents';
+    const inner = paddingBoxOf(el, el.getBoundingClientRect(), sc);
+    let x = clipsSelf && hide(cs.overflowX) && (directLabel ? cuts(inner, 'x') : el.scrollWidth > el.clientWidth + 1);
+    let y = clipsSelf && hide(cs.overflowY) && (directLabel ? cuts(inner, 'y') : el.scrollHeight > el.clientHeight + 1);
     let by = null;
+    let viewportCut = false;
     let ellipsis = cs.textOverflow === 'ellipsis';
     if (!x && !y) {
-      // ACT 59br37: text cut by an ancestor that clips (a fixed-width chip or label),
-      // within three levels. The text must be partly visible: a slide that is wholly
-      // outside its carousel is not cut text. A scroll container is reachable.
-      const r = el.getBoundingClientRect();
-      for (let n = el.parentElement, i = 0; n && n.nodeType === 1 && i < 3 && n !== document.body; n = n.parentElement, i++) {
+      // ACT 59br37: text cut by an ancestor that clips (a fixed-width chip or label, a
+      // card, a page column). Measured on the glyph boxes the element owns, so a nowrap
+      // line that runs out of its block is found at any depth. The text must be partly
+      // visible: a slide wholly outside its carousel is not cut text. A scroll container
+      // is reachable, a designed clip is intended, and a box under 4 px holds visually
+      // hidden text.
+      const r = rects.length ? unionRect(rects) : el.getBoundingClientRect();
+      const box = el.getBoundingClientRect();
+      const past = (a, axis) => (rects.length ? cuts(a, axis) : axis === 'x'
+        ? r.right > a.right + 1 || r.left < a.left - 1 : r.bottom > a.bottom + 1 || r.top < a.top - 1);
+      // Partly on screen: the text or the box holding it (a cell whose text has
+      // already run past the edge still shows its first pixels).
+      const shownX = (a) => (r.left < a.right && r.right > a.left) || (box.left < a.right && box.right > a.left);
+      const shownY = (a) => (r.top < a.bottom && r.bottom > a.top) || (box.top < a.bottom && box.bottom > a.top);
+      const scrolls = (v) => v === 'auto' || v === 'scroll';
+      for (let n = parentOf(el); n && n.nodeType === 1 && n !== document.body && n !== document.documentElement; n = parentOf(n)) {
+        if (designedClip(n)) return null;
         const ncs = style(n);
         const ax = ncs.overflowX;
         const ay = ncs.overflowY;
-        if (ax === 'auto' || ax === 'scroll' || ay === 'auto' || ay === 'scroll') break;
-        if (!hide(ax) && !hide(ay)) continue;
-        const a = n.getBoundingClientRect();
-        const cutX = hide(ax) && (r.right > a.right + 1 || r.left < a.left - 1) && r.left < a.right && r.right > a.left;
-        const cutY = hide(ay) && (r.bottom > a.bottom + 1 || r.top < a.top - 1) && r.top < a.bottom && r.bottom > a.top;
+        if (!hide(ax) && !hide(ay) && !scrolls(ax) && !scrolls(ay)) continue;
+        const nb = n.getBoundingClientRect();
+        if (nb.width < 4 || nb.height < 4) return null;
+        const a = n.offsetWidth && n.offsetHeight
+          ? paddingBoxOf(n, nb, { sx: nb.width / n.offsetWidth, sy: nb.height / n.offsetHeight }) : nb;
+        // Judge each axis on its own: overflow-x hidden makes overflow-y compute to auto,
+        // which scrolls only text that runs out vertically.
+        const overX = past(a, 'x');
+        const overY = past(a, 'y');
+        if ((scrolls(ax) && overX) || (scrolls(ay) && overY)) return null; // reachable by scrolling this box
+        const cutX = hide(ax) && overX && shownX(a);
+        const cutY = hide(ay) && overY && shownY(a);
         if (cutX || cutY) {
           x = cutX;
           y = cutY;
           by = n;
           ellipsis = ellipsis || ncs.textOverflow === 'ellipsis';
           break;
+        }
+      }
+      if (!x && !y && rects.length) {
+        // The screen edge cuts sideways when the page hides horizontal overflow: text past
+        // it can never be scrolled into view.
+        const rootHides = [document.documentElement, document.body].some((n) => n && hide(style(n).overflowX));
+        const screen = { left: VX0, right: VX1, top: VY0, bottom: VY1 };
+        if (rootHides && cuts(screen, 'x') && shownX(screen)) {
+          x = true;
+          by = document.documentElement;
+          viewportCut = true;
         }
       }
       if (!x && !y) return null;
@@ -661,12 +797,13 @@ export function extractSnapshot(args) {
         const rg = document.createRange();
         rg.selectNodeContents(el);
         const first = rg.getClientRects()[0];
-        if (first && first.height > 0) lineH = first.height;
+        if (first && first.height > 0) lineH = first.height / sc.sy;
       } catch (e) { /* keep the estimate */ }
     }
+    // In the box's own units, like the line height and font size.
     const boxH = bcs.overflowY === 'clip'
       ? cb.clientHeight - (parseFloat(bcs.paddingTop) || 0) - (parseFloat(bcs.paddingBottom) || 0)
-      : cb.getBoundingClientRect().height;
+      : cb.offsetHeight || cb.getBoundingClientRect().height / sc.sy;
     const exemptY = !y || (lineH >= boxH - 0.5 && fontPx <= boxH + 0.5);
     if (by && !markerShown) ellipsis = false; // declared but not drawn
     // Tickers and marquees clip by design: text that moves (CSS animation on the element
@@ -680,8 +817,61 @@ export function extractSnapshot(args) {
         break;
       }
     }
-    return { x, y, ellipsis: ellipsis || !!clamp, line_clamp: !!clamp, animated, by: by ? (by.getAttribute('id') ? `#${by.getAttribute('id')}` : by.tagName.toLowerCase()) : null,
+    return { x, y, ellipsis: ellipsis || !!clamp, line_clamp: !!clamp, animated,
+      by: viewportCut ? 'viewport' : by && by !== owner ? (by.getAttribute('id') ? `#${by.getAttribute('id')}` : by.tagName.toLowerCase()) : null,
       act: exemptX && exemptY ? 'passed' : 'failed' };
+  };
+  // The control that reports for a text holder: its nearest interactive ancestor.
+  const ownerControl = (n) => {
+    for (let p = n.parentElement; p; p = p.parentElement) if (isInteractive(p)) return p;
+    return null;
+  };
+  // A holder that is a candidate of its own (tagged, interactive, an alert, or text that
+  // no control contains) reports for itself.
+  const ownCandidate = (n) => {
+    if (roleMap.has(n) || isInteractive(n)) return true;
+    const role = (n.getAttribute('role') || '').trim();
+    if (role === 'alert' || role === 'status') return true;
+    const tag = n.tagName.toLowerCase();
+    return (ALWAYS_TEXT.has(tag) || DIRECT_TEXT.has(tag)) && !(n.parentElement && n.parentElement.closest(INTERACTIVE));
+  };
+  // The elements that draw a control's words when they sit in spans: each owns a text
+  // node, reports through this control (not a nested one, not a candidate of its own),
+  // is not visually hidden, draws no icon-font glyphs and paints ink (LY-01..03).
+  const labelHolders = (el) => {
+    const out = [];
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node && out.length < 12; node = walker.nextNode()) {
+      const holder = node.parentElement;
+      if (!node.nodeValue.trim() || !holder || holder === el || out.includes(holder)) continue;
+      if (ownCandidate(holder) || ownerControl(holder) !== el) continue;
+      let hidden = false;
+      for (let p = holder; p && p !== el; p = p.parentElement) if (visuallyHidden(p)) { hidden = true; break; }
+      if (hidden || iconFont(style(holder).fontFamily) || !paintsInk(holder)) continue;
+      out.push(holder);
+    }
+    return out;
+  };
+  const labelClip = (el) => {
+    for (const holder of labelHolders(el)) {
+      const clip = clippedOf(holder, style(holder), true, el);
+      if (clip) return { ...clip, label: uniqueSelector(holder) };
+    }
+    return null;
+  };
+  // Whether an element's text paints anything: its own text or, for a control whose
+  // words sit in spans, any of them (null when it has no text).
+  const textInk = (el, interactive) => {
+    if (hasDirectText(el)) return paintsInk(el);
+    if (!interactive) return null;
+    let seen = false;
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (!node.nodeValue.trim() || !node.parentElement) continue;
+      seen = true;
+      if (paintsInk(node.parentElement)) return true;
+    }
+    return seen ? false : null;
   };
   const visibleText = (el) => {
     const tag = el.tagName.toLowerCase();
@@ -865,6 +1055,13 @@ export function extractSnapshot(args) {
     }
     return el.hasAttribute('tabindex') && el.tabIndex >= 0;
   };
+  const isDisabled = (el) => {
+    try {
+      return el.matches(':disabled') || el.getAttribute('aria-disabled') === 'true' || !!el.closest('[inert]');
+    } catch (e) {
+      return false;
+    }
+  };
   const ALWAYS_TEXT = new Set(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'label', 'legend', 'figcaption', 'caption']);
   const DIRECT_TEXT = new Set(['span', 'div', 'small', 'strong', 'em', 'b', 'i', 'td', 'th', 'dt', 'dd', 'blockquote', 'output', 'pre', 'code', 'section', 'article', 'header', 'footer', 'main', 'aside']);
 
@@ -966,6 +1163,32 @@ export function extractSnapshot(args) {
     return g.vis && g.inVp;
   });
   const inertByModal = (el) => modals.length > 0 && !modals.some((m) => m === el || m.contains(el) || el.contains(m));
+  // Count rendered, enabled controls by direct-child subtree, including below-fold
+  // controls. The boundary describes DOM structure, not semantic alternatives.
+  const siblingBranches = new WeakMap();
+  for (const el of all) {
+    if (!isInteractive(el) || !geo(el).vis || isDisabled(el) || inertByModal(el)) continue;
+    for (let child = el, parent = el.parentElement; parent && parent !== document.body && parent !== document.documentElement; child = parent, parent = parent.parentElement) {
+      if (!siblingBranches.has(parent)) siblingBranches.set(parent, new Set());
+      siblingBranches.get(parent).add(child);
+    }
+  }
+  const siblingScopes = new WeakMap();
+  const siblingScope = (el) => {
+    if (siblingScopes.has(el)) return siblingScopes.get(el);
+    let result = { sibling_scope_id: null, sibling_scope_status: 'none' };
+    for (let parent = el.parentElement; parent && parent !== document.body && parent !== document.documentElement; parent = parent.parentElement) {
+      if ((siblingBranches.get(parent)?.size || 0) >= 2) {
+        const selector = uniqueSelector(parent);
+        result = selector && selector.length <= 256
+          ? { sibling_scope_id: selector, sibling_scope_status: 'measured' }
+          : { sibling_scope_id: null, sibling_scope_status: 'unavailable' };
+        break;
+      }
+    }
+    siblingScopes.set(el, result);
+    return result;
+  };
   // Fraction of sample points inside the visible box where another element is on top
   // (not the element, a descendant or an ancestor): a sheet, scrim or overlay.
   const occlusion = (el, r) => {
@@ -1001,6 +1224,8 @@ export function extractSnapshot(args) {
       if ((parseFloat(cs.opacity) || 0) <= 0.01 || cs.visibility !== 'visible') continue;
       if (tag === 'dialog' || n.getAttribute('aria-modal') === 'true') return true;
       if (MEDIA.has(tag)) return true;
+      // A background clipped to the text paints the glyphs, not a box.
+      if (cs.backgroundClip === 'text' || cs.webkitBackgroundClip === 'text') continue;
       if (cs.backgroundImage && cs.backgroundImage !== 'none') return true;
       const bg = parseColor(cs.backgroundColor);
       if (bg && bg.a > 0.05) return true;
@@ -1009,6 +1234,43 @@ export function extractSnapshot(args) {
   };
 
   // Bounded solid-paint evidence, not a general rendering model. CSS `color` is
+  // What covers an element: the nearest fixed or sticky layer (scrolling moves content
+  // under it) or a box in the normal layout (nothing moves it away), and whether it is
+  // a dialog, popup or large overlay that covers content on purpose.
+  const OVERLAY_ROLES = new Set(['dialog', 'alertdialog', 'tooltip', 'menu', 'listbox', 'status', 'alert']);
+  const occluderOf = (top, el) => {
+    let layer = top;
+    let position = 'flow';
+    let overlay = false;
+    for (let n = top; n && n.nodeType === 1 && !n.contains(el); n = parentOf(n)) {
+      const tag = n.tagName.toLowerCase();
+      if (tag === 'dialog' || n.getAttribute('aria-modal') === 'true' || OVERLAY_ROLES.has((n.getAttribute('role') || '').trim())) overlay = true;
+      const p = style(n).position;
+      if (position === 'flow' && (p === 'fixed' || p === 'sticky')) {
+        position = p;
+        layer = n;
+      }
+    }
+    const b = layer.getBoundingClientRect();
+    if (b.width * b.height >= 0.4 * vw * vh) overlay = true;
+    // Scrolling can move the covered text out from under a fixed or sticky bar only in
+    // the box that scrolls it: an inner scroll container, or else the page.
+    let scroller = null;
+    for (let n = parentOf(el); n && n.nodeType === 1 && n !== document.body && n !== document.documentElement; n = parentOf(n)) {
+      const oy = style(n).overflowY;
+      if ((oy === 'auto' || oy === 'scroll') && n.scrollHeight > n.clientHeight + 1) {
+        scroller = { top: round2(n.scrollTop), max: round2(n.scrollHeight - n.clientHeight), inner: true };
+        break;
+      }
+    }
+    if (!scroller) {
+      const se = document.scrollingElement || document.documentElement;
+      scroller = { top: round2(window.scrollY), max: round2(Math.max(0, se.scrollHeight - window.innerHeight)), inner: false };
+    }
+    return { position, overlay, selector: uniqueSelector(layer), scroller,
+      box: { x: round2(b.left), y: round2(b.top), w: round2(b.width), h: round2(b.height) } };
+  };
+
   // included only when a text node actually occupies a rendered glyph box.
   const paintFor = (el) => {
     const parts = [];
@@ -1228,12 +1490,15 @@ export function extractSnapshot(args) {
     if (s) for (const r of roles) if (known.has(r)) s.roles.add(r);
   }
 
-  candidates.sort((a, b) => a.group - b.group || a.visRank - b.visRank || a.order - b.order);
+  // What is on screen comes first: a long page's off-screen controls must not crowd
+  // visible text out of the cap (truncation is reported with the snapshot).
+  candidates.sort((a, b) => a.visRank - b.visRank || a.group - b.group || a.order - b.order);
   const cap = Math.max(0, (args.cap || 400) - spots.size);
   const kept = candidates.slice(0, cap).sort((a, b) => a.order - b.order);
 
   const ids = new WeakMap();
   const elements = [];
+  const recordOf = new Map();
   let n = 0;
   for (const c of kept) {
     const el = c.el;
@@ -1249,13 +1514,7 @@ export function extractSnapshot(args) {
     const border = isControl ? borderFor(cs, colors ? colors.container || colors.bg : null) : { color: null, width: 0 };
     let cumOpacity = 1;
     for (let p = el; p; p = parentOf(p)) cumOpacity *= parseFloat(style(p).opacity);
-    const disabled = (() => {
-      try {
-        return el.matches(':disabled') || el.getAttribute('aria-disabled') === 'true' || !!el.closest('[inert]');
-      } catch (e) {
-        return false;
-      }
-    })();
+    const disabled = isDisabled(el);
     const fw = parseInt(cs.fontWeight, 10);
     const fs = parseFloat(cs.fontSize);
     const displayedText = visibleText(el);
@@ -1299,13 +1558,16 @@ export function extractSnapshot(args) {
         return {
           occluded_fraction: o.fraction,
           occluded_by: o.by ? uniqueSelector(o.by) : null,
+          ...(o.by && o.fraction > 0 ? { occluder: occluderOf(o.by, el) } : {}),
           inert_by_modal: inertByModal(el),
         };
       })(),
       ...(c.interactive || ['input', 'select', 'textarea'].includes(tag) ? { a11y: a11yOf(el) } : {}),
       ...(() => {
-        const clip = !c.interactive && hasDirectText(el) ? clippedOf(el, cs) : null;
-        return clip ? { clipped: clip } : {};
+        const direct = hasDirectText(el);
+        const clip = (direct ? clippedOf(el, cs, c.interactive) : null) || (c.interactive ? labelClip(el) : null);
+        // Text that paints nothing is marked so box-sampled covering skips it (LY-02).
+        return { ...(clip ? { clipped: clip } : {}), ...(textInk(el, c.interactive) === false ? { ink: false } : {}) };
       })(),
       roles: roleMap.has(el) ? [...roleMap.get(el)].sort() : [],
       // Ids of the nearest ancestors (grouping context such as a toolbar or chip row).
@@ -1316,8 +1578,10 @@ export function extractSnapshot(args) {
         }
         return ids;
       })(),
+      ...siblingScope(el),
       source: 'dom',
     });
+    recordOf.set(el, elements[elements.length - 1]);
   }
   for (const s of spots.values()) {
     const b = s.box;
@@ -1344,6 +1608,260 @@ export function extractSnapshot(args) {
       hotspot_origin: s.origin,
     });
   }
+  // ---------- rendered layout: overlapping text, near-miss alignment, uneven spacing
+  // Text drawn over other text: lines of one element whose glyph bands cross (a line
+  // height far below the font size) or two elements whose glyph bands cross (a negative
+  // margin, an absolutely placed label). The band is the middle 0.8 em of each line box,
+  // so ordinary tight headings do not count. Pairs in different fixed or sticky layers
+  // are left to the covered-text record, which knows whether scrolling moves them apart.
+  const fixedHost = (el) => {
+    for (let n = el; n && n.nodeType === 1; n = parentOf(n)) {
+      const p = style(n).position;
+      if (p === 'fixed' || p === 'sticky') return n;
+    }
+    return null;
+  };
+  const bandsOf = (el, rects) => {
+    const fs = parseFloat(style(el).fontSize) || 16;
+    return rects.map((r) => {
+      const h = Math.min(r.height, 0.8 * fs);
+      const top = r.top + (r.height - h) / 2;
+      return { left: r.left, right: r.right, top, bottom: top + h };
+    });
+  };
+  const crossing = (a, b) => {
+    const ix = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+    const iy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+    return ix >= 6 && iy >= 1 ? iy : 0;
+  };
+  const texts = [];
+  for (const c of kept) {
+    const el = c.el;
+    const g = geo(el);
+    if (!g.vis || !g.inVp) continue;
+    // The text an element owns; a control also owns the words its spans draw
+    // (labelHolders), which are reported through the control. Each glyph box keeps the
+    // element that paints it.
+    const owned = [];
+    if (hasDirectText(el)) {
+      for (const q of ownTextRects(el)) owned.push({ rect: q, holder: el });
+    }
+    if (c.interactive) {
+      for (const holder of labelHolders(el)) {
+        for (const q of ownTextRects(holder)) if (owned.length < 24) owned.push({ rect: q, holder });
+      }
+    }
+    const shown = owned.filter(({ rect, holder }) => rect.width >= 2 && rect.height >= 4
+      && rect.bottom > VY0 && rect.top < VY1 && rect.right > VX0 && rect.left < VX1 && paintsInk(holder));
+    if (!shown.length) continue;
+    const rects = shown.map((o) => o.rect);
+    // Each line's band follows the font size of the element that draws it.
+    texts.push({ el, rects, holders: shown.map((o) => o.holder), bands: shown.map((o) => bandsOf(o.holder, [o.rect])[0]),
+      host: fixedHost(el), direct: hasDirectText(el) });
+  }
+  const overlapOf = new Map();
+  for (const t of texts) {
+    if (!t.direct) continue;
+    const lines = t.bands.map((b, i) => ({ b, top: t.rects[i].top })).sort((p, q) => p.top - q.top);
+    for (let i = 1; i < lines.length; i++) {
+      if (Math.abs(lines[i].top - lines[i - 1].top) < 1) continue; // same line
+      const amount = crossing(lines[i - 1].b, lines[i].b);
+      if (amount) {
+        overlapOf.set(t.el, { kind: 'lines', with: null, overlap_px: round2(amount) });
+        break;
+      }
+    }
+  }
+  // Two texts collide only when both stay visible: where the upper one sits on a painted
+  // box (a sheet, toast, keypad or card background), the lower text is covered instead,
+  // which the covered-text record judges with its reach and overlay rules.
+  for (let i = 0; i < texts.length; i++) {
+    for (let j = i + 1; j < texts.length; j++) {
+      const a = texts[i];
+      const b = texts[j];
+      // A control's label spans count as its text (they are not candidates of their own).
+      if (a.host !== b.host || a.el.contains(b.el) || b.el.contains(a.el)) continue;
+      let amount = 0;
+      let spot = null;
+      for (const p of a.bands) {
+        for (const q of b.bands) {
+          const v = crossing(p, q);
+          if (v > amount) {
+            amount = v;
+            spot = { x: (Math.max(p.left, q.left) + Math.min(p.right, q.right)) / 2, y: (Math.max(p.top, q.top) + Math.min(p.bottom, q.bottom)) / 2 };
+          }
+        }
+      }
+      if (!amount || spot.x < VX0 || spot.y < VY0 || spot.x >= VX1 || spot.y >= VY1) continue;
+      let top = null;
+      try {
+        top = document.elementFromPoint(spot.x, spot.y);
+      } catch (e) {
+        top = null;
+      }
+      const upper = top && (a.el === top || a.el.contains(top)) ? a : top && (b.el === top || b.el.contains(top)) ? b : null;
+      if (!upper) continue; // a third layer is on top: covered, not colliding
+      const lower = upper === a ? b : a;
+      if (paintsOver(top, lower.el)) continue;
+      const later = a.el.compareDocumentPosition(b.el) & Node.DOCUMENT_POSITION_FOLLOWING ? b : a;
+      const other = later === a ? b : a;
+      if (!overlapOf.has(later.el)) overlapOf.set(later.el, { kind: 'element', with: uniqueSelector(other.el), overlap_px: round2(amount) });
+    }
+  }
+  for (const [el, v] of overlapOf) {
+    const rec = recordOf.get(el);
+    if (rec) rec.text_overlap = v;
+  }
+
+  // Glyphs under a painted box: five points across the middle of every visible line.
+  // The element box sampling above misses a ribbon over one word or a callout pulled
+  // over a paragraph's last line; a line counts as covered when two of its five points
+  // (about 40 % of it) are under a painted box that neither contains nor sits inside
+  // the text.
+  for (const t of texts) {
+    let points = 0;
+    let hidden = 0;
+    let lines = 0;
+    let cover = null;
+    t.bands.forEach((band, i) => {
+      const holder = t.holders[i];
+      const y = (band.top + band.bottom) / 2;
+      let onLine = 0;
+      for (const fx of [0.1, 0.3, 0.5, 0.7, 0.9]) {
+        const x = band.left + (band.right - band.left) * fx;
+        if (x < VX0 || y < VY0 || x >= VX1 || y >= VY1) continue;
+        points += 1;
+        let top = null;
+        try {
+          top = document.elementFromPoint(x, y);
+        } catch (e) {
+          top = null;
+        }
+        if (!top || top === holder || holder.contains(top) || top.contains(holder) || !paintsOver(top, holder)) continue;
+        hidden += 1;
+        onLine += 1;
+        if (!cover) cover = occluderOf(top, holder);
+      }
+      if (onLine >= 2) lines += 1;
+    });
+    if (cover && lines) {
+      const rec = recordOf.get(t.el);
+      if (rec) rec.glyph_cover = { fraction: round2(hidden / Math.max(1, points)), lines_covered: lines, lines: t.bands.length, ...cover };
+    }
+  }
+
+  // Siblings meant to line up: three or more same-kind blocks stacked in a column (where
+  // their text starts) or set side by side in a row (their top edges). One block 1.5-8
+  // px off while the rest agree is a near-miss; in a column of four or more, one gap
+  // that differs from the others by at least 4 px and 25 % is uneven rhythm. Recorded
+  // as candidates with the outlier's selector; the analyser rates them P3.
+  const layoutOutliers = [];
+  const firstGlyphLeft = (el) => {
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (!node.nodeValue.trim()) continue;
+      const host = node.parentElement;
+      if (!host || !geo(host).vis) continue;
+      if (['center', 'right', 'end', 'justify'].includes(style(host).textAlign)) return null;
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      const r = [...range.getClientRects()].find((q) => q.width > 0 && q.height > 0);
+      return r ? r.left : null;
+    }
+    return null;
+  };
+  const contentLeft = (el) => {
+    const glyph = firstGlyphLeft(el);
+    if (glyph !== null) return glyph;
+    const cs = style(el);
+    return el.getBoundingClientRect().left + (parseFloat(cs.borderLeftWidth) || 0) + (parseFloat(cs.paddingLeft) || 0);
+  };
+  // Same component: list items and table rows by tag; other blocks by a shared class,
+  // or by classes that differ only in modifiers (`card` and `card--new`).
+  const LIST_ITEMS = new Set(['LI', 'TR', 'DT', 'DD']);
+  const sameKind = (a, b) => {
+    if (a.tagName !== b.tagName) return false;
+    if (LIST_ITEMS.has(a.tagName)) return true;
+    const base = (el) => new Set([...el.classList].filter((c) => !/--|^is-|^has-/.test(c)));
+    const ca = base(a);
+    const cb = base(b);
+    return (!ca.size && !cb.size) || [...ca].some((c) => cb.has(c));
+  };
+  const modeOf = (values, tolerance) => {
+    let best = null;
+    for (const v of values) {
+      const agree = values.filter((w) => Math.abs(w - v) <= tolerance).length;
+      if (!best || agree > best.agree) best = { value: v, agree };
+    }
+    return best;
+  };
+  const textOf = (el) => (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+  const boxOf = (el) => {
+    const b = el.getBoundingClientRect();
+    return { x: round2(b.left), y: round2(b.top), w: round2(b.width), h: round2(b.height) };
+  };
+  const containers = new Set();
+  for (const c of kept) {
+    for (let n = parentOf(c.el), i = 0; n && n.nodeType === 1 && i < 4; n = parentOf(n), i++) containers.add(n);
+  }
+  for (const box of containers) {
+    const kids = [...box.children].filter((k) => {
+      if (['script', 'style', 'template', 'br', 'hr'].includes(k.tagName.toLowerCase())) return false;
+      const cs = style(k);
+      if (!['static', 'relative'].includes(cs.position) || cs.display === 'contents' || cs.float !== 'none') return false;
+      // Off-screen members still set the rule (a long list never fits one screen);
+      // an outlier is reported only from a screen that shows it.
+      const g = geo(k);
+      return g.vis && g.r.height > 2 && g.r.width > 2;
+    });
+    if (kids.length < 3) continue;
+    const groups = [];
+    for (const k of kids) {
+      const g = groups.find((list) => sameKind(list[0], k));
+      if (g) g.push(k); else groups.push([k]);
+    }
+    for (const group of groups) {
+      if (group.length < 3) continue;
+      const rs = group.map((k) => geo(k).r);
+      const column = rs.every((r, i) => i === 0 || r.top >= rs[i - 1].bottom - 1);
+      const row = !column && rs.every((r, i) => i === 0 || (r.left >= rs[i - 1].right - 1 && r.top < rs[i - 1].bottom && r.bottom > rs[i - 1].top));
+      if (!column && !row) continue;
+      // A row lines up on the edge its container aligns: centres for align-items
+      // center, bottoms for end; baseline rows depend on text and are skipped.
+      const align = style(box).alignItems;
+      if (row && align === 'baseline') continue;
+      const values = column ? group.map(contentLeft) : rs.map((r) => (align === 'center' ? (r.top + r.bottom) / 2
+        : ['flex-end', 'end'].includes(align) ? r.bottom : r.top));
+      const mode = modeOf(values, 0.75);
+      if (mode && mode.agree >= group.length - 1 && mode.agree >= 2) {
+        const off = group.map((k, i) => ({ k, d: values[i] - mode.value })).filter((o) => Math.abs(o.d) > 0.75);
+        if (off.length === 1 && Math.abs(off[0].d) >= 1.5 && Math.abs(off[0].d) <= 8 && geo(off[0].k).inVp) {
+          layoutOutliers.push({ kind: 'alignment', axis: column ? 'x' : 'y', selectors: [uniqueSelector(off[0].k)],
+            container: uniqueSelector(box), offset_px: round2(off[0].d), group_size: group.length,
+            text: textOf(off[0].k), box: boxOf(off[0].k) });
+        }
+      }
+      if (column && group.length >= 4) {
+        const gaps = rs.slice(1).map((r, i) => r.top - rs[i].bottom);
+        const typical = modeOf(gaps, 1);
+        if (typical && typical.agree >= gaps.length - 1 && typical.agree >= 2) {
+          const odd = gaps.map((v, i) => ({ v, i })).filter((o) => Math.abs(o.v - typical.value) > 1);
+          // Only a squeezed gap: a wider one often separates groups on purpose (a divider
+          // between sections of a menu or form), which needs the design rule to judge.
+          const off = odd.length === 1 ? odd[0].v - typical.value : 0;
+          const uneven = off < 0 && -off >= 4 && -off >= 0.25 * typical.value;
+          if (odd.length === 1 && uneven) {
+            const before = group[odd[0].i];
+            const after = group[odd[0].i + 1];
+            if (geo(before).inVp && geo(after).inVp) layoutOutliers.push({ kind: 'spacing', axis: 'y', selectors: [uniqueSelector(before), uniqueSelector(after)],
+              container: uniqueSelector(box), gap_px: round2(odd[0].v), typical_px: round2(typical.value), group_size: group.length,
+              text: textOf(after), box: boxOf(after) });
+          }
+        }
+      }
+    }
+  }
+
   state.ids = ids;
   state.hotspots = [...spots.values()].map((s) => ({ id: s.id, box: s.box, elementId: `hs-${s.id.replace(/[^A-Za-z0-9._-]/g, '_')}` }));
 
@@ -1456,6 +1974,8 @@ export function extractSnapshot(args) {
       shift(e.visible_box);
       for (const hb of e.hit_boxes || []) shift(hb);
       for (const p of e.paint?.parts || []) shift(p.box);
+      if (e.occluder) shift(e.occluder.box);
+      if (e.glyph_cover) shift(e.glyph_cover.box);
     }
     if (active) { active.x = round2(active.x - VX0); active.y = round2(active.y - VY0); }
     for (const l of layerOut) shift(l.box);
@@ -1476,6 +1996,10 @@ export function extractSnapshot(args) {
       controls: focusOnBody ? [] : (deep.getAttribute('aria-controls') || '').split(/\s+/).filter(Boolean).slice(0, 8),
     },
     layers: layerOut,
+    layout_outliers: (() => {
+      if (panned && (VX0 || VY0)) for (const o of layoutOutliers) { o.box.x = round2(o.box.x - VX0); o.box.y = round2(o.box.y - VY0); }
+      return layoutOutliers;
+    })(),
     pageHotspotError,
     unknownRoles: [...unknownRoles],
   };

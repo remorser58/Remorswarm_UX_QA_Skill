@@ -7,6 +7,36 @@ keep their normal paths. The original insane-search toolkit is included under
 Both the repository-folder installation and the release ZIP include the toolkit.
 Users need no separate search-skill installation.
 
+## Install
+
+Users install the whole skill with one command. The builder and checker below
+remain maintainer tools for producing and validating the distribution.
+
+```sh
+python3 scripts/install.py --target codex
+```
+
+Use `--target claude` for `~/.claude/skills/remorsearch-ux-qa`, or
+`--destination /path/to/folder` for an explicit path. The installer requires
+Python 3.10+, Node.js 22 (>=22 <23) and npm up front, and checks them before
+writing anything. It stages the deterministic payload from this builder,
+verifies it against `manifest.remorsearch.json`, runs `npm ci` and the
+Chromium install inside the staged copy's `drivers/web`, confirms an actual
+Chromium launch, verifies the staged payload again after the dependencies land,
+and only then activates the destination. A failure at any point before
+activation discards the staged copy and leaves an existing installation
+unchanged.
+
+The installer refuses symlinked destination paths, destinations overlapping
+this repository, the filesystem root, the home directory and unrelated existing
+folders. Updating an owned installation first archives the complete previous
+folder, including run records and symlinks, as
+`remorsearch-ux-qa.backup-<timestamp>.tar.gz` beside the skill folder; hosts
+discover folders, not archive files. npm dependencies live inside the
+destination's `drivers/web/node_modules`; Chromium downloads into Playwright's
+browser cache (`~/Library/Caches/ms-playwright` by default on macOS, overridable
+with `PLAYWRIGHT_BROWSERS_PATH`). External accounts stay user prerequisites.
+
 ## Build and verify
 
 Use Python 3.10+ on macOS, Linux or WSL. Run from this repository. The default
@@ -57,7 +87,9 @@ load the source index body and an actual linked platform method body.
 
 ## Complete local check
 
-Prepare the web driver's pinned dependencies and Chromium using Node.js 22:
+Prepare the source tree's pinned web driver dependencies and Chromium using
+Node.js 22. An installation made with `scripts/install.py` already carries its
+own copy; these commands prepare the checkout the checker copies from:
 
 ```sh
 (cd skills/remorsearch-ux-qa/drivers/web && npm ci && npx playwright install chromium)

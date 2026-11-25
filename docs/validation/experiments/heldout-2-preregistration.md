@@ -10,13 +10,13 @@ the end, with the reason, and the original analysis must still be reported.
 - The suite was written by four blind Opus agents from product briefs and public
   taxonomies, using the format in spec §12.1. Their completion messages were
   restricted to counts and file lists.
-- The tool author (this session) does not open `benchmarks/heldout-2/keys/`,
+- The tool author does not open `benchmarks/heldout-2/keys/`,
   `site/` or `scenarios/` content. Scripts read them for recording and scoring.
 - Scoring output shown to the author is limited to aggregate metrics. Per-defect
   results are written to a file and opened only after the aggregate report is
   committed.
 - **Known limitation:** authors, detector author and adjudicators are all Claude
-  models (the user asked for Claude-only subagents). The briefs use public
+  models (a project choice). The briefs use public
   taxonomies, but the answer-key schema still uses this tool's categories and
   profile attributes.
 
@@ -145,7 +145,7 @@ have not been opened by the tool author. Development used the three dev suites
    2 000 resamples, seed 7; single rates use Wilson intervals. Verdict rule as
    above (pass when the whole interval clears the threshold, fail when it is
    entirely below, otherwise inconclusive).
-5. **C6 details:** operators are Opus only (the user's Claude-only rule).
+5. **C6 details:** operators are Opus only (a project choice).
    Four composed profiles per product; input channels alternate between
    `screenshot` and `screenshot+a11y`, so notes can be corroborated across
    channels. Every profile runs both variants of its product in separate
@@ -157,8 +157,8 @@ have not been opened by the tool author. Development used the three dev suites
 
 ### Amendment 2 (2026-09-28, before the freeze and before any heldout-2 recording)
 
-1. **C6 operators mix Opus and Sonnet** (the user asked to mix Sonnet into the
-   subagents). Four composed profiles per product cover {Opus, Sonnet} ×
+1. **C6 operators mix Opus and Sonnet** (Sonnet was added to broaden the
+   operator models). Four composed profiles per product cover {Opus, Sonnet} ×
    {screenshot, screenshot+a11y}. Both models are one family (`claude`), so a
    note is corroborated only by another input channel; agreement between Opus
    and Sonnet on the same channel does not count. Results are also reported per

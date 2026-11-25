@@ -11,7 +11,7 @@ The host agent investigates, operates browser/Figma tools, builds and replays. C
 
 Load only the active provider card. Product improvement starts with `references/persona-qa/workflow.md`, uses `references/research/workflow.md` for discovered questions, then returns to relevant QA. Narrow requests keep their scope. Label serial/self checks. Research supplies scrubbed hypotheses; actual product traces establish findings.
 
-Lookup `references/loop/provider-contract.md` by section (React UI: `references/loop/react-design-system.md`). ux-loop.v1 intake: minimized summaries; receipts bind build/route/scenario/device/viewport/input/tool versions, steps/errors/keyboard/focus/semantics/accessibility, actual/reference captures/comparisons. URL/image alone is insufficient. Editable Figma file/branch/version/nodes/readback; unresolved conflict blocks acceptance. Proposals use no side accent bars, side tabs or rails.
+Lookup `references/loop/provider-contract.md` by section (React UI: `references/loop/react-design-system.md`). ux-loop.v1 intake: minimized summaries; receipts bind build/route/scenario/device/viewport/input/tool versions, steps/errors/keyboard/focus/semantics/accessibility, current actual/reference captures/comparisons. URL/image alone is insufficient. Editable Figma file/branch/version/nodes/readback (`policy.figma_first`); unresolved conflict blocks acceptance. Proposals follow `policy.allow_side_accents` and no side-tab cards.
 
 ## 2. Validate, run, fix and replay
 
@@ -29,7 +29,7 @@ python3 scripts/ux_loop.py resume --checkpoint CHECKPOINT --input extended-packe
 
 Persist research/plan/browser/fix/replay/decision. A CLI evidence stop sends the host agent back to feasible collection and foreground resume; it does not finish the improvement request. Respect access stops, unresolved conflicts and limits. Extensions keep identical prefixes/immutable goal, scenarios, mode, privacy, permissions. Retry: new round/run/artifact IDs, --retry within the same budget. Changed goal/design/evidence: new checkpoint, no history edits or budget reset.
 
-Replay the current build with the same scenario/fixture/viewport/input: original failure, integrity, recovery, visual/accessibility, adjacent regressions and preserved intent. Use fresh real receipts. Applied needs all replay gates to become accepted; verify the CLI report against those artifacts before reporting completion.
+Replay the current build with the same scenario/fixture/viewport/input: original failure, integrity, recovery, visual/accessibility, adjacent regressions and preserved intent. Use fresh receipts taken after the CLI patch. Applied needs all replay gates to become accepted; verify the CLI report against those artifacts before reporting completion.
 
 ## 3. Output
 

@@ -259,6 +259,7 @@ def aggregate(analyses: Iterable[dict[str, Any]], profiles: Iterable[dict[str, A
         # counting profiles outside the check's scope as not triggered, so a CVD-only or
         # bright-sun-only finding names its condition (AP-05) instead of reading "k/k".
         evaluated = {pid for run_id in group["runs"] for pid in evaluated_by_run.get(run_id, [])} | set(tested)
+        # An explicit unknown remains unresolved across steps and cannot establish a negative contrast.
         untriggered = [profiles_by_id[p] for p in sorted(evaluated - unassessed)
                        if p not in group["triggered"] and p in profiles_by_id]
         differential = {} if check_id == "TI-01" else _differential([profiles_by_id[p] for p in triggered if p in profiles_by_id], untriggered)

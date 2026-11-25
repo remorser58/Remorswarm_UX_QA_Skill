@@ -1,14 +1,19 @@
 """Artifact integrity and scoped completion gates; never infer proof from a URL."""
 from __future__ import annotations
 
-import struct
-import zlib
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from xml.etree import ElementTree
 
+from ergoqa import png
+
 from .contracts import index
 from .io import ContractError, GateStop, parse_json, read_artifact, timestamp
+from .png_capture import PNGValidationError, validate_png
+
+VISUAL_ASPECTS = ("alignment", "spacing", "typography", "text_clipping",
+                  "component_occlusion", "figma_fidelity")
+MAX_DIFF_PIXELS = 10_000_000
 
 
 class Evidence:
@@ -52,6 +57,15 @@ class Evidence:
         if not timestamp(run["started_at"]) <= at <= timestamp(run["ended_at"]):
             raise GateStop("unknown", f"Capture {artifact_id} is not from run interval {run['id']}")
 
+    def compared_after_inputs(self, check: dict) -> None:
+        # A comparison may postdate its run, e.g. a target drawn in Figma after baseline QA,
+        # but it cannot precede the capture or reference export it compares.
+        compared = timestamp(self.artifacts[check["comparison_artifact_id"]]["created_at"])
+        inputs = max(timestamp(self.artifacts[check[key]]["created_at"])
+                     for key in ("actual_artifact_id", "reference_artifact_id"))
+        if compared < inputs:
+            raise GateStop("unknown", f"Comparison {check['comparison_artifact_id']} predates its capture or reference export")
+
     def research(self) -> None:
         for evidence_id in self.packet["goal"]["evidence_ids"]:
             evidence = self.records["evidence"][evidence_id]
@@ -90,26 +104,85 @@ class Evidence:
             return
         if not raw.startswith(b"\x89PNG\r\n\x1a\n"):
             raise GateStop("unknown", f"Live capture must be PNG, not a URL/mock: {artifact_id}")
-        offset, dimensions, saw_end, saw_pixels = 8, None, False, False
-        while offset + 12 <= len(raw):
-            size = struct.unpack(">I", raw[offset:offset + 4])[0]
-            chunk = raw[offset + 4:offset + 8]
-            end = offset + 12 + size
-            if end > len(raw):
-                break
-            payload = raw[offset + 8:offset + 8 + size]
-            checksum = struct.unpack(">I", raw[end - 4:end])[0]
-            if zlib.crc32(chunk + payload) & 0xffffffff != checksum:
-                break
-            if offset == 8 and chunk == b"IHDR" and size == 13:
-                dimensions = struct.unpack(">II", payload[:8])
-            saw_pixels = saw_pixels or chunk == b"IDAT"
-            if chunk == b"IEND" and size == 0:
-                saw_end = end == len(raw)
-                break
-            offset = end
-        if dimensions != expected or not saw_end or not saw_pixels:
-            raise GateStop("unknown", f"Corrupt/wrong-size PNG capture: {artifact_id}")
+        try:
+            validate_png(raw, expected)
+        except PNGValidationError as exc:
+            raise GateStop("unknown", f"Corrupt/wrong-size PNG capture: {artifact_id}: {exc}") from exc
+
+    def inspection(self, payload: dict, check: dict) -> None:
+        inspection = payload.get("inspection")
+        if not isinstance(inspection, dict):
+            raise GateStop("unknown", f"Missing image inspection: {check['id']}")
+        if inspection.get("viewed_artifact_ids") != [check["actual_artifact_id"], check["reference_artifact_id"]]:
+            raise GateStop("unknown", f"Inspection must name the actual and reference artifacts: {check['id']}")
+        tool = inspection.get("image_tool")
+        if not isinstance(tool, str) or not tool.strip():
+            raise GateStop("unknown", f"Inspection requires a host image tool name: {check['id']}")
+        observations = inspection.get("observations")
+        if not isinstance(observations, list) or not 1 <= len(observations) <= 500:
+            raise GateStop("unknown", f"Inspection requires 1-500 regional observations: {check['id']}")
+        viewport = check["viewport"]
+        width, height = (round(viewport[key] * viewport["device_scale_factor"]) for key in ("width", "height"))
+        covered = set()
+        for observation in observations:
+            if not isinstance(observation, dict) or any(
+                not isinstance(observation.get(key), str) or not observation[key].strip()
+                for key in ("region", "observed", "expected")
+            ):
+                raise GateStop("unknown", f"Inspection requires region, observed and expected detail: {check['id']}")
+            aspect, status = observation.get("aspect"), observation.get("status")
+            if not isinstance(aspect, str) or aspect not in check["checks"]:
+                raise GateStop("unknown", f"Unknown inspection aspect: {check['id']}")
+            if status not in ("passed", "failed", "unknown", "blocked"):
+                raise GateStop("unknown", f"Invalid inspection status: {check['id']}")
+            for key in ("actual_box", "reference_box"):
+                box = observation.get(key)
+                if not isinstance(box, list) or len(box) != 4 or any(type(n) is not int for n in box):
+                    raise GateStop("unknown", f"Inspection {key} must be integer [x, y, width, height]: {check['id']}")
+                x, y, w, h = box
+                if x < 0 or y < 0 or w <= 0 or h <= 0 or x + w > width or y + h > height:
+                    raise GateStop("unknown", f"Inspection {key} is outside its screenshot: {check['id']}")
+            if status != "passed" and "passed" in (check["checks"][aspect], check["status"]):
+                raise GateStop(status, f"Visual pass contradicts {aspect} observation: {check['id']}")
+            covered.add(aspect)
+        if not set(VISUAL_ASPECTS) <= covered:
+            raise GateStop("unknown", f"Inspection is missing required aspect coverage: {check['id']}")
+        if check["status"] == "passed" and any(value != "passed" for value in check["checks"].values()):
+            raise GateStop("unknown", f"Visual pass contradicts aspect checks: {check['id']}")
+
+    def pixel_diff(self, check: dict) -> None:
+        tolerance = check.get("tolerance", {"channel_delta": 0, "max_changed_fraction": 0})
+        if not isinstance(tolerance, dict):
+            raise GateStop("unknown", f"Invalid pixel tolerance: {check['id']}")
+        delta, maximum = tolerance.get("channel_delta"), tolerance.get("max_changed_fraction")
+        if (type(delta) is not int or not 0 <= delta <= 64
+                or type(maximum) not in (int, float) or not 0 <= maximum <= 0.1):
+            raise GateStop("unknown", f"Pixel tolerance requires channel_delta 0-64 and max_changed_fraction 0-0.1: {check['id']}")
+        try:
+            images = []
+            for key in ("actual_artifact_id", "reference_artifact_id"):
+                raw = self.artifact(check[key])
+                image = png.decode(raw, max_pixels=MAX_DIFF_PIXELS)
+                # The decoder ignores tRNS on grey/RGB; do not discard that transparency.
+                if image.channels in (1, 3) and any(kind == b"tRNS" for kind, _ in png._chunks(raw)):
+                    raise png.PNGError("non-palette tRNS transparency is not supported")
+                images.append(image)
+            actual, reference = images
+        except png.PNGError as exc:
+            raise GateStop("unknown", f"Pixel comparison unavailable: {check['id']}: {exc}") from exc
+        with_alpha = actual.channels in (2, 4) or reference.channels in (2, 4)
+        convert = png.to_rgba if with_alpha else png.to_rgb
+        actual, reference = convert(actual), convert(reference)
+        if (actual.width, actual.height) != (reference.width, reference.height):
+            raise GateStop("unknown", f"Pixel comparison dimensions disagree: {check['id']}")
+        channels = (abs(a - b) > delta for a, b in zip(actual.data, reference.data))
+        if with_alpha:
+            changed = sum(r or g or b or a for r, g, b, a in zip(channels, channels, channels, channels))
+        else:
+            changed = sum(r or g or b for r, g, b in zip(channels, channels, channels))
+        fraction = changed / (actual.width * actual.height)
+        if fraction > maximum and check["status"] == "passed":
+            raise GateStop("failed", f"Pixel comparison changed fraction {fraction:.6f} exceeds {maximum}: {check['id']}")
 
     def visual(self, run: dict, must_pass: bool) -> None:
         checks = [x for x in self.packet["visual_checks"] if x["run_id"] == run["id"]]
@@ -118,15 +191,19 @@ class Evidence:
         for check in checks:
             if check["status"] in {"unknown", "blocked"}:
                 raise GateStop(check["status"], f"Visual comparison {check['id']}: {check['reason']}")
-            self.figma(check["figma_id"])
+            if check["figma_id"] is not None:
+                self.figma(check["figma_id"])
             self.screenshot(check["actual_artifact_id"], check["viewport"])
             self.screenshot(check["reference_artifact_id"], check["viewport"])
             self.capture_time(check["actual_artifact_id"], run)
-            self.capture_time(check["comparison_artifact_id"], run)
             payload = self.payload(check["comparison_artifact_id"])
+            self.compared_after_inputs(check)
             self.identity(payload, run, "visual_report")
             if payload.get("comparison") != check:
                 raise GateStop("unknown", f"Visual report disagrees with declared comparison: {check['id']}")
+            self.inspection(payload, check)
+            if check["method"] == "pixel_diff":
+                self.pixel_diff(check)
             if must_pass and check["status"] != "passed":
                 raise GateStop("failed", f"Visual comparison failed: {check['id']}: {check['reason']}")
 

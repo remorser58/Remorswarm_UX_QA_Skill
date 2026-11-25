@@ -45,7 +45,6 @@ I could not open any primary source (see below), so every literature claim is ta
   - §0, §2 (profile), §6 (observation), §7 (finding), §12 and §12.1 (benchmark);
   - §13 (audience), re-read after it changed on disk.
 - `docs/validation/heldout-mixed-frozen-8c1de02.json`, top-level summary only.
-- `COORDINATION.md` on this branch and on `origin/claude/admiring-goldberg-llu3f5`. This brief is part of item 2 of the skill session's remaining work: new files only, under `docs/qa-discipline/`.
 
 **Repository data analysed.** These are tool outputs and code, not answer keys.
 

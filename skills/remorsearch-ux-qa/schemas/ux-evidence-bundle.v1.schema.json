@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/remorser58/Remorsearch_UX_QA_Skill/schemas/ux-evidence-bundle.v1.schema.json",
+  "$id": "https://github.com/remorser58/remorsearch_UX_QA/schemas/ux-evidence-bundle.v1.schema.json",
   "title": "UX Evidence Bundle v1",
   "type": "object",
   "required": [

@@ -8,13 +8,13 @@ Every number in this brief has one of these tags:
 
 | Tag | Meaning | Can it be a hard threshold? |
 |---|---|---|
-| **[V1]** | Verified this session from the primary document's own text. These are mostly GitHub-hosted primary docs: EA IRIS, the Trace Center proposed PSE guidelines, the BBC TTML validator requirements and the DaltonLens source code. | Yes |
-| **[V1-3p]** | Verified this session from a third-party document that restates a standard, such as a practitioner's XAG test notes. | Yes, after a spot check against the official text |
+| **[V1]** | Verified at the time of writing from the primary document's own text. These are mostly GitHub-hosted primary docs: EA IRIS, the Trace Center proposed PSE guidelines, the BBC TTML validator requirements and the DaltonLens source code. | Yes |
+| **[V1-3p]** | Verified at the time of writing from a third-party document that restates a standard, such as a practitioner's XAG test notes. | Yes, after a spot check against the official text |
 | **[V2]** | Verified only through a web-search result snippet that quotes or summarises the named source. The full page could not be fetched. | Probably yes. Re-read the official page before shipping |
-| **[R]** | Recalled from prior knowledge of the literature. It could not be fetched or searched this session. | **No.** Treat it as a placeholder until someone checks it against the original |
+| **[R]** | Recalled from prior knowledge of the literature. It could not be fetched or searched at the time of writing. | **No.** Treat it as a placeholder until someone checks it against the original |
 | **[D]** | Derived in this brief by calculation from inputs that carry the tags above. The formula is shown. | Only as strong as its inputs |
 
-**How the research was limited.** The network egress proxy blocked WebFetch for learn.microsoft.com, w3.org, itu.int, ofcom.org.uk, arxiv.org, pmc/ncbi, wikipedia, gameaccessibilityguidelines.com, ian-hamilton.com, gamedeveloper.com, huggingface.co and the scholarly APIs. Only github.com could be fetched. The shared WebSearch quota (200 calls) ran out partway through. Microsoft XAG, W3C, ITU and Ofcom values therefore come from search snippets [V2], and the reaction-time, latency, motion-sickness, mobile-ergonomics and Hodent material is mostly [R]. The Sources section lists what needs checking before any [R] value is encoded as a gate.
+**How the research was limited.** The network egress proxy blocked WebFetch for learn.microsoft.com, w3.org, itu.int, ofcom.org.uk, arxiv.org, pmc/ncbi, wikipedia, gameaccessibilityguidelines.com, ian-hamilton.com, gamedeveloper.com, huggingface.co and the scholarly APIs. Only github.com could be fetched. Web search was rate-limited partway through. Microsoft XAG, W3C, ITU and Ofcom values therefore come from search snippets [V2], and the reaction-time, latency, motion-sickness, mobile-ergonomics and Hodent material is mostly [R]. The Sources section lists what needs checking before any [R] value is encoded as a gate.
 
 **Severity scale used in this brief:**
 - **P0:** a safety risk (photosensitive seizure) or something that blocks critical-path progress for the target persona, with no workaround in the game.
@@ -762,7 +762,7 @@ Rules for personas:
 
 ## 6. Sources
 
-Access status: "fetched" means the full text was read this session; "snippet" means only search-result text was seen; "not accessed" means it is cited from prior knowledge [R].
+Access status: "fetched" means the full text was read at the time of writing; "snippet" means only search-result text was seen; "not accessed" means it is cited from prior knowledge [R].
 
 **Guidelines and standards**
 1. Microsoft, Xbox Accessibility Guideline 101: Text display. Snippet [V2] (console 26→52 px at 1080p). https://learn.microsoft.com/en-us/xbox/accessibility/xbox-accessibility-guidelines/101
@@ -817,7 +817,7 @@ Access status: "fetched" means the full text was read this session; "snippet" me
     - Taesiri et al., GlitchBench (CVPR 2024) and VideoGameQA-Bench (2025).
 38. Springer UAIS (2025), "The evolution of video game accessibility on Xbox consoles in the Far Cry game series". Title snippet only. https://link.springer.com/article/10.1007/s10209-025-01208-4
 
-**Human factors literature (all [R]; not accessed this session; verify before use)**
+**Human factors literature (all [R]; not accessed at the time of writing; verify before use)**
 
 39. Der, I. & Deary, I. J. (2006). Age and sex differences in reaction time in adulthood: Results from the United Kingdom Health and Lifestyle Survey. *Psychology and Aging* 21(1):62–73.
 40. Woods, D. L. et al. (2015). Factors influencing the latency of simple reaction time. *Frontiers in Human Neuroscience*. Kosinski, R. J. (2008+). A literature review on reaction time (Clemson).

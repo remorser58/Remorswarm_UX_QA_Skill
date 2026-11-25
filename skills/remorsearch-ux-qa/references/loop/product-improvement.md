@@ -6,7 +6,7 @@ Improve a working product from one URL or repository with available tools and th
 
 1. Runtime: use `python3` if it is 3.10+; otherwise run `python3 scripts/find_runtime.py` and reuse the paths it prints. Missing Node 22 gaps only the bundled driver; host-browser QA continues.
 2. Product and intent discovery.
-3. Baseline: real product QA; report it even without changes or a loop packet.
+3. Baseline: real product QA; after first observation, check `references/persona-qa/generated-ui-preflight.md` sections 1–4 and replay affected checks after fixes. Report baseline even without changes or a loop packet.
 4. Research PRD needs and QA questions; build/revalidate behavioral personas and bounded task assignments.
 5. A warranted reversible fix, then fill, strict improve and replay.
 
@@ -39,13 +39,13 @@ Load `references/research/workflow.md` and its access/evidence cards only when r
 
 Add Naver Cafes, reviews, Reddit or official sources as relevant. Selection implies no access. Discover URLs, then invoke bundled insane-search under the research card's access/privacy rules. Unsupported output stays a lead; unread content stays a gap. Retain calls, source URL, dates, version, summary, read scope, firsthand/promotion/inference labels, counters and duplicates. A missing optional source or key does not stop other research or reproduced product QA; report it separately from missing required QA. Never invent callback receipts.
 
-Turn scrubbed research into hypotheses and rerun tasks. Persona reuse/workers: lookup `references/persona-qa/persona-library-swarm.md` by section. Unreproduced complaints stay hypotheses; sparse research does not block reproduced defects. Never fabricate statuses.
+Turn scrubbed research into hypotheses and rerun related tasks. Persona reuse/workers: lookup `references/persona-qa/persona-library-swarm.md` by section. Unreproduced complaints stay hypotheses; sparse community evidence does not block reproduced defects. Never fabricate statuses.
 
 ## Fix and verify in the same scope
 
 The improvement request, actor and scope authorize ordinary reversible fixes; do not ask again at a CLI permission stop. Review paths and concurrent edits, then make a minimal fix. Unresolved intent conflicts, scope expansion, deployment, publication and real account changes need their own authority.
 
-Create screen composition and UX changes in editable Figma first. Preserve existing design; record file URL, nodes, version and readback before implementing. No side accent bars or side-tab cards. A missing required Figma connection blocks the affected design/implementation only; name it and continue discovery and QA. A screenshot or local plan does not substitute.
+When design lives in Figma (`policy.figma_first: true`), create screen composition and UX changes in editable Figma first, preserving existing design and recording file URL, nodes, version and readback before implementing. Missing Figma connection blocks only that change (a screenshot or local plan does not substitute); continue discovery and QA. A code-first project (`figma_first: false`) changes code directly with before/after captures. Follow the project's design rules; proposals follow `policy.allow_side_accents` and React UI fixes lookup `references/loop/react-design-system.md` by section.
 
 Use `references/loop/workflow.md` for patch/replay records and look up `references/loop/provider-contract.md` by section for packet fields. Host browser and Figma tools act; the CLI validates imported evidence and applies authorized local text patches. When it stops for missing receipts, continue feasible collection and resume with appended evidence.
 

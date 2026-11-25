@@ -215,7 +215,8 @@ export function startServer({ session, port, idleTimeoutS, onReady, onDone }) {
       } catch (err) {
         if (err instanceof DriverFailure) {
           const result = await finishWith({ reason: err.message });
-          send(res, 500, { error: err.message, run: result.runPath, status: result.status });
+          send(res, 500, { error: err.message, run: result.runPath, status: result.status,
+            exit_code: result.exitCode, ...(result.analysis ? { analysis: result.analysis } : {}) });
           return;
         }
         throw err;
@@ -248,6 +249,7 @@ export function startServer({ session, port, idleTimeoutS, onReady, onDone }) {
     send(res, 200, {
       run: result.runPath, status: result.status, success: result.success,
       success_basis: result.run.success_basis, exit_code: result.exitCode,
+      ...(result.analysis ? { analysis: result.analysis } : {}),
     });
   }
 

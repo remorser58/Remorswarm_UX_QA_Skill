@@ -44,7 +44,7 @@ runtime dependency while the original v1 validator continues its semantic checks
 
 `goal` has a stable ID, objective, complete scenario matrix, required evidence IDs,
 explicit code paths, bounded `max_iterations` and mandatory stop conditions.
-`policy` pins Figma-first, prohibits side accents and raw community storage, and
+`policy` records whether design is Figma-first and whether side accents are allowed, prohibits raw community storage, and
 sets a live-artifact freshness window of 1–30 days. Default example: seven days.
 The normalized v1 bundle remains embedded without changing its record IDs.
 

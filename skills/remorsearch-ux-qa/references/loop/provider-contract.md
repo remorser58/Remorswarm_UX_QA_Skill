@@ -83,6 +83,10 @@ revision and scenario digest must agree across every payload; captures fall
 inside the run interval. Missing checks are not marked passed. A blocked/unknown
 run records an explicit reason and cannot verify a finding.
 
+Every scenario carries keyboard, focus and semantics checks, pointer and touch flows
+included. Check what that flow uses, such as activated links staying in the tab order
+and where focus lands after activation; an unexercised check is not passed.
+
 QA owns observations linking actual runs to findings. A fix requires a verified,
 observed finding reproduced by that round's baseline, the original scenario,
 linked proposal, rationale/expected effect, and explicit P0–P3 severity. A
@@ -98,20 +102,114 @@ Comparison-ready/approved/implemented are eligible statuses; unresolved
 `spec_conflict` or `design_defect` blocks implementation.
 
 Each visual check links the run, route, viewport, Figma record and exact versions
-and nodes, actual capture, reference export, comparison report, method
+and nodes when the packet's policy is Figma-first. A code-first packet
+(`policy.figma_first: false`) leaves `figma_id`, the version and key fields null
+and `node_ids` empty; its reference is a capture of the approved baseline, and
+`figma_fidelity` then records fidelity to that reference. A check always links
+the actual capture, reference export, comparison report, method
 (`review` or `pixel_diff`), reviewer, explicit overall status and reason. Required
-aspect keys: `layout`, `interaction_states`, `typography`, `side_accents`. For a skill-authored proposal, a passed
-`side_accents` check means **no side accent bars, attached side-tab cards or
-equivalent decorative rails**. Existing-product QA reports a bar only when the
+aspect keys: `layout`, `interaction_states`, `alignment`, `spacing`, `typography`,
+`text_clipping`, `component_occlusion`, `figma_fidelity`, `side_accents`.
+`text_clipping` and `component_occlusion` are separate gates; `layout: passed`
+cannot stand in for either one. `side_accents` applies the packet's
+`policy.allow_side_accents`: when it is false, a passed check means the
+skill-authored proposal adds no side accent bars, attached side-tab cards or
+equivalent decorative rails; when it is true, a passed check means the change
+follows the project's own rule. Existing-product QA reports a bar only when the
 task trace shows harm. If the CLI requires an absence receipt that the current
 product cannot supply, report a policy-gate limitation; never invent a pass.
 
 Live screenshots/reference exports must be PNG bytes at viewport times device
 scale. The comparator JSON repeats the run identity, uses `kind: visual_report`,
-and has `comparison` equal to the full visual-check object. Record actual failure
-or unknown results. A screenshot file, Figma link, pixel difference count or a
-reviewer's name alone cannot pass the gate. Accessibility coverage is separately
-required; visual matching does not prove keyboard operation or semantics.
+and has `comparison` equal to the full visual-check object. It also requires an
+`inspection` object for both methods. The host must open both images through its
+image-viewing tool and author concrete regional observations. This excerpt shows
+one row; a complete report needs coverage of all six aspects below:
+
+```json
+{
+  "inspection": {
+    "viewed_artifact_ids": ["actual-capture-001", "figma-export-001"],
+    "image_tool": "view_image",
+    "observations": [{
+      "region": "checkout action",
+      "actual_box": [24, 712, 342, 48],
+      "reference_box": [24, 712, 342, 48],
+      "aspect": "alignment",
+      "status": "passed",
+      "observed": "The action starts at x=24, aligned with the form fields.",
+      "expected": "The pinned Figma frame aligns the action and fields at x=24."
+    }]
+  }
+}
+```
+
+`viewed_artifact_ids` must equal `[actual_artifact_id, reference_artifact_id]` in
+that order, with no extra IDs. `image_tool`, `region`, `observed` and `expected`
+must be nonempty strings. Each box is integer `[x, y, width, height]` in screenshot
+pixels, with positive dimensions and its entire area inside its own image.
+Device scale is already reflected in these pixel coordinates; CSS coordinates
+must be converted before recording. There must be 1–500 observations. Each row
+names an aspect from `checks` and a status of `passed`, `failed`, `unknown` or
+`blocked`. At least one row must cover each of `alignment`, `spacing`,
+`typography`, `text_clipping`, `component_occlusion` and `figma_fidelity`.
+A nonpassing observation cannot support a passed matching aspect or a passed
+overall comparison, even when another row for that aspect passes. Record actual
+failure or unknown results. Accessibility coverage remains separately required.
+
+For `pixel_diff`, the gate decodes the hash-verified PNG bytes using the bundled
+decoder and recomputes the changed-pixel fraction. Each pixel counts once when
+any decoded RGB channel (or decoded alpha when present) differs by more than
+`channel_delta`. Optional `tolerance` belongs on the visual-check object, and
+therefore also appears in the report's identical `comparison`:
+
+```json
+{"channel_delta": 0, "max_changed_fraction": 0}
+```
+
+Omitting `tolerance` uses those strict defaults. If supplied, both fields are
+required: `channel_delta` is an integer from 0 to 64, and
+`max_changed_fraction` is a finite number from 0 to 0.1. A recomputed fraction
+above that limit rejects a claimed pass. The decoder is capped at 10,000,000
+pixels per image; unsupported inputs, including Adam7, 16-bit PNG, non-palette
+`tRNS` transparency and synthetic SVG, return `unknown` for this method. Indexed
+PNG colors and palette transparency are decoded; an invalid palette/index also
+returns `unknown`. RGB samples use the existing decoder's
+color interpretation; this is not perceptual or color-managed matching. The
+decoder ignores PNG `gAMA`, `iCCP` and `sRGB` metadata, so equal samples can render
+differently under color management. A pixel pass does not verify those semantics.
+
+These checks establish evidence structure, hash/identity consistency and a
+recomputed pixel result. They cannot authenticate an image-tool invocation,
+prove that someone viewed the images, or verify the truth, relevance or coverage
+quality of the observations. Semantic conclusions still depend on a trusted
+human or multimodal reviewer. Pixel equality cannot establish design quality,
+keyboard operation, user comprehension or a correct Figma export. Review remains
+mandatory even for identical PNGs. The bundled fixtures explicitly identify
+authored synthetic observations and never claim live inspection.
+
+Older packets missing the new aspect keys fail schema validation; reports without
+inspection stop as `unknown`. Reopen the exact artifacts, inspect them and write
+new evidence with current hashes. Preserve immutable ingested records; start a
+new packet/goal when the old envelope cannot satisfy the updated required keys.
+Do not relabel missing evidence as passed. `fill` only copies mechanical identity
+fields and hashes; it never creates observations or fills `@auto` within
+`inspection`.
+
+Export each reference from a frame of exactly the CSS viewport at the run's device
+scale (Figma `download_assets` with `defaultFormat: png` and `defaultScale` set to the
+device scale); a 1x export for a 2x run is rejected. A comparison report follows its
+actual capture and reference export and may postdate the run, as when the target is
+drawn in Figma after baseline QA; an earlier stamp is rejected.
+
+Every goal scenario needs a reference, a regression-only scenario included. With the
+owner's approval to send product screens to Figma, upload the approved baseline capture
+as that reference. `upload_assets` places a 400x300 frame and garbles non-ASCII file
+names in the layer name, so resize the frame to the viewport and rename it with
+`use_figma`, re-export it at device scale and confirm the export equals the capture.
+Compare replays under a stated pixel tolerance and show that it rejects another state of
+the same screen. Quote multipart paths that contain spaces:
+`curl -F 'file=@"PATH";type=image/png' URL`.
 
 ## 4. Reviewed local code fixes
 

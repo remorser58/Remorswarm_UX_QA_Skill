@@ -133,10 +133,10 @@
       ],
       "properties": {
         "figma_first": {
-          "const": true
+          "type": "boolean"
         },
         "allow_side_accents": {
-          "const": false
+          "type": "boolean"
         },
         "raw_community_storage": {
           "const": false
@@ -785,7 +785,10 @@
           "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
         },
         "figma_id": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
         },
         "node_ids": {
@@ -794,27 +797,39 @@
             "type": "string",
             "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
           },
-          "minItems": 1,
+          "minItems": 0,
           "maxItems": 500,
           "uniqueItems": true
         },
         "file_key": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "minLength": 1,
           "maxLength": 2000
         },
         "branch_key": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "minLength": 1,
           "maxLength": 2000
         },
         "baseline_version": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "minLength": 1,
           "maxLength": 2000
         },
         "readback_version": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "minLength": 1,
           "maxLength": 2000
         },
@@ -858,6 +873,15 @@
             "pixel_diff"
           ]
         },
+        "tolerance": {
+          "type": "object",
+          "required": ["channel_delta", "max_changed_fraction"],
+          "properties": {
+            "channel_delta": {"type": "integer", "minimum": 0, "maximum": 64},
+            "max_changed_fraction": {"type": "number", "minimum": 0, "maximum": 0.1}
+          },
+          "additionalProperties": false
+        },
         "reviewer": {
           "type": "string",
           "minLength": 1,
@@ -868,7 +892,12 @@
           "required": [
             "layout",
             "interaction_states",
+            "alignment",
+            "spacing",
             "typography",
+            "text_clipping",
+            "component_occlusion",
+            "figma_fidelity",
             "side_accents"
           ],
           "properties": {
@@ -888,6 +917,12 @@
                 "unknown"
               ]
             },
+            "alignment": {
+              "enum": ["passed", "failed", "blocked", "unknown"]
+            },
+            "spacing": {
+              "enum": ["passed", "failed", "blocked", "unknown"]
+            },
             "typography": {
               "enum": [
                 "passed",
@@ -895,6 +930,25 @@
                 "blocked",
                 "unknown"
               ]
+            },
+            "text_clipping": {
+              "enum": [
+                "passed",
+                "failed",
+                "blocked",
+                "unknown"
+              ]
+            },
+            "component_occlusion": {
+              "enum": [
+                "passed",
+                "failed",
+                "blocked",
+                "unknown"
+              ]
+            },
+            "figma_fidelity": {
+              "enum": ["passed", "failed", "blocked", "unknown"]
             },
             "side_accents": {
               "enum": [
@@ -981,7 +1035,10 @@
           "pattern": "^[a-f0-9]{64}$"
         },
         "figma_id": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
         },
         "rationale": {

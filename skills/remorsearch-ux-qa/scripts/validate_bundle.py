@@ -69,7 +69,9 @@ def _require_ref(
     location: str,
     errors: list[str],
 ) -> None:
-    if not isinstance(value, str) or value not in target:
+    if value is None:
+        errors.append(f"{location} is required")
+    elif not isinstance(value, str) or value not in target:
         errors.append(f"{location} references an unknown record")
 
 

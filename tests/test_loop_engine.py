@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from loop_factory import ROOT, SKILL, append_recovery_round, make_packet, replace_artifact
+from loop_factory import REPLAY_START, ROOT, SKILL, append_recovery_round, make_packet, replace_artifact
 from uxloop.contracts import validate_packet
 from uxloop.engine import create_state, report, run
 from uxloop.io import ContractError, digest, load_json
@@ -52,6 +52,16 @@ class LoopTests(unittest.TestCase):
         self.assertFalse(report(state)['product_complete'])
         self.assertFalse(report(state)['live_execution_performed_by_cli'])
         self.assertEqual(load(self.checkpoint)['run_id'], state['run_id'])
+
+    def test_code_first_project_completes_without_figma(self):
+        self.packet = make_packet(self.evidence_root, 'code_first')
+        self.assertEqual(validate_packet(self.packet), [])
+        state = self.go()
+        self.assertEqual(state['status'], 'complete', state['reason'])
+        self.assertEqual(state['accepted_fix_ids'], ['fix-1'])
+        figma_first = copy.deepcopy(self.packet)
+        figma_first['policy']['figma_first'] = True
+        self.assertTrue(any('Figma-first policy' in x for x in validate_packet(figma_first)))
 
     def test_blocked_permission_never_modifies_code(self):
         self.packet = make_packet(self.evidence_root, 'blocked_permission')
@@ -187,6 +197,20 @@ class LoopTests(unittest.TestCase):
     def test_screenshot_without_comparison_cannot_complete(self):
         self.packet['visual_checks'] = [self.packet['visual_checks'][0]]
         self.assert_not_complete(self.go(), 'blocked')
+
+    def test_comparison_may_follow_its_run(self):
+        # Figma-first QA draws the target after the baseline run, so that comparison is written later.
+        artifacts = {x['id']: x for x in self.packet['artifacts']}
+        artifacts['artifact-baseline-visual']['created_at'] = '2026-09-14T00:02:30+00:00'
+        state = self.go()
+        self.assertEqual(state['status'], 'complete', state['reason'])
+
+    def test_comparison_cannot_predate_its_capture(self):
+        artifacts = {x['id']: x for x in self.packet['artifacts']}
+        artifacts['artifact-replay-visual']['created_at'] = REPLAY_START
+        state = self.go()
+        self.assert_not_complete(state, 'unknown')
+        self.assertIn('predates its capture or reference export', state['reason'])
 
     def test_false_editable_figma_cannot_become_success(self):
         replace_artifact(self.packet, self.evidence_root, 'artifact-figma', lambda x: x.update(editable=False))

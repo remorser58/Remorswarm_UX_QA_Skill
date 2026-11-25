@@ -51,6 +51,8 @@ Take strata from the audience file first: its segments, their conditions, contex
 
 Use a supplied completed audience, brief-derived conditions, or an optional bounded dataset to select contexts. Missing audience or dataset never blocks QA. Create the actual task, with concrete data, from the product surface and the audience file's key tasks.
 
+When scope and budget allow, cover at least two task-changing conditions per key task and add a baseline profile — a typical member with no added facet, or a base-rate profile. A baseline is a comparison, not a clean-surface guarantee; only a matched one-facet pair (same segment, task and device, one differing facet) supports condition attribution. A defect observed under both profiles stays observed under both, never proof that all users are affected.
+
 ## Scenario format
 
 For scenarios about discoverability, optional decisions, or recovery, look up
