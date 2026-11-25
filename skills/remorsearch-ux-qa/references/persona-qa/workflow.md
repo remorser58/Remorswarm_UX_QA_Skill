@@ -29,8 +29,9 @@ For every priority task and scoped device:
 | Recovery | Back, return, rerender and each coupon/address/error transition |
 | Keyboard only | Whole primary task, including intermediate choices and recovery |
 | Reading order | Each intermediate screen's meaningful sequence and focus order |
+| State probes | Committing tasks: all four probes + coverage in `drivers/web/README.md` State probes |
 
-List reached/missing screens, states and devices; check Korean clipping/IME and retain prior values after each step. Author `success.task_checks` for material fields after transitions and completion (`drivers/web/README.md`). Use explicit expected reset/normalized values (`from_step`, `type.redact:true`). Failed submit: record first-invalid focus, invalid state and error association (first-invalid focus/clear-on-type become findings only if blocking completion, breaking error association, causing wrong submission, or violating spec). Each row: pass/partial/fail/untested with reason.
+List reached/missing screens, states and devices; check Korean clipping/IME and retain prior values after each step. Author `success.task_checks` for material fields after transitions and completion (`drivers/web/README.md`). Use explicit expected reset/normalized values (`from_step`, `type.redact:true`). Failed submit: record first-invalid focus, invalid state and error association (first-invalid focus/clear-on-type become findings only if blocking completion, breaking error association, causing wrong submission, or violating spec). Each row: pass/partial/fail/untested with reason; probe rows done/not applicable/not checked.
 
 Record the UI card's component/screen matrices for every product UI QA.
 
@@ -38,7 +39,9 @@ Optional dataset: exact source/revision/schema, bounded sample/seed/config/shard
 
 ## 2. Exercise and capture
 
-Exercise actual product/input/start state; capture decisions/recovery, console/network/runtime errors, keyboard/focus/semantics and feedback. Screenshots support the trace; available interactions require flow evidence.
+Exercise actual product/input/start state; capture decisions/recovery, console/network/runtime errors, keyboard/focus/semantics and feedback. Screenshots support, not replace, flow evidence.
+
+Per-screen measurement/analysis: `drivers/web/README.md` section "Task-walk coverage".
 
 Blind touch uses screenshots before DOM/source/run data. A separate a11y or screenshot+a11y auditor reproduces transitions with provenance; `drive_client.mjs --port 9477 inspect` after each step/failed submit records values, choices, invalid/error association, focus and reading order. Link receipts to screen/step. Screenshot-only sessions refuse inspect; never leak DOM knowledge into the blind pass. Programmatic evidence cannot stand for assistive-tech speech. Scripted replay uses `ergo_drive.mjs run` with the same scenario/profile/build and authored steps/integrity criteria. Driver success cannot override data loss.
 

@@ -20,6 +20,7 @@ def task_result(**updates):
     result = {"kind": "task_check", "id": "request-retained", "selector": "#pay", "property": "text",
               "checkpoint": 1, "step_index": 1, "snapshot_id": "S-R-1-001", "element_id": "pay",
               "passed": False, "result": "fail", "reason": None, "severity": "P1",
+              "basis": {"kind": "task", "reference": "Generic task requires the submitted request to be retained."},
               "consequence": "필수 요청사항이 최종 결과에 유지되지 않았습니다."}
     return {**result, **updates}
 
@@ -56,6 +57,12 @@ class TaskValidationTests(unittest.TestCase):
         self.assertEqual(analyze.run_health(run, [], None)[0], "degraded")
         run["status"] = "blocked"
         self.assertEqual(analyze.run_health(run, [], None)[0], "failed")
+
+    def test_missing_expectation_basis_never_promotes_an_authored_guess(self):
+        run = {"run_id": "R", "profile_id": "EP-01", "status": "completed",
+               "success_detail": {"criteria": [task_result(basis=None)]}}
+        self.assertEqual(checks.check_task_integrity(run, {"profile_id": "EP-01"},
+                                                   {"S-R-1-001": {"snapshot_id": "S-R-1-001"}}), [])
 
 
 class TaskEvidenceTests(unittest.TestCase):

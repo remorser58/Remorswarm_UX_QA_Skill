@@ -30,6 +30,8 @@ For Korean reports keep this QA structure. Use 결론, 발견, 수정 전후, �
 
 ## Findings
 
+Automated analyzer warnings below P2 are not cards: give one row per rule and screen with counts, examples and evidence links (`ergo_qa.py swarm` `summaries`). Model-reviewed, state, timing and focus results stay cards.
+
 Order cards by P0, P1, P2, P3, then high, medium, low confidence within each severity. Include verified current-build observations here. Put unreproduced, stale or unverified cards in the annex and state the missing evidence. Severity follows user impact; confidence follows evidence quality. Research gate statuses govern community-derived scenario motivation; they never reduce the severity of an observed product failure.
 
 | ID | Severity and impact rationale | Confidence | Scenario/task | Verification |
@@ -113,6 +115,14 @@ Count executed scenarios even when the task failed. Give completion separately. 
 | Happy paths | [k/n planned device/task combinations] | [k/n] | [missing paths] |
 | Recovery paths | [k/n planned device/task combinations] | [k/n] | [at least one per device for ship] |
 | Accessibility checks | [k/n planned checks; standards apart] | [pass/fail/partial counts] | [keyboard, assistive technology, etc.] |
+
+For each committing task, add one row per task x viewport x input x probe (a Back/reopen resubmit, b keep on confirmation, c switch item/date/recipient, d error-fix-resubmit). Status is exactly `done`, `not applicable` or `not checked`; the other columns follow `drivers/web/README.md` section State-probe coverage. Absent rows count as `not checked`; carry gaps into the verdict, never count them as passed.
+
+| Task | Viewport, input | Probe | Status | Result | Run/step/capture/check | Reason or gap |
+| --- | --- | --- | --- | --- | --- | --- |
+| [task] | [CSS size, device ID, input] | [a-d] | [done/not applicable/not checked] | [pass/fail/-] | [run ID, step, snapshot, check ID, replay run_path] | [required unless done] |
+
+Summary: `done k, not applicable m, not checked j of n rows`.
 
 ## Method and limits
 

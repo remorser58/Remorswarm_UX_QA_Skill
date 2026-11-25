@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generic state contract fixture</title>
+<style>
+body { font: 18px system-ui; max-width: 48rem; margin: 24px; }
+button, input { font: inherit; margin: 8px; padding: 8px; }
+li { margin: 8px; }
+</style>
+<h1>Generic request</h1>
+<p id="policy">Entry accepts 2 through 8 ASCII letters, digits or hyphens.
+Errors, Back, cancel and rerender preserve this draft and its option.
+New request clears both fields. Approve creates one record per draft.
+Re-entry and edit-resubmit update that record, never duplicate it. Cancel never changes records.
+Each fresh page starts with no records; this fixture has no persistent or server state.</p>
+<main id="screen"></main>
+<section id="history"><h2>Visible records</h2><ol id="records"></ol>
+<p class="record" hidden>Hidden decoration is not a visible history record.</p></section>
+<aside><p class="record">Unrelated content outside the declared history container.</p></aside>
+<script>
+const bug = new URLSearchParams(location.search).get('bug');
+const screen = document.querySelector('#screen');
+const records = document.querySelector('#records');
+let nextId = 1;
+let draft = { id: nextId, value: '', checked: false };
+let phase = 'form';
+const rows = [];
+const escapeText = (value) => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+function render(message = '') {
+  records.innerHTML = rows.map((row) => `<li class="record">${escapeText(row.value)} ${row.checked ? 'selected' : 'unselected'}</li>`).join('');
+  if (phase === 'form') {
+    screen.innerHTML = `<label>Entry<input id="entry" value="${escapeText(draft.value)}"></label>
+      <label><input id="option" type="checkbox" ${draft.checked ? 'checked' : ''}>Optional selection</label>
+      <p id="error" role="alert">${message}</p><button id="review">Review</button><button id="rerender">Rerender</button>`;
+    screen.querySelector('#entry').oninput = (event) => { draft.value = event.target.value; };
+    screen.querySelector('#option').onchange = (event) => { draft.checked = event.target.checked; };
+    screen.querySelector('#rerender').onclick = () => {
+      if (bug === 'rerender_loss') { draft.value = ''; draft.checked = false; }
+      render();
+    };
+    screen.querySelector('#review').onclick = () => {
+      if (!/^[a-z0-9-]{2,8}$/i.test(draft.value)) {
+        if (bug === 'error_loss') { draft.value = ''; draft.checked = false; }
+        render('Use 2 through 8 letters, digits or hyphens.');
+      } else { phase = 'review'; history.pushState({ phase }, '', '#review'); render(); }
+    };
+  } else if (phase === 'review') {
+    screen.innerHTML = `<p id="reviewed">${escapeText(draft.value)}</p><button id="back">Back</button>
+      <button id="cancel">Cancel</button><button id="approve">Approve</button>`;
+    screen.querySelector('#back').onclick = () => history.back();
+    screen.querySelector('#cancel').onclick = () => {
+      if (bug === 'cancel_mutates') rows.push({ ...draft });
+      phase = 'form'; render();
+    };
+    screen.querySelector('#approve').onclick = () => {
+      const previous = rows.findIndex((row) => row.id === draft.id);
+      if (previous < 0 || bug === 'duplicate') rows.push({ ...draft });
+      else rows[previous] = { ...draft };
+      phase = 'complete'; render();
+    };
+  } else {
+    screen.innerHTML = `<p id="receipt" role="status">Approved ${escapeText(draft.value)}</p>
+      <button id="reenter">Re-enter</button><button id="edit">Edit</button><button id="new">New request</button>`;
+    screen.querySelector('#reenter').onclick = () => { phase = 'review'; render(); };
+    screen.querySelector('#edit').onclick = () => { phase = 'form'; render(); };
+    screen.querySelector('#new').onclick = () => { draft = { id: ++nextId, value: '', checked: false }; phase = 'form'; render(); };
+  }
+}
+addEventListener('popstate', () => {
+  if (bug === 'back_loss') { draft.value = ''; draft.checked = false; }
+  phase = 'form'; render();
+});
+render();
+</script>
+</html>

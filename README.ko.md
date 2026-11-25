@@ -68,6 +68,18 @@ npm ci && npx playwright install chromium
 
 Node.js 22를 쓰십시오. 고정된 Playwright 1.56.1에서는 Node.js 24.16 이상과 Node.js 26에서 `npx playwright install`이 다운로드 뒤 멈춥니다([microsoft/playwright#40724](https://github.com/microsoft/playwright/issues/40724), Playwright 1.60에서는 됩니다).
 
+Ubuntu 26.04 x64에서 `does not support chromium on ubuntu26.04-x64`로
+실패하면 Playwright의 Ubuntu 24.04 빌드를 명시적으로 사용합니다. 설치와
+드라이버 실행 모두 같은 환경 변수를 유지하세요.
+
+```sh
+export PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=ubuntu24.04-x64
+npx playwright install chromium
+```
+
+Ubuntu 26.04 정식 지원이 아닌 호환성 우회입니다. Node.js 22는 그대로
+사용하세요. 이 변수는 최신 Node의 설치 멈춤 문제를 해결하지 않습니다.
+
 ## 사용법
 
 저장된 페르소나의 정적 브라우저 여정과 대규모 실행 큐를 포함한 누적 개선은 `main` 브랜치에 반영되어 있습니다.
@@ -244,6 +256,9 @@ python3 scripts/check_release.py --output dist/release-check
 - 한국 플랫폼 상당수가 자동 수집을 제한하므로, 디시인사이드, 네이버, 쿠팡, X는 서면 허락과 함께 항목별 약관 확인을 기록하지 않으면 수집 공백으로 끝납니다. 유튜브는 본인의 키를 쓰는 API로만 읽습니다. 한국 팩은 법률 자문이 아닙니다.
 - ergonomics 모드의 엄지 도달 모델은 보정되지 않았고, 벤치마크 세트는 작으며 에이전트가 만들었습니다. 결과는 인증이 아니라 선별용으로 봅니다. `docs/validation/`을 보십시오.
   [기존 별도 평가](docs/validation/experiments/heldout-2-results.md)에서는 정상 시나리오당 P0–P2 문제 단위가 1.75건으로 사전 기준 0.35건을 넘었고, 조건 식별 목표도 충족하지 못했습니다. 이후 수정만으로 이 목표를 통과했다고 볼 수 없습니다. 발견 항목은 실제 수정 전에 검토해야 합니다.
+  이 checkout에는 `benchmarks/heldout-2/audience/*.json`만 있고 해당 평가의
+  fixture·scenario·정답 키는 없습니다. 공개된 수치를 이 checkout만으로
+  재현할 수 없으며 audience 파일만으로 실행 가능한 suite가 되지는 않습니다.
 - 웹 드라이버가 다루는 것은 Chromium 기기 에뮬레이션뿐입니다. 실제 iOS Safari, 네이티브 앱, 실제 기기는 다루지 않습니다.
 
 ## 라이선스

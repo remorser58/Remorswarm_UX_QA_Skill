@@ -63,7 +63,7 @@ phone use is left-thumb, so always keep a left-grip profile.
 | ID | Basis | Rule | Severity |
 | --- | --- | --- | --- |
 | PT-01 | measured | WCAG 2.2 SC 2.5.8: ≥ 24 × 24 CSS px, or the 24 px spacing-circle exception, over the whole rendered page. The target includes an associated `<label>` (it accepts the same click). Inline/equivalent/essential exceptions need judgment. | P1 on primary/destructive/path targets, else P2 |
-| PT-02 | measured | Physical size (label-extended target) of controls the task depends on (primary, destructive, on-path): < 4.4 mm (iOS 28 pt floor) → P1; < 7 mm (44 pt / 48 dp / Windows 7.5 mm) → P2; one-hand grip with a side < 9.2 mm **and** harder to hit than a 9.2 mm square (Parhi) → P3, so a full-width 60 × 8.8 mm field passes. Small secondary targets are left to PT-01. | as rule |
+| PT-02 | measured | Physical size (label-extended target) on touch devices, over the whole rendered page. Primary/destructive/on-path controls: < 4.4 mm (derived iOS floor) → P1; < 7 mm (platform guidance) → P2; one-hand grip with a side < 9.2 mm **and** harder to hit than a 9.2 mm square (Parhi) → P3, so a full-width 60 × 8.8 mm field passes. Other controls < 7 mm → P3 even if never tapped or declared in the scenario. Hidden, disabled, covered and modal-inert controls are excluded; game controls use GM-05. This is device-calibrated physical-size guidance, not a 44 CSS px rule or a WCAG 2.5.8 failure. | as rule |
 | PT-04 | model | Dual-Gaussian tap success (Bi & Zhai 2016): σx² = 0.0075·W² + 1.68, σy² = 0.0108·W² + 1.33 (mm²); P(hit) = erf(Wx/2√2σx)·erf(Wy/2√2σy), on the label-extended target. Severity from the baseline model (k = 1). Profile multipliers (one-hand thumb 1.3, walking 1.4, tremor 1.3/1.8, 60s 1.10, 70s+ 1.3; multiplied; derived or declared assumptions, see `params.py`) add findings only for targets harder to hit than a 9.2 mm square; profile-only severity is at most P2 for the primary action or a control the task used, otherwise P3 (MP-02), and P3 for any target of at least 7.0 mm (SIT-01: walking and tremor studies find such targets usable; critical targets below 7.0 mm already get P2 from PT-02). | baseline miss ≥ 10 % P1, ≥ 5 % P2, ≥ 3 % P3; profile-only ≤ P2 (path/primary, < 7.0 mm) or P3 |
 | PT-03 | model | Misfire: probability that a tap aimed at a primary/path target lands in a destructive neighbour (same Gaussian integrated over the neighbour box), plus gap. Same baseline/profile split as PT-04. | baseline ≥ 1 % and neighbour declared `irreversible` → P0; ≥ 5 % → P1; ≥ 1 % → P2; profile-only ≤ P2 (≤ P3 when the aimed target is at least 7.0 mm and the neighbour is not `irreversible`); gap < 8 dp (1.27 mm) → P3 |
 | PT-06 | measured | Pointer devices: a destructive control within 8 CSS px of a primary/path control (Material 8 dp; Win32 separation of destructive commands). | P2 |
@@ -250,11 +250,13 @@ RF-02/RF-03은 `run.adaptation[]`과 원본·복제 baseline·변경 조건의 �
 [WCAG 1.4.12 해설](https://www.w3.org/WAI/WCAG22/Understanding/text-spacing.html).
 
 `TI-01` is an opt-in measured task comparison on the recorded owner execution:
-`success.task_checks` compares authored value/text/checked expectations after
-specified actions and at completion. It stores checkpoint/capture IDs without
-field values. Severity and consequence are authored task impact; comparison
-alone does not prove downstream harm. Unvisited, ambiguous, protected and missing
-targets remain unevaluable. See `drivers/web/README.md` for executable payloads.
+`success.task_checks` compares grounded value/text/checked/visible-count
+expectations at checkpoints. `from_check` is a same-run invariant; `follow_up`
+compares a fresh replay on an owned fixture (four state probes and coverage: README State probes). Missing product/task `basis` stays
+a candidate, not a defect. Evidence keeps capture IDs, not field values.
+Severity/consequence do not prove downstream harm. Unvisited, ambiguous,
+protected and missing targets remain unevaluable. See `drivers/web/README.md`
+for executable contracts, timing recovery and separate intermediate focus probes.
 
 ## Judgment (not automated)
 

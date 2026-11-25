@@ -210,22 +210,27 @@ def cmd_swarm(args: argparse.Namespace) -> int:
     findings = swarm.aggregate(analyses, profiles)
     out = Path(args.out)
     _write_json(out / "analyses.json", {"analyses": analyses})
-    problem_units = swarm.units([f for f in findings if f.get("tier") != "hypothesis"])
+    listed, summaries = swarm.present([f for f in findings if f.get("tier") != "hypothesis"], args.list_threshold)
+    problem_units = swarm.units(listed)
     _write_json(out / "findings.json", {"findings": findings, "units": problem_units, "severity_counts": swarm.severity_counts(findings),
-                                        "unit_severity_counts": swarm.severity_counts(problem_units)})
+                                        "unit_severity_counts": swarm.severity_counts(problem_units),
+                                        "list_threshold": args.list_threshold, "listed_finding_ids": [f["id"] for f in listed],
+                                        "summaries": summaries})
     audience_doc = load_json(args.audience) if getattr(args, "audience", None) else None
     plan = None
     raw = load_json(args.profiles)
     if isinstance(raw, dict) and isinstance(raw.get("plan"), dict):
         plan = raw["plan"]
-    (out / "report.md").write_text(report.render(findings, profiles, analyses, title=args.title, audience=audience_doc, plan=plan), encoding="utf-8")
+    (out / "report.md").write_text(report.render(findings, profiles, analyses, title=args.title, audience=audience_doc, plan=plan,
+                                                 list_threshold=args.list_threshold), encoding="utf-8")
     if args.bundle:
         bundle_doc = bundle.to_evidence_bundle(args.bundle_id or f"ergo-{out.name}", analyses, findings, profiles)
         _write_json(out / "bundle.json", bundle_doc)
     counts = swarm.severity_counts(findings)
     ucounts = swarm.severity_counts(problem_units)
     print(f"problem units: {len(problem_units)} (P0 {ucounts['P0']}, P1 {ucounts['P1']}, P2 {ucounts['P2']}, P3 {ucounts['P3']}); "
-          f"element findings: {len(findings)} (P0 {counts['P0']}, P1 {counts['P1']}, P2 {counts['P2']}, P3 {counts['P3']}) -> {out}")
+          f"element findings: {len(findings)} (P0 {counts['P0']}, P1 {counts['P1']}, P2 {counts['P2']}, P3 {counts['P3']}); "
+          f"listed {len(listed)}, advisory summaries {len(summaries)} (below {args.list_threshold}) -> {out}")
     unhealthy = [a for a in analyses if a.get("health") in ("failed", "degraded")]
     if unhealthy:
         print(f"run health: {len(unhealthy)} run(s) failed or degraded — see report section 1", file=sys.stderr)
@@ -525,6 +530,8 @@ def build_parser() -> argparse.ArgumentParser:
             p.add_argument("--fail-on", choices=("P0", "P1", "P2", "P3"))
             p.add_argument("--fail-on-basis", help="comma-separated bases the --fail-on gate counts (e.g. measured)")
             p.add_argument("--allow-degraded", action="store_true", help="exit 0 even when a run failed or was degraded")
+            p.add_argument("--list-threshold", choices=("P0", "P1", "P2", "P3"), default="P2",
+                           help="list automated warnings down to this severity; lower ones become rule x screen summaries (P3 lists all)")
             p.add_argument("--audience", help="ergo-audience.v1 file the profiles were composed from (segment names in the report)")
         p.set_defaults(func=func)
 

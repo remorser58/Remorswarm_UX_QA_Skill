@@ -16,6 +16,8 @@ For Korean reports use 결론, 발견, 수정 전후, 실행과 점검 범위, �
 
 ## Findings
 
+Automated warnings below the list threshold (default P2) are not cards: list one row per rule and screen with finding/element counts, examples and evidence IDs, as `swarm` writes in `summaries`. Task-state, timing, focus and judgment results stay cards.
+
 Sort P0 → P1 → P2 → P3, then confidence high → medium → low. Every card uses [the persona-QA finding fields](../persona-qa/evidence-and-severity.md#finding-card): impact rationale; build/screen/device/viewport/input; profile or scenario and task; steps from start URL; expected/observed with visible UI quotes; capture receipt; why it matters; verified/inferred cause; fix layer/change/trade-off; separate KWCAG 2.2 and WCAG 2.2 item/status columns for accessibility; second pass; confidence.
 
 Add the ergonomics evidence boundaries to each card:

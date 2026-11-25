@@ -94,20 +94,28 @@ function r4(n) {
   return Math.round(n * 10000) / 10000;
 }
 
-function sampleTaskState({ selector, property, expected, key }) {
-  const elements = document.querySelectorAll(selector);
+function sampleTaskState({ selector, property, container, expected, key }) {
+  const visible = (node) => {
+    if (node.closest('[hidden]') || !node.getClientRects().length || !node.checkVisibility({ opacityProperty: true, visibilityProperty: true })) return false;
+    for (let ancestor = node; ancestor; ancestor = ancestor.parentElement) {
+      const style = getComputedStyle(ancestor);
+      if (style.display === 'none' || style.visibility !== 'visible' || Number(style.opacity) === 0) return false;
+    }
+    return true;
+  };
+  const elements = document.querySelectorAll(property === 'count' ? container : selector);
   if (elements.length !== 1) return { reason: elements.length ? 'ambiguous_target' : 'missing_target' };
   const el = elements[0];
   const credential = 'input[type="password"], input[type="hidden"], input[type="url"], [data-sensitive], [autocomplete="username"], [autocomplete*="password"], [autocomplete="one-time-code"]';
   if (el.matches(credential) || el.closest('[data-sensitive]') || el.querySelector(credential)
     || /(?:password|passwd|secret|token|credential|api.?key|authorization)/i.test(`${el.getAttribute('name') || ''} ${el.id}`)) return { reason: 'protected_target' };
-  if (el.closest('[hidden]') || !el.getClientRects().length || !el.checkVisibility({ opacityProperty: true, visibilityProperty: true })) return { reason: 'hidden_target' };
-  for (let ancestor = el; ancestor; ancestor = ancestor.parentElement) {
-    const style = getComputedStyle(ancestor);
-    if (style.display === 'none' || style.visibility !== 'visible' || Number(style.opacity) === 0) return { reason: 'hidden_target' };
-  }
+  if (!visible(el)) return { reason: 'hidden_target' };
   let actual;
-  if (property === 'checked') {
+  let nodes = [];
+  if (property === 'count') {
+    nodes = [...el.querySelectorAll(selector)].filter(visible);
+    actual = nodes.length;
+  } else if (property === 'checked') {
     if (!(el instanceof HTMLInputElement) || !['checkbox', 'radio'].includes(el.type)) return { reason: 'unsupported_property' };
     actual = el.checked;
   } else if (property === 'value') {
@@ -120,7 +128,7 @@ function sampleTaskState({ selector, property, expected, key }) {
   const passed = actual === expected;
   return { passed, result: passed ? 'pass' : 'fail', reason: null,
     element_id: window[Symbol.for(key)]?.ids?.get(el) ?? null,
-    private_actual: actual, private_node: el };
+    private_actual: actual, private_node: el, private_nodes: nodes };
 }
 
 function stripQuery(url) {
@@ -868,6 +876,7 @@ export class WebSession {
     this.warned = new Set();
     this.steps = [];
     this.taskCheckResults = new Map();
+    this.taskStateSamples = new Map(); // Private scalar state, never serialized into run/snapshot evidence.
     this.authoredInputs = new Set();
     this.mismatchedInputs = new Set();
     this.privateValues = new Set();
@@ -894,6 +903,12 @@ export class WebSession {
     this.flashGrid = null;
     this.flashPrev = null; // last flash frame (across bursts) for block motion
     this.focusWalks = [];
+    this.replayActions = [];
+    this.temporalCandidates = new Map();
+    this.temporalDropped = 0;
+    this.temporalSamplingTruncated = false;
+    this.temporalStopped = false;
+    this.probeReplays = [];
     this.reflowScreens = [];
     this.reflowDropped = new Set();
     this.reflow = [];
@@ -1055,12 +1070,11 @@ export class WebSession {
     await this.context.route('**/*', (route) => this.onRoute(route));
     await this.context.routeWebSocket(/.*/, (ws) => this.onWebSocket(ws));
     const windows = this.scenario.timing_windows;
-    if (windows.length) {
-      await this.context.exposeBinding(TW_BINDING, (source, payload) => this.onTimingWindow(source, payload));
-    }
+    await this.context.exposeBinding(TW_BINDING, (source, payload) => this.onTimingWindow(source, payload));
     await this.context.addInitScript(pageInit, {
       key: STATE_KEY,
-      binding: windows.length ? TW_BINDING : null,
+      binding: TW_BINDING,
+      candidates: !this.opts.probeReplay,
       windows: windows.map((w) => ({ id: w.id, selector: w.selector })),
       pollMs: TW_POLL_MS,
     });
@@ -1090,6 +1104,12 @@ export class WebSession {
         // A new document replaced the old one: its timed elements are gone.
         this.navRequestPending = false;
         for (const w of this.tw.values()) if (w.cur) this.applyTransition(w, false, t, null);
+        if (!this.temporalStopped) for (const candidate of this.temporalCandidates.values()) {
+          if (candidate.disappeared_ms === null) {
+            candidate.disappeared_ms = this.rel(t);
+            candidate.disappearance = 'navigation';
+          }
+        }
         this.needCalibrate = true;
       }
     });
@@ -1499,7 +1519,7 @@ export class WebSession {
    * reveals it when the user opened that layer). Bounded by FOCUS_WALK_MAX stops and
    * FOCUS_WALK_BUDGET_MS.
    */
-  async focusWalk(page, phase, snapshotId) {
+  async focusWalk(page, phase, snapshotId, { direction = 'Tab', preserveStart = false } = {}) {
     const stops = [];
     let ended = 'max_stops';
     const deadline = Math.min(epochNow() + FOCUS_WALK_BUDGET_MS, this.finishBrowserDeadline ?? Infinity);
@@ -1507,7 +1527,7 @@ export class WebSession {
     await page.addStyleTag({ content: 'html, body { scroll-behavior: auto !important; }' }).catch(() => {});
     // Reset the sequential focus navigation starting point to the top of the document
     // (blur alone keeps it at the last focused or autofocused element).
-    await page.evaluate(() => {
+    if (!preserveStart) await page.evaluate(() => {
       window.scrollTo(0, 0);
       const b = document.body;
       if (!b) return;
@@ -1528,7 +1548,7 @@ export class WebSession {
         ended = 'time_budget';
         break;
       }
-      await page.keyboard.press('Tab');
+      await page.keyboard.press(direction);
       await this.settleScroll(page);
       const info = await page.evaluate(focusInfo);
       if (!info) {
@@ -1620,7 +1640,64 @@ export class WebSession {
       stops.push(stop);
     }
     if (cdp) await cdp.detach().catch(() => {});
-    this.focusWalks.push({ phase, snapshot_id: snapshotId, url: page.url(), ended, stops });
+    this.focusWalks.push({ phase, snapshot_id: snapshotId, url: page.url(), direction, ended, stops });
+  }
+
+  /** Reproduce an authored intermediate state in a new context, never in the task page. */
+  async intermediateFocusWalks() {
+    for (const check of this.scenario.focus_walks || []) {
+      const source = this.steps[check.after_step - 1];
+      const record = { id: check.id, state: check.state, source_step_index: check.after_step,
+        source_snapshot_id: source?.after ?? null, status: 'not_checked', reason: null };
+      this.probeReplays.push(record);
+      if (!source || this.steps.slice(0, check.after_step).some((s) => s.result !== 'ok')) {
+        record.reason = 'source_prefix_incomplete';
+        continue;
+      }
+      const runId = `${this.runId}-focus-${check.id}`;
+      const runDir = path.join(this.runDir, 'probes', runId);
+      const directoryError = ensureRunDir(runDir);
+      if (directoryError) { record.status = 'blocked'; record.reason = directoryError; continue; }
+      const actions = this.replayActions.slice(0, check.after_step);
+      const replay = new WebSession({ pw: this.pw, pwInfo: this.pwInfo,
+        scenario: { ...this.scenario, steps: actions, success: null, success_unevaluable: [], focus_walks: [], timing_windows: [] },
+        deviceRequest: this.deviceRequest, profileId: this.profileId, runId, runDir, mode: 'scripted',
+        options: { ...this.opts, probeReplay: true, focusWalk: false, reflow: false }, warnings: [] });
+      record.run_id = runId;
+      record.run_path = `probes/${runId}/run.json`;
+      try {
+        await replay.start();
+        for (const action of actions) {
+          const { step } = await replay.act(action);
+          if (step.result !== 'ok') throw new Error('replay_action_failed');
+        }
+        if (!(await replay.page.locator(check.selector).isVisible())) throw new Error('state_not_reproduced');
+        record.snapshot_id = replay.lastSnapshotId;
+        record.entry_focus = await replay.page.evaluate(focusInfo);
+        for (const direction of ['Tab', 'Shift+Tab']) {
+          await replay.focusWalk(replay.page, check.state, replay.lastSnapshotId, { direction, preserveStart: true });
+        }
+        await replay.page.keyboard.press('Escape');
+        await replay.settleScroll(replay.page);
+        record.escape = {
+          state_still_visible: await replay.page.locator(check.selector).isVisible(),
+          return_focus: await replay.page.evaluate(focusInfo),
+          expected_return_selector: check.return_selector ?? null,
+          returned: check.return_selector ? await replay.page.locator(check.return_selector).evaluate((el) => el === document.activeElement) : null,
+        };
+        const escapeCapture = await replay.snapshot(actions.length, ['focus_probe_escape']);
+        record.escape.snapshot_id = escapeCapture.id;
+        record.status = 'observed';
+        // Same focus measurements, but kept with their own run/capture provenance.
+        record.walks = replay.focusWalks;
+      } catch (err) {
+        record.status = 'blocked';
+        record.reason = this.redactRecord(firstLine(err.message));
+      } finally {
+        if (replay.page) await replay.finish({ reason: record.status === 'blocked' ? record.reason : undefined });
+        else await replay.browserTransport?.close();
+      }
+    }
   }
 
   /**
@@ -1904,12 +1981,28 @@ export class WebSession {
   // ------------------------------------------------------------------ timing windows
 
   onTimingWindow(source, payload) {
+    if (this.temporalStopped) return;
     try {
       if (!source || source.frame !== this.page.mainFrame()) return;
     } catch {
       return;
     }
+    if (payload?.candidate_limit === true) { this.temporalSamplingTruncated = true; return; }
     if (!payload || typeof payload !== 'object' || typeof payload.id !== 'string') return;
+    if (payload.candidate === true) {
+      if (typeof payload.selector !== 'string' || typeof payload.v !== 'boolean'
+        || !Number.isFinite(payload.t) || !Number.isInteger(payload.step_index)) return;
+      let candidate = this.temporalCandidates.get(payload.id);
+      if (!candidate && payload.v) {
+        if (this.temporalCandidates.size >= 128) { this.temporalDropped++; return; }
+        candidate = { id: payload.id, selector: payload.selector.slice(0, 1000), role: payload.role,
+          text: typeof payload.text === 'string' ? payload.text.slice(0, 500) : '',
+          step_index: payload.step_index, appeared_ms: this.rel(payload.t - this.clockOffset), disappeared_ms: null };
+        this.temporalCandidates.set(payload.id, candidate);
+      }
+      if (candidate && !payload.v) candidate.disappeared_ms = this.rel(payload.t - this.clockOffset);
+      return;
+    }
     const w = this.tw.get(payload.id);
     if (!w || w.fallback) return;
     if (payload.v === null) {
@@ -1997,9 +2090,41 @@ export class WebSession {
         poll_interval_ms: TW_POLL_MS,
         method: w.method,
         error: w.error,
+        observation_end_ms: this.rel(endEpoch),
+        recovery: w.recovery || { status: 'not_checked' },
+        exception: w.def.exception || null,
       });
     }
     return out;
+  }
+
+  temporalCandidatesOut(endEpoch) {
+    return [...this.temporalCandidates.values()].map((candidate, index) => {
+      const declared = this.scenario.timing_windows.find((w) => w.selector === candidate.selector);
+      return { ...candidate, source_run_id: this.runId,
+        source_snapshot_id: this.steps[candidate.step_index - 1]?.after ?? null,
+        observation_end_ms: this.rel(endEpoch),
+        status: candidate.disappeared_ms === null ? 'open_at_observation_end' : 'disappeared',
+        visible_ms: candidate.disappeared_ms === null ? null : candidate.disappeared_ms - candidate.appeared_ms,
+        declared_window_id: declared?.id ?? null,
+        timing_window: declared || { id: `discovered-${index + 1}`, selector: candidate.selector, kind: 'transient_text', measure: 'visible_duration' },
+        verdict: 'candidate', recovery: 'not_checked' };
+    });
+  }
+
+  async observeTimingRecovery(snapshot) {
+    for (const window of this.tw.values()) {
+      const recovery = window.def.recovery;
+      if (!recovery || (recovery.after_step ?? 'final') !== snapshot.checkpoint) continue;
+      window.recovery = { status: 'not_checked', selector: recovery.selector, snapshot_id: snapshot.id };
+      if (!window.intervals.length || !window.text) continue;
+      const available = await this.page.locator(recovery.selector).evaluateAll((elements, text) => elements.some((el) =>
+        el.checkVisibility({ opacityProperty: true, visibilityProperty: true })
+        && el.getClientRects().length && !el.closest('[hidden],[data-sensitive]')
+        && !el.matches('input,textarea,select') && (el.innerText || '').replace(/\s+/g, ' ').trim().includes(text)), window.text).catch(() => null);
+      window.recovery.status = available === true ? 'available' : available === false ? 'not_observed' : 'unevaluable';
+      window.recovery.basis = 'same_visible_text';
+    }
   }
 
   // ------------------------------------------------------------------ page state helpers
@@ -2851,6 +2976,9 @@ export class WebSession {
       try { document.querySelectorAll(selector); return true; } catch { return false; }
     }, action.target))) throw new DriverFailure('redacted typing requires valid plain CSS');
     const stepIndex = this.steps.length + 1;
+    this.replayActions.push({ ...action });
+    await this.page.evaluate(({ key, step }) => window[Symbol.for(key)]?.armTemporal?.(step),
+      { key: STATE_KEY, step: stepIndex });
     if (action.action === 'type') {
       this.authoredInputs.add(stepIndex);
       if (this.scenario.steps[stepIndex - 1]?.action === 'type' && this.scenario.steps[stepIndex - 1].text !== action.text) this.mismatchedInputs.add(stepIndex);
@@ -3002,6 +3130,7 @@ export class WebSession {
     }
     step.url_after = this.page.url();
     this.steps.push(step);
+    await this.observeTimingRecovery({ checkpoint: stepIndex, id: step.after });
     return { step: this.redactRecord(step), snap };
   }
 
@@ -3087,6 +3216,28 @@ export class WebSession {
     return out;
   }
 
+  taskExpected(criterion) {
+    if ('from_step' in criterion) return this.scenario.steps[criterion.from_step - 1].text;
+    if ('from_check' in criterion) {
+      const source = this.taskStateSamples.get(criterion.from_check);
+      return criterion.property === 'count' ? source + (criterion.delta ?? 0) : source;
+    }
+    return criterion.expected;
+  }
+
+  taskEvidence(criterion) {
+    const evidence = { basis: criterion.basis ?? null };
+    if (criterion.container) evidence.container = criterion.container;
+    if ('from_check' in criterion) {
+      const source = this.taskCheckResults.get(criterion.from_check);
+      evidence.relation = { kind: criterion.property === 'count' ? 'delta' : 'equal', source_check_id: criterion.from_check,
+        delta: criterion.delta ?? 0, snapshot_id: source?.snapshot_id ?? null, step_index: source?.step_index ?? null };
+    }
+    if (criterion.input_cases) evidence.input_cases = criterion.input_cases.map(({ step, kind, expectation, basis, boundary }) =>
+      ({ step, kind, expectation, basis, ...(boundary ? { boundary } : {}) }));
+    return evidence;
+  }
+
   async sampleTaskChecks(checkpoint, stepResult) {
     const samples = new Map();
     if (stepResult !== 'ok') return samples;
@@ -3095,8 +3246,8 @@ export class WebSession {
       if ('from_step' in c && (!this.authoredInputs.has(c.from_step) || this.mismatchedInputs.has(c.from_step)
         || (c.from_step !== checkpoint && this.steps[c.from_step - 1]?.result !== 'ok'))) continue;
       try {
-        samples.set(c.id, await this.page.evaluateHandle(sampleTaskState, { selector: c.selector, property: c.property,
-          expected: 'from_step' in c ? this.scenario.steps[c.from_step - 1].text : c.expected, key: STATE_KEY }));
+        samples.set(c.id, await this.page.evaluateHandle(sampleTaskState, { selector: c.selector, property: c.property, container: c.container,
+          expected: this.taskExpected(c), key: STATE_KEY }));
       } catch { samples.set(c.id, null); }
     }
     return samples;
@@ -3110,42 +3261,132 @@ export class WebSession {
         checkpoint, step_index: snapshot?.snap.step_index ?? this.steps.length,
         snapshot_id: snapshot?.id ?? null, element_id: null, passed: null, result: 'unevaluable', reason: null,
         severity: criterion.severity, consequence: criterion.consequence,
+        ...this.taskEvidence(criterion),
       };
-      const expected = 'from_step' in criterion ? this.scenario.steps[criterion.from_step - 1].text : criterion.expected;
+      const expected = this.taskExpected(criterion);
+      const caseSteps = (criterion.input_cases || []).map((item) => item.step);
       if (stepResult !== 'ok') result.reason = 'action_failed';
+      else if (caseSteps.some((index) => !this.authoredInputs.has(index))) result.reason = 'source_step_unvisited';
+      else if (caseSteps.some((index) => index !== checkpoint && this.steps[index - 1]?.result !== 'ok')) result.reason = 'source_step_failed';
+      else if (caseSteps.some((index) => this.mismatchedInputs.has(index))) result.reason = 'source_input_mismatch';
       else if ('from_step' in criterion && !this.authoredInputs.has(criterion.from_step)) result.reason = 'source_step_unvisited';
       else if ('from_step' in criterion && criterion.from_step !== checkpoint && this.steps[criterion.from_step - 1]?.result !== 'ok') result.reason = 'source_step_failed';
       else if ('from_step' in criterion && this.mismatchedInputs.has(criterion.from_step)) result.reason = 'source_input_mismatch';
+      else if ('from_check' in criterion && (!this.taskStateSamples.has(criterion.from_check)
+        || this.taskCheckResults.get(criterion.from_check)?.passed !== true)) result.reason = 'source_check_unavailable';
       else if (!snapshot || !this.page || this.crashed || this.page.isClosed()) result.reason = 'capture_unavailable';
       else {
         try {
-          // Only explicitly selected CSS targets are read, and only the comparison leaves the DOM.
+          // Read only authored visible targets. Scalars needed across navigation stay in a private map.
           const before = beforeSamples.get(criterion.id);
           if (!before) result.reason = 'capture_unavailable';
           else {
-            const after = await this.page.evaluateHandle(sampleTaskState, { selector: criterion.selector, property: criterion.property, expected, key: STATE_KEY });
+            const after = await this.page.evaluateHandle(sampleTaskState, { selector: criterion.selector, property: criterion.property, container: criterion.container, expected, key: STATE_KEY });
             try {
-              Object.assign(result, await after.evaluate((last, first) => {
-                if (last.reason !== first.reason || !Object.is(last.private_actual, first.private_actual) || last.private_node !== first.private_node) return { reason: 'capture_state_changed' };
-                // Private browser handles are disposed below; values/nodes never enter the result.
-                return last.reason ? { reason: last.reason } : { passed: last.passed, result: last.result, reason: null, element_id: last.element_id };
-              }, before));
+              const sampled = await after.evaluate((last, first) => {
+                if (last.reason !== first.reason || !Object.is(last.private_actual, first.private_actual) || last.private_node !== first.private_node
+                  || last.private_nodes?.length !== first.private_nodes?.length
+                  || last.private_nodes?.some((node, i) => node !== first.private_nodes[i])) return { reason: 'capture_state_changed' };
+                return last.reason ? { reason: last.reason } : { passed: last.passed, result: last.result, reason: null, element_id: last.element_id, private_actual: last.private_actual };
+              }, before);
+              const { private_actual: actual, ...safe } = sampled;
+              Object.assign(result, safe);
+              if (!sampled.reason) this.taskStateSamples.set(criterion.id, actual);
             } finally { await after.dispose().catch(() => {}); }
           }
         } catch {
           result.reason = 'evaluation_error'; // Exception text can carry a field value.
         }
       }
+      if (!criterion.basis && result.passed !== null) {
+        result.comparison = result.result;
+        Object.assign(result, { passed: null, result: 'unevaluable', reason: 'expectation_basis_missing' });
+      }
       this.taskCheckResults.set(criterion.id, this.redactRecord(result));
       await beforeSamples.get(criterion.id)?.dispose().catch(() => {});
     }
   }
 
-  async evaluateSuccess() {
+  /** Metamorphic means a separate fresh execution, not a same-run preservation check. */
+  async replayTaskChecks() {
+    if (this.opts.probeReplay || !this.scenario.success || !this.page || this.crashed || this.blockReasons.length
+      || this.steps.some((step) => step.result !== 'ok')) {
+      this.taskStateSamples.clear();
+      return;
+    }
+    for (const criterion of this.scenario.success.task_checks || []) {
+      if (!criterion.follow_up) continue;
+      const source = this.taskCheckResults.get(criterion.id);
+      if (!source || !this.taskStateSamples.has(criterion.id)) continue;
+      const limit = criterion.after_step ?? this.steps.length;
+      const original = this.replayActions.slice(0, limit);
+      if (original.length !== limit) continue;
+      const steps = [];
+      for (let i = 0; i <= original.length; i++) {
+        if (i) steps.push({ ...original[i - 1] });
+        steps.push(...(criterion.follow_up.insertions.find((item) => item.after_step === i)?.steps || []).map((action) => ({ ...action })));
+      }
+      const check = { id: criterion.id, selector: criterion.selector, property: criterion.property,
+        expected: this.taskStateSamples.get(criterion.id), severity: criterion.severity, consequence: criterion.consequence,
+        ...(criterion.container ? { container: criterion.container } : {}), ...(criterion.basis ? { basis: criterion.basis } : {}),
+        ...(criterion.follow_up.input_cases ? { input_cases: criterion.follow_up.input_cases } : {}), redact: criterion.redact };
+      const relative = `state-oracle/${criterion.id}`;
+      const runDir = path.join(this.runDir, relative);
+      const dirError = ensureRunDir(runDir);
+      const replay = { relation: 'equal', source_result: source.result, changes: criterion.follow_up.changes, run_id: `${this.runId}-state-${criterion.id}`,
+        run_path: `${relative}/run.json`, check_id: criterion.id, snapshot_id: null, step_index: null,
+        result: 'unevaluable', passed: null, reason: 'replay_failed' };
+      if (!dirError) {
+        const child = new WebSession({ pw: this.pw, pwInfo: this.pwInfo, deviceRequest: this.deviceRequest,
+          profileId: this.profileId, runId: replay.run_id, runDir, mode: 'scripted', warnings: [],
+          scenario: { ...this.scenario, steps, timing_windows: [], focus_walks: [], success: { task_checks: [check] }, success_unevaluable: [] },
+          options: { ...this.opts, probeReplay: true, focusWalk: false, reflow: false } });
+        // Inherit privacy masks even when a source type action did not mark its later output.
+        for (const selector of this.redactSelectors) child.redactSelectors.add(selector);
+        for (const value of this.privateValues) child.privateValues.add(value);
+        let failed = false;
+        try {
+          await child.start();
+          if (!child.blockReasons.length) {
+            for (const action of steps) {
+              const { step } = await child.act(action);
+              if (step.result !== 'ok' || child.crashed) { failed = true; break; }
+            }
+          }
+        } catch { failed = true; }
+        try {
+          const finished = await child.finish(failed ? { reason: 'state oracle replay failed' } : {});
+          const outcome = finished.run.success_detail?.criteria.find((item) => item.id === criterion.id);
+          if (finished.status === 'completed' && outcome) {
+            Object.assign(replay, { snapshot_id: outcome.snapshot_id, step_index: outcome.step_index,
+              result: outcome.result, passed: outcome.passed, reason: outcome.reason });
+            if (outcome.comparison) replay.comparison = outcome.comparison;
+          }
+        } catch {
+          await child.browserTransport?.close([child.context]);
+          // Keep the bounded failure reason; exception text may contain input values.
+        }
+      }
+      source.replay = replay;
+      const baseline = source.comparison ?? source.result;
+      const followUp = replay.comparison ?? replay.result;
+      const comparison = baseline === 'fail' || followUp === 'fail' ? 'fail'
+        : baseline === 'pass' && followUp === 'pass' ? 'pass' : 'unevaluable';
+      if (!criterion.basis) {
+        if (comparison !== 'unevaluable') source.comparison = comparison;
+      } else if (comparison === 'unevaluable') {
+        Object.assign(source, { passed: null, result: 'unevaluable', reason: 'replay_failed' });
+      } else Object.assign(source, { passed: comparison === 'pass', result: comparison, reason: null });
+      this.taskCheckResults.set(criterion.id, this.redactRecord(source));
+    }
+    this.taskStateSamples.clear();
+  }
+
+  async evaluateSuccess(recordedCriteria = null) {
     const sc = this.scenario.success;
     const unevaluable = [...this.scenario.success_unevaluable];
     if (!sc && !unevaluable.length) return { success: null, detail: null };
-    const results = [];
+    const results = recordedCriteria ? [...recordedCriteria] : [];
     const check = async (kind, value, fn) => {
       try {
         results.push({ kind, value, passed: !!(await fn()) });
@@ -3153,7 +3394,7 @@ export class WebSession {
         results.push({ kind, value, passed: false, error: firstLine(err.message) });
       }
     };
-    if (this.page && !this.crashed && !this.page.isClosed()) {
+    if (!recordedCriteria && this.page && !this.crashed && !this.page.isClosed()) {
       for (const sel of sc?.selector_visible || []) {
         await check('selector_visible', sel, async () => (await this.page.locator(sel).filter({ visible: true }).count()) > 0);
       }
@@ -3169,6 +3410,7 @@ export class WebSession {
         checkpoint: criterion.after_step ?? 'final', step_index: criterion.after_step ?? this.steps.length,
         snapshot_id: null, element_id: null, passed: null, result: 'unevaluable', reason: 'checkpoint_unvisited',
         severity: criterion.severity, consequence: criterion.consequence,
+        ...this.taskEvidence(criterion),
       };
       results.push(this.redactRecord(result));
       if (result.passed === null) unevaluable.push(criterion.id);
@@ -3305,7 +3547,6 @@ export class WebSession {
     const finishing = (async () => {
       if (reason) this.block(reason);
       for (const t of this.twPollers) clearInterval(t);
-      const end = epochNow();
       let success = null;
       let detail = null;
       let basis = null;
@@ -3326,6 +3567,16 @@ export class WebSession {
         finalUrl = this.page.url();
         title = await this.page.title();
       } catch { /* page gone */ }
+      await this.observeTimingRecovery({ checkpoint: 'final', id: this.lastSnapshotId });
+      const end = epochNow();
+      this.temporalStopped = true;
+      await this.page?.evaluate((key) => window[Symbol.for(key)]?.stopTemporal?.(), STATE_KEY).catch(() => {});
+      await this.replayTaskChecks();
+      if (this.scenario.success?.task_checks?.some((check) => check.follow_up)) {
+        ({ success, detail } = await this.evaluateSuccess((detail?.criteria || []).filter((check) => check.kind !== 'task_check')));
+        if (detail) basis = 'measured';
+      }
+      if (!reason && !this.crashed && !this.blockReasons.length) await this.intermediateFocusWalks();
       // Focus walks run after the task (so they never delay step 1) and only when the
       // run ended normally: at the end state, then the initial screen in a fresh context.
       if (this.focusWalkEnabled() && !reason && !this.crashed && this.page && !this.blockReasons.length) {
@@ -3397,6 +3648,10 @@ export class WebSession {
           ...(this.opts.buildId ? { build_id: this.opts.buildId, build_id_basis: 'operator_supplied', build_id_source: this.opts.buildIdSource } : {}) },
         steps: this.steps,
         timing_windows: this.timingWindowsOut(end),
+        temporal_candidates: this.temporalCandidatesOut(end),
+        temporal_candidates_dropped: this.temporalDropped,
+        temporal_sampling_truncated: this.temporalSamplingTruncated,
+        probe_replays: this.probeReplays,
         flash_samples: this.flashSamples,
         focus_walks: this.focusWalks,
         reflow: this.reflow,

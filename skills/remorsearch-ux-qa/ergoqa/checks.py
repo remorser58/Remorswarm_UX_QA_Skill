@@ -27,6 +27,18 @@ from .snapshot import is_number, validate_adaptation, validate_native_state
 
 SEVERITY_ORDER = {"P0": 0, "P1": 1, "P2": 2, "P3": 3}
 
+# Single-element geometry/readability rules can share a component-level finding.
+# Interaction, timing, task-state and multi-element relations remain separate.
+REPEATED_ELEMENT_CHECKS = frozenset({
+    "RH-01", "PT-01", "PT-02", "PT-04", "PC-01", "PC-02", "PC-04", "PC-05",
+    "GM-01", "GM-02", "GM-05", "LY-01",
+})
+
+# Task state, judgment, timing and keyboard-focus results are always listed as
+# findings. Other automated warnings below the report's list threshold are
+# summarized by rule and screen.
+ALWAYS_LISTED_CHECKS = frozenset({"TI-01", "PJ-01", "CG-02", "CG-03", "GM-03", "SM-05", "SM-06", "FM-02"})
+
 # Reach-zone labels (thumb-reach-v3); shared with the swarm's derived advice.
 ZONE_KO = {"out": "파지를 바꿔야 닿는", "stretch": "엄지를 크게 뻗어야 하는", "mild": "약간 불편한", "natural": "편한"}
 
@@ -674,9 +686,10 @@ def check_target_size(ctx: Context) -> list[Observation]:
                 False, "P1" if critical else "P2",
                 f"'{label}' 크기 {tbox['w']:.0f}×{tbox['h']:.0f}px로 WCAG 2.5.8 최소 24px 미달, 간격 예외도 불충족({reason}).",
             ))
-        if ctx.is_touch and critical and "game_control" not in _roles(element):
-            # Platform size guidance (44 pt / 48 dp / 9.2 mm one-thumb) is applied to the
-            # controls a task depends on; small secondary targets are covered by PT-01.
+        if ctx.is_touch and "game_control" not in _roles(element):
+            # Scan secondary controls too: passing WCAG's 24 px spacing exception
+            # does not imply comfortable touch size. Their platform-size advice is
+            # P3; stronger and one-thumb rules still require a critical/path target.
             w_mm, h_mm = _box_mm(ctx, tbox)
             side = min(w_mm, h_mm)
             severity = None
@@ -1877,17 +1890,29 @@ def check_run_timing(run: dict[str, Any], profile: dict[str, Any], device: Any, 
             appearances = int(measured.get("appearances") or 0)
             offscreen = appearances > 0 and int(measured.get("offscreen_appearances") or 0) >= appearances
             failed = shortest + params.TIMING_JITTER_MS < need or has_action or offscreen
+            recovery = measured.get("recovery") or {}
+            recovered = (recovery.get("status") == "available" and recovery.get("basis") == "same_visible_text"
+                         and recovery.get("snapshot_id") in snapshots)
+            exception = declared.get("exception") or measured.get("exception")
+            # Same information available without a deadline is not information loss.
+            # Text recovery alone does not establish recovery of a timed action.
+            if recovered and not has_action:
+                failed = False
             critical = bool(element and _roles(element) & {"error_message", "critical_message"})
             severity = ("P1" if (has_action or (offscreen and critical)) else "P2") if failed else None
             out.append(Observation(
                 "CG-02", run_id, pid, None, None, [], key,
                 {"name": "visible_ms", "value": shortest, "unit": "ms", "threshold": round(need), "comparator": ">=", "chars": len(text), "offscreen": offscreen,
-                 "reading_rate_syll_per_min": reading_rate, "has_action": has_action},
+                 "reading_rate_syll_per_min": reading_rate, "has_action": has_action,
+                 "recovery": recovery, "exception_claimed": exception, "wcag_verdict": "not_determined"},
                 not failed, severity,
                 f"'{text[:30]}' 메시지가 {shortest:.0f}ms만 표시됨(느린 독자 기준 읽기 필요 시간 약 {need:.0f}ms)"
-                + (" — 동작이 포함된 메시지가 자동으로 사라짐(WCAG 2.2.1)." if has_action else ".")
+                + (" — 동작도 사라짐. WCAG 2.2.1 대체 경로·조정·예외를 별도 확인해야 합니다." if has_action else ".")
+                + (" 같은 정보가 화면에서 다시 확인되었습니다." if recovered else "")
+                + (" 예외는 작성자 주장으로, 적용 여부는 별도 검토해야 합니다." if exception else "")
                 + (" 게다가 화면 밖(뷰포트 바깥)에 나타나 보이지 않았습니다." if offscreen else ""),
                 "reading-time-v2",
+                {"verdict": "modeled_risk" if failed else "observed", "wcag_level": "2.2.1 A; 2.2.4 AAA"},
             ))
     samples = run.get("flash_samples") or []
     if samples:
@@ -3055,13 +3080,14 @@ def check_task_integrity(run: dict[str, Any], profile: dict[str, Any], snapshots
         return []
     out = []
     for criterion in (run.get("success_detail") or {}).get("criteria", []):
-        if criterion.get("kind") != "task_check" or criterion.get("passed") is None:
+        if criterion.get("kind") != "task_check" or criterion.get("passed") is None or not criterion.get("basis"):
             continue
         snapshot = snapshots.get(criterion.get("snapshot_id"))
         if snapshot is None:
             continue
         passed = criterion["passed"]
         measurement = {key: criterion[key] for key in ("id", "selector", "property", "checkpoint", "result", "step_index", "snapshot_id", "severity", "consequence")}
+        measurement.update({key: criterion[key] for key in ("basis", "container", "relation", "replay", "input_cases") if key in criterion})
         message = ("명시한 과업 값 검사를 통과했습니다." if passed else
                    f"명시한 과업 값이 {criterion['checkpoint']} 시점의 화면 상태와 일치하지 않습니다. {criterion['consequence']}")
         out.append(Observation(
@@ -3069,7 +3095,7 @@ def check_task_integrity(run: dict[str, Any], profile: dict[str, Any], snapshots
             [criterion["element_id"]] if criterion.get("element_id") else [],
             f"{criterion['selector']}|{criterion['id']}", measurement, passed,
             None if passed else criterion["severity"], message,
-            extra={"anchor_selectors": [criterion["selector"]], "scope": "authored criteria on the recorded owner execution; field values omitted", "impact_basis": "authored; comparison does not establish downstream harm"},
+            extra={"anchor_selectors": [criterion.get("container", criterion["selector"])], "scope": "authored visible-state criteria; same-run invariants and explicitly linked fresh replay; field values omitted", "impact_basis": criterion["basis"]},
         ))
     return out
 

@@ -89,6 +89,19 @@ download on Node.js 24.16 or later and on Node.js 26
 ([microsoft/playwright#40724](https://github.com/microsoft/playwright/issues/40724);
 Playwright 1.60 works).
 
+On Ubuntu 26.04 x64, Playwright 1.56.1 can fail with
+`does not support chromium on ubuntu26.04-x64`. Use its Ubuntu 24.04 build
+explicitly, keeping the override in the environment for both installation and
+driver runs:
+
+```sh
+export PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=ubuntu24.04-x64
+npx playwright install chromium
+```
+
+This is a compatibility workaround, not native Ubuntu 26.04 support. Keep Node.js
+22; the platform override does not fix the newer-Node installation hang.
+
 ## Use
 
 Ask in plain words, or call it by name:
@@ -440,6 +453,9 @@ real-user benefit or equal coverage.
   missed its confirmatory noise limit (1.75 P0–P2 units per clean scenario;
   limit 0.35) and condition-identification target. Later fixes do not establish
   that those original targets now pass; review findings before acting on them.
+  This checkout includes only `benchmarks/heldout-2/audience/*.json`, not that
+  evaluation's fixtures, scenarios or answer key. Its published results cannot
+  be reproduced from this checkout; audience files are not a runnable suite.
 - Only Chromium device emulation is exercised by the web driver; no real iOS
   Safari, native apps or real devices.
 

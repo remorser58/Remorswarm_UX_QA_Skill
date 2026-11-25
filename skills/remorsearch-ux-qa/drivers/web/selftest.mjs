@@ -28,6 +28,8 @@ import { decodePng } from './png.mjs';
 import { snapshotReply } from './serve.mjs';
 import { normalizeAction, normalizeBuildId, normalizeScenario } from './validate.mjs';
 import { writeJsonAtomic } from './util.mjs';
+import { runTemporalSelftest } from './temporal_selftest.mjs';
+import { runStateOracleSelftest } from './state_oracle_selftest.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '..', '..');
@@ -100,6 +102,20 @@ setTimeout(()=>{fetch('/read/cleared');document.getElementById('browser-check').
   '/read/login.html': `<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>로그인</title></head>
 <body><form><input name="id" aria-label="아이디"><input type="password" aria-label="비밀번호"><button>로그인</button></form></body></html>`,
   '/read/storage.html': '<!doctype html><html><body>Connection isolation fixture</body></html>',
+  '/task-walk.html': `<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Task walk fixture</title><style>
+body { font: 16px/1.5 sans-serif; color: #111; background: white; }
+button { width: 48px; height: 48px; }
+@media (max-width: 640px) { #inner-action { width: 18px; height: 18px; padding: 0; font-size: 12px; } }
+</style></head><body><main id="entry"><h1>Catalog</h1><a id="open-detail" href="/task-walk.html?detail">Open detail</a></main>
+<script>
+if (location.search === '?detail') {
+  document.querySelector('main').innerHTML='<h1>Detail</h1><button id="inner-action">Save</button>';
+  document.getElementById('inner-action').onclick=()=>{
+    document.querySelector('main').innerHTML='<h1>Saved items</h1><button id="remove-saved">Remove saved item</button>';
+  };
+}
+</script></body></html>`,
   '/task-integrity.html': `<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>과업 값 검사</title></head><body>
 <label for="memo">요청사항</label><input id="memo" aria-describedby="memo-help"><p id="memo-help">입력 안내</p><p id="summary">없음</p>
 <label><input id="option" type="checkbox">선택</label><input id="masked" type="password"><input id="hidden" type="hidden">
@@ -168,7 +184,7 @@ function readFixture(pathname, res, req) {
 }
 
 // Fixture files served at /<name> (same origin as the pages, no CORS headers).
-const FIXTURE_FILES = Object.fromEntries(['layers.html', 'dialog.html', 'reflow.html', 'reflow2.html', 'reflow2.css', 'reflow_adaptation.html', 'viewport.html', 'focus.html', 'focus2.html', 'feedback_ambient.html', 'native_feedback.html', 'inspect.html', 'painted_state.html', 'typography.html']
+const FIXTURE_FILES = Object.fromEntries(['temporal_keyboard.html', 'layers.html', 'dialog.html', 'reflow.html', 'reflow2.html', 'reflow2.css', 'reflow_adaptation.html', 'viewport.html', 'focus.html', 'focus2.html', 'feedback_ambient.html', 'native_feedback.html', 'inspect.html', 'painted_state.html', 'typography.html']
   .map((f) => [`/${f}`, f]));
 
 function startFixtureServer() {
@@ -180,7 +196,7 @@ function startFixtureServer() {
       res.end(html);
       return;
     }
-    if (req.method === 'GET' && (pathname.startsWith('/read/') || pathname === '/task-integrity.html' || pathname === '/task-integrity-timing.html')) {
+    if (req.method === 'GET' && (pathname.startsWith('/read/') || pathname === '/task-walk.html' || pathname === '/task-integrity.html' || pathname === '/task-integrity-timing.html')) {
       readFixture(pathname, res, req);
       return;
     }
@@ -869,6 +885,16 @@ async function serveTest(base, tmp) {
     ['note without confusion flag is rejected (400)', await request(port, 'POST', '/note', { body: { intent: 'x' } }), 400],
   ];
   for (const [name, res, want] of cases) check(`${label}: ${name}`, res.status === want, `${res.status} ${res.text}`);
+  for (const [endpoint, body, allowed] of [
+    ['/note', { confusion: false, scope: 'screen' }, ['intent', 'expected', 'observed', 'confusion', 'step_index', 'severity', 'failure_class', 'evidence', 'corroborated', 'anchor']],
+    ['/finish', { task_success_claimed: true }, ['success']],
+    ['/finish', { success: true, findings: [] }, ['success']],
+  ]) {
+    const rejected = await request(port, 'POST', endpoint, { body });
+    check(`${label}: ${endpoint} extras name the allowed fields without ending the session`,
+      rejected.status === 400 && rejected.json.error.includes(`allowed: ${allowed.join(', ')}`)
+      && (await request(port, 'GET', '/health')).json.finished === false, rejected.text);
+  }
   const note = await request(port, 'POST', '/note', { body: { intent: '결제하기', expected: '결제 완료 화면', observed: '카드 번호 오류가 위쪽에 표시됨', confusion: true } });
   check(`${label}: POST /note records a persona note`, note.status === 200 && note.json.ok === true && note.json.step_index === 1, note.text);
   const type = await request(port, 'POST', '/act', { body: { action: 'type', target: '#card', text: '4242 4242' } });
@@ -904,6 +930,39 @@ async function serveTest(base, tmp) {
   check(`${label}: on-demand snapshot is noted`, [...snaps.values()].some((s) => s.notes.includes('on_demand')));
   checkSnapshotFiles(label, runDir, run, snaps, { id: 'galaxy-s24', orientation: 'portrait', vw: 360, vh: 780, dpr: 3 });
   pythonLoadRun(label, runDir);
+}
+
+async function taskWalkTest(base, tmp) {
+  const sc = { ...scenario(), scenario_id: 'SC-task-walk',
+    surface: { kind: 'web', url: `${base}/task-walk.html` },
+    targets: {}, hotspots: [], timing_windows: [],
+    steps: [{ action: 'tap', target: '#open-detail' }, { action: 'tap', target: '#inner-action' }],
+    success: { selector_visible: '#remove-saved' } };
+  const scPath = path.join(tmp, 'task-walk.json');
+  writeJson(scPath, sc);
+  for (const device of ['galaxy-s24', 'desktop-1920']) {
+    const runId = `R-task-walk-${device}`;
+    const result = await runDriver(['run', '--scenario', scPath, '--device', device,
+      '--out', path.join(tmp, 'runs'), '--run-id', runId]);
+    if (!check(`task-walk ${device}: reaches the final inner screen`, result.code === 0, result.err || result.out)) continue;
+    const { run, snaps } = loadRun(path.join(tmp, 'runs', runId));
+    const initial = snaps.get(run.steps[0].before);
+    const detail = snaps.get(run.steps[0].after);
+    const saved = snaps.get(run.steps[1].after);
+    check(`task-walk ${device}: navigation and same-URL state changes have distinct measured captures`,
+      initial && detail && saved && initial.snapshot_id !== detail.snapshot_id && detail.snapshot_id !== saved.snapshot_id
+      && !bySel(initial, '#inner-action') && !bySel(initial, '#remove-saved')
+      && detail.surface.url.endsWith('?detail') && saved.surface.url === detail.surface.url
+      && !!bySel(saved, '#remove-saved') && run.steps.every((s) => s.result === 'ok'));
+    const action = bySel(detail, '#inner-action');
+    const size = device === 'galaxy-s24' ? 18 : 48;
+    check(`task-walk ${device}: inner target geometry and readable-text metrics are collected`,
+      action && near(action.box.w, size, 0.1) && near(action.box.h, size, 0.1)
+      && typeof action.font_size_px === 'number' && action.font_size_px > 0, action);
+    check(`task-walk ${device}: every reached screen retains its PNG and measured element list`,
+      [initial, detail, saved].every((s) => s?.elements.length
+        && fs.existsSync(path.join(tmp, 'runs', runId, s.screenshot.path))));
+  }
 }
 
 async function exitCodeTests(base, tmp) {
@@ -2498,7 +2557,8 @@ async function taskIntegrityTest(base, tmp) {
   const input = { action: 'type', target: '#memo', text: sentinel, redact: true, delay_ms: 0 };
   const tap = (target) => ({ action: 'tap', target });
   const criterion = (id, selector, property, expected, after_step) => ({ id, selector, property, expected,
-    ...(after_step === undefined ? {} : { after_step }), severity: 'P2', consequence: '명시한 요청사항이 해당 단계에 유지되어야 합니다.' });
+    ...(after_step === undefined ? {} : { after_step }), basis: { kind: 'task', reference: 'The fixture task requires retaining the authored request.' },
+    severity: 'P2', consequence: '명시한 요청사항이 해당 단계에 유지되어야 합니다.' });
   const ref = (id, selector, property, from_step, after_step) => {
     const result = criterion(id, selector, property, '', after_step);
     delete result.expected;
@@ -2719,6 +2779,102 @@ async function paintedStateTest(base, tmp) {
   }
 }
 
+function stateProbeTemplateTest() {
+  const section = fs.readFileSync(path.join(HERE, 'README.md'), 'utf8')
+    .split('## State probes\n')[1].split('## State-probe coverage')[0];
+  const blocks = [...section.matchAll(/```json\n([\s\S]*?)\n```/g)];
+  const values = {
+    '<M>': '1', '<N>': '4', '<K>': '1', '<S>': '3', '<k>': '1', '<n>': '1',
+    '<fixture-seeded-count>': '0', '<product|task>': 'task',
+    '<record-row>': '.record', '<records-list>': '#history',
+    '<product Back/reopen control>': '#back', '<same submit control as step N>': '#submit',
+    '<saved content and status summary>': '#saved-status', '<fixture-seeded saved summary>': 'Saved',
+    '<cancel/delete control>': '#delete', '<keep/close control in the confirmation>': '#keep',
+    '<dependent field, total or selection>': '#dependent', '<value|text|checked>': 'value',
+    '<value the rule states after the switch>': '""', '<other item/date/recipient>': '#other',
+    '<dependent input>': '#dependent', '<synthetic value>': 'Draft',
+    '<field the product promises to keep>': '#kept',
+    '<unaffected input or confirmation copy>': '#kept', '<value|text>': 'value',
+    '<submit control>': '#submit',
+    '<fixture starts with this many records>': 'Fixture begins empty.',
+    '<visible promise: one submission, one record>': 'Submit creates one record.',
+    '<visible confirmation text promising no change>': 'Keep leaves the saved record unchanged.',
+    '<visible rule: changing X resets or recomputes Y>': 'Switch clears the dependent draft.',
+    '<visible rule: this entry is kept when X changes>': 'Switch keeps the note.',
+    '<visible promise that entries are kept>': 'Correction preserves other entries.',
+  };
+  check('state templates: four probe JSON blocks are present', blocks.length === 4);
+  for (const [index, block] of blocks.entries()) {
+    const filled = block[1].replace(/<[^>]+>/g, (token) => {
+      if (!(token in values)) throw new Error(`Unfilled state template token: ${token}`);
+      return values[token];
+    });
+    const parsed = JSON.parse(filled);
+    const task_checks = Array.isArray(parsed) ? parsed : [parsed];
+    const normalized = normalizeScenario({
+      schema_version: 'ergo-scenario.v1', scenario_id: `SC-probe-template-${index}`,
+      surface: { kind: 'web', url: 'http://127.0.0.1/fixture' }, task_goal_ko: 'Validate authored state probe templates.',
+      device_ids: ['galaxy-s24'], targets: {},
+      steps: [{ action: 'type', target: '#kept', text: 'Note' }, { action: 'type', target: '#fix', text: 'Valid' },
+        { action: 'click', target: '#target' }, { action: 'click', target: '#submit' }],
+      success: { task_checks },
+    }, { requireSteps: true });
+    check(`state templates: probe ${index + 1} validates with an authored prefix`,
+      normalized.scenario.success.task_checks.length === task_checks.length);
+    if (index === 2 || index === 3) {
+      check(`state templates: probe ${index + 1} independently replays every outcome check`,
+        task_checks.filter((c) => c.after_step > 1).every((c) => c.follow_up?.insertions.length));
+    }
+  }
+}
+
+async function warningFamilyTest(tmp) {
+  const { pw, info } = loadPlaywright();
+  const transport = await openBrowser(pw, info, { endpoint: undefined });
+  const context = await transport.browser.newContext({ viewport: { width: 360, height: 780 }, deviceScaleFactor: 1 });
+  try {
+    const page = await context.newPage();
+    await page.setContent(`<!doctype html><main id="catalog">
+      <div class="row"><button id="one" class="choice small">One</button><p class="detail">First detail</p></div>
+      <div class="row"><button id="two" class="small choice">Two</button><p class="detail">Second detail</p></div>
+      <button id="help" class="help">Help</button>
+      <button id="back">Back</button><button id="next">Next</button>
+      </main><aside id="tools"><button id="other" class="choice small">Other</button></aside>
+      <section><button id="plain-a" class="choice">A</button></section>
+      <section><button id="plain-b" class="choice">B</button></section>
+      <div id="copy"><p>Anonymous first</p><p>Anonymous second</p></div>`);
+    await page.evaluate(() => {
+      for (const id of ['host-a', 'host-b']) {
+        const host = document.createElement('div');
+        host.id = id;
+        document.body.append(host);
+        host.attachShadow({ mode: 'open' }).innerHTML =
+          `<div id="shadow-panel"><button id="${id}-action" class="action">Act</button></div>`;
+      }
+    });
+    const ex = await page.evaluate(extractSnapshot, { key: STATE_KEY, cap: 400, knownRoles: [...KNOWN_ROLES] });
+    writeJson(path.join(tmp, 'warning-family-capture.json'), ex);
+    const family = (id) => ex.elements.find((e) => e.selector === `#${id}`)?.selector_family;
+    check('warning family: repeated nested components share a family regardless of ID or class order',
+      family('one') === '#catalog > div.row > button.choice.small' && family('one') === family('two'), ex.elements);
+    check('warning family: distinct components and containers remain separate',
+      family('one') !== family('help') && family('one') !== family('other'));
+    check('warning family: classless ancestors retain structural positions',
+      family('plain-a') !== family('plain-b'));
+    check('warning family: unrelated unclassed IDs are not normalized',
+      family('back') === null && family('next') === null);
+    check('warning family: anonymous repeated text uses its scoped structural family',
+      ex.elements.filter((e) => e.text.startsWith('Anonymous')).length === 2
+      && ex.elements.filter((e) => e.text.startsWith('Anonymous')).every((e) => e.selector_family === '#copy > p'));
+    check('warning family: identical shadow-local containers retain host boundaries',
+      family('host-a-action') === '#host-a >>> #shadow-panel > button.action'
+      && family('host-b-action') === '#host-b >>> #shadow-panel > button.action');
+  } finally {
+    await context.close();
+    await transport.close();
+  }
+}
+
 async function gazeGeometryTest(tmp) {
   const { pw, info } = loadPlaywright();
   const transport = await openBrowser(pw, info, { endpoint: undefined });
@@ -2901,7 +3057,7 @@ async function typographyTest(base, tmp) {
 async function main() {
   const keep = process.argv.includes('--keep');
   // --only a,b: run just these groups (scripted, actions, layers, focus, focus2, feedback, native-feedback,
-  // read, reflow, reflow-copy, viewport, dialog, serve, tooling, exit, connect, analyze) while iterating on one part.
+  // read, reflow, reflow-copy, viewport, dialog, serve, task-walk, tooling, exit, connect, analyze) while iterating on one part.
   const oi = process.argv.indexOf('--only');
   const only = oi > 0 && process.argv[oi + 1] ? new Set(process.argv[oi + 1].split(',')) : null;
   const want = (g) => !only || only.has(g);
@@ -2914,10 +3070,17 @@ async function main() {
     writeJson(path.join(tmp, 'p-s24.json'), profile('EP-S24', 'galaxy-s24'));
     writeJson(path.join(tmp, 'p-desk.json'), profile('EP-DESK', 'desktop-1920'));
     deviceTableTest();
+    if (want('state-templates')) stateProbeTemplateTest();
     if (want('connect')) await connectTest(base, tmp);
     if (want('analyze')) await analyzeTest(base, tmp);
     if (want('integrity')) await taskIntegrityTest(base, tmp);
+    if (want('temporal')) await runTemporalSelftest({ base, tmp, runDriver, check });
+    if (want('state-oracle')) {
+      const { pw, info } = loadPlaywright();
+      await runStateOracleSelftest({ pw, info, check, tmp });
+    }
     if (want('painted')) await paintedStateTest(base, tmp);
+    if (want('warning-family')) await warningFamilyTest(tmp);
     if (want('gaze')) await gazeGeometryTest(tmp);
     if (want('typography')) await typographyTest(base, tmp);
 
@@ -2976,6 +3139,7 @@ async function main() {
     if (want('viewport')) await viewportTest(base, tmp);
     if (want('dialog')) await dialogTest(base, tmp);
     if (want('serve')) await serveTest(base, tmp);
+    if (want('task-walk')) await taskWalkTest(base, tmp);
     if (want('tooling')) await toolingTest(base, tmp);
     if (want('exit')) await exitCodeTests(base, tmp);
   } finally {

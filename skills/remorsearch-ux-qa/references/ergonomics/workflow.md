@@ -21,6 +21,8 @@ python3 scripts/ergo_qa.py catalog
 
 Use safe steps and authored `success.task_checks` for material values/choices after recovery transitions and at completion; exact payloads, 1-based steps, intentional reset/normalization and `type.redact:true` are in `drivers/web/README.md`. Read-only defaults and separate write grants apply. Production verification/payment, human checks or missing access stop the path. Emulation covers Chromium viewport/DPR/input; real device, grip, keyboard occlusion, safe area and screen reader remain untested.
 
+State/temporal/focus replay contracts: see the driver README.
+
 ## 2. Compose profiles
 
 Default stratified coverage:
@@ -50,9 +52,11 @@ node drivers/web/ergo_drive.mjs run --scenario sc.json --device DEVICE --out run
 python3 scripts/ergo_qa.py analyze --runs runs/ --profiles work/profiles.json --scenario sc.json --cross-profile --out analysis.json
 ```
 
-One real scripted trace per device/orientation can serve all profiles there. Keep screenshots, geometry/colors/timing before/after each step, actual outcomes and collector versions. Bundled run/idle default limit is 900 seconds. Android uses adb capture plus `android-snapshot`; iOS/desktop/engine-rendered games use platform captures and annotations (vision geometry is inferred); look up `references/ergonomics/platform-drivers.md` for exact options. A blocked transport stays untested.
+One real scripted trace per device/orientation can serve all profiles. Keep screenshots, geometry/colors/timing before/after steps, outcomes and collector versions (default limit 900s). Android uses adb + `android-snapshot`; iOS/desktop/games use platform captures/annotations (`references/ergonomics/platform-drivers.md`). Blocked transports stay untested.
 
-Opt-in persona agents use serve and `references/ergonomics/persona-agent-protocol.md`, plus `references/agent-setup.md` if spawning is authorized. Each agent receives applicable cards and sees screenshots before touch decisions. Separate runs per agent when behavior matters; later technical/a11y inspection records its provenance. Notes/expectation/confusion remain judgment. Optional `references/ergonomics/swarm-and-social-layer.md` boards/interviews cite run/step/observation IDs; ungrounded answers are speculative and simulated discourse only generates research hypotheses.
+`init` leaves `steps` empty; author transitions or `serve`, then analyze the full task trace (lookup `drivers/web/README.md` section "Task-walk coverage": task × viewport × input + keyboard; unvisited = "not checked"; entry scans alone never prove completion).
+
+Opt-in persona agents use `serve`, `references/ergonomics/persona-agent-protocol.md` and `references/agent-setup.md`; inspect screenshots before touch decisions and record technical/a11y inspection provenance separately. Notes remain judgment. `references/ergonomics/swarm-and-social-layer.md` citations require run/step/observation IDs.
 
 ## 4. Analyze, judge and aggregate
 

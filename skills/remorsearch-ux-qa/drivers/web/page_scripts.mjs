@@ -108,7 +108,7 @@ export function pageInit(cfg) {
   }
 
   const windows = Array.isArray(cfg.windows) ? cfg.windows : [];
-  if (!windows.length || !cfg.binding) return;
+  if (!cfg.binding) return;
   // Rendered, whether or not it is inside the viewport: a message that appears
   // off-screen is itself a finding (it cannot be read), so it must be recorded.
   const shown = (el) => {
@@ -121,10 +121,95 @@ export function pageInit(cfg) {
     return cs.display !== 'none' && cs.visibility === 'visible' && parseFloat(cs.opacity) > 0;
   };
   const last = new Map();
+  // Candidates are observations, not inferred product rules. Start only when an
+  // action is armed; initial page text is not a transient-message candidate.
+  let action = null;
+  let sequence = 0;
+  const candidates = new Map();
+  const pending = new Set();
+  const previousText = new WeakMap();
+  let truncated = false;
+  const protectedSelector = 'input,textarea,select,[data-sensitive],[hidden],script,style';
+  const selectorFor = (el) => {
+    if (el.id && /^[A-Za-z_][\w-]*$/.test(el.id) && document.querySelectorAll(`#${el.id}`).length === 1) return `#${el.id}`;
+    const parts = [];
+    for (let node = el; node && node !== document.body; node = node.parentElement) {
+      const siblings = [...node.parentElement?.children || []].filter((n) => n.localName === node.localName);
+      parts.unshift(`${node.localName}:nth-of-type(${siblings.indexOf(node) + 1})`);
+    }
+    return parts.length ? `body>${parts.join('>')}` : null;
+  };
+  const candidateText = (el) => {
+    if (!el?.isConnected || el.matches(protectedSelector) || el.closest(protectedSelector) || el.querySelector('[data-sensitive],input[type=password]')) return null;
+    if (!shown(el)) return null;
+    return (el.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 500) || null;
+  };
+  const sendCandidate = (entry, visible, t) => {
+    Promise.resolve(window[cfg.binding]({
+      candidate: true, id: entry.id, selector: entry.selector, role: entry.role,
+      step_index: entry.step, text: entry.text, v: visible, t,
+    })).catch(() => {});
+  };
+  state.armTemporal = (step) => {
+    action = step;
+    pending.clear();
+    for (const el of document.querySelectorAll('body *')) previousText.set(el, candidateText(el));
+  };
+  state.stopTemporal = () => { action = null; };
+  const markTruncated = () => {
+    if (truncated) return;
+    truncated = true;
+    Promise.resolve(window[cfg.binding]({ candidate_limit: true })).catch(() => {});
+  };
+  if (cfg.candidates) {
+    new MutationObserver((list) => {
+      if (action === null) return;
+      for (const mutation of list) {
+        if (!changed(mutation)) continue;
+        if (pending.size >= 128) { markTruncated(); break; }
+        const el = mutation.target.nodeType === Node.TEXT_NODE ? mutation.target.parentElement : mutation.target;
+        if (el instanceof Element && !['HTML', 'BODY'].includes(el.tagName) && pending.size < 128) pending.add(el);
+        for (const node of mutation.addedNodes || []) {
+          if (node instanceof Element) {
+            if (pending.size < 128) pending.add(node);
+            for (const child of node.querySelectorAll('*')) {
+              if (pending.size >= 128) { markTruncated(); break; }
+              if (!child.children.length || child.matches('[role=status],[role=alert],[role=dialog],dialog,[aria-live]')) pending.add(child);
+            }
+          }
+        }
+      }
+    }).observe(document, { subtree: true, childList: true, attributes: true, characterData: true, attributeOldValue: true, characterDataOldValue: true });
+  }
   const tick = () => {
     const fn = window[cfg.binding];
     if (typeof fn !== 'function') return;
     const t = now();
+    if (cfg.candidates && action !== null) {
+      for (const [el, entry] of candidates) {
+        if (candidateText(el) !== entry.text) {
+          sendCandidate(entry, false, t);
+          candidates.delete(el);
+          previousText.set(el, null);
+          if (pending.size < 128) pending.add(el);
+        }
+      }
+      for (const el of pending) {
+        const text = candidateText(el);
+        const selector = selectorFor(el);
+        if (!text || !selector || candidates.has(el) || previousText.get(el) === text) continue;
+        if (candidates.size >= 128) { markTruncated(); continue; }
+        // A changed container is useful only for an explicit live region/dialog;
+        // ordinary text candidates stay at a leaf to avoid recording entire pages.
+        const role = el.getAttribute('role') || (el.localName === 'dialog' ? 'dialog' : el.hasAttribute('aria-live') ? 'status' : 'text');
+        if (role === 'text' && el.children.length) continue;
+        const entry = { id: `candidate-${performance.timeOrigin}-${++sequence}`, selector, role, step: action, text };
+        candidates.set(el, entry);
+        previousText.set(el, text);
+        sendCandidate(entry, true, t);
+      }
+      pending.clear();
+    }
     for (const w of windows) {
       let v = false;
       let text = null;
@@ -1525,6 +1610,31 @@ export function extractSnapshot(args) {
       text: displayedText,
       tag,
       selector: uniqueSelector(el),
+      // A family is structural evidence, never a guess based on numbered IDs.
+      // Keep unclassed ancestor positions and explicit container IDs so unrelated
+      // toolbars/dialogs do not collapse into one warning.
+      selector_family: (() => {
+        if (!el.classList.length && el.id) return null;
+        const parts = [];
+        for (let node = el; node; node = node.parentElement) {
+          if (node !== el && node.id) {
+            parts.unshift(uniqueSelector(node));
+            break;
+          }
+          const classes = [...node.classList].sort();
+          let part = node.localName + classes.map((name) => `.${CSS.escape(name)}`).join('');
+          if (node !== el && !classes.length && node.parentElement) {
+            const siblings = [...node.parentElement.children].filter((s) => s.localName === node.localName);
+            if (siblings.length > 1) part += `:nth-of-type(${siblings.indexOf(node) + 1})`;
+          }
+          parts.unshift(part);
+        }
+        let family = parts.join(' > ');
+        for (let root = el.getRootNode(); root.host; root = root.host.getRootNode()) {
+          family = `${uniqueSelector(root.host)} >>> ${family}`;
+        }
+        return family;
+      })(),
       dom_id: el.id ? String(el.id).slice(0, 120) : null,
       box: { x: round2(g.r.left), y: round2(g.r.top), w: round2(g.r.width), h: round2(g.r.height) },
       ...visibleBoxOf(el),
