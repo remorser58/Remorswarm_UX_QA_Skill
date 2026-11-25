@@ -63,7 +63,10 @@ jobs:
       - name: Install Chromium for Playwright
         run: npx playwright install --with-deps chromium
       - name: Driver selftest
-        run: node selftest.mjs
+        run: |
+          node selftest.mjs
+          node state_oracle_selftest.mjs
+          node temporal_selftest.mjs
       - name: Persona benchmark launcher tests
         working-directory: .
         run: node --test benchmarks/persona-effectiveness/tests/runner.test.cjs benchmarks/persona-effectiveness-pe2/tests/runner.test.cjs

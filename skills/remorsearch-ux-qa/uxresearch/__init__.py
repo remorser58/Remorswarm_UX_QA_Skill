@@ -7,6 +7,6 @@ marker words) lives in `uxresearch/data/*.json`, never in this package's code.
 
 VERSION = "0.2.0"
 RULES_VERSION = "ux-research-rules.2"
-PROJECT_URL = "https://github.com/remorser58/remorsearch_UX_QA"
+PROJECT_URL = "https://github.com/remorser58/Remorswarm_UX_QA_Skill"
 ROBOTS_TOKEN = "RemorsearchUXQA"
 USER_AGENT = f"{ROBOTS_TOKEN}/{VERSION} (+{PROJECT_URL}; read-only UX research)"

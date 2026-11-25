@@ -17,9 +17,9 @@ artifacts between them. A research-only or review-only request keeps its scope.
 | Component | What it does | Needs |
 | --- | --- | --- |
 | **research** | Finds task-specific experiences, workarounds and counterexamples in communities, comments, reviews and official sources; preserves source context and gaps. | A permitted source route. YouTube comments use your own YouTube Data API key (`REMORSEARCH_YOUTUBE_API_KEY`). |
-| **persona-qa** | Exercises completion, input preservation, errors/recovery, keyboard and accessibility on the real product with synthetic test conditions. | An accessible product and safe fixtures; the bundled web driver needs Node.js 22 and Playwright. |
-| **ergonomics** *(experimental)* | Screens reach, touch, perception, timing and layout with simulated profiles. | Relevant scenarios; model results remain separate from real-device and human evidence. |
-| **loop** | Records bounded fixes, current-build replay, regression and preserved-intent checks. | Host browser/Figma tools and actual receipts. Existing improvement authority is recorded explicitly for scoped local patches. |
+| **persona-qa** | Exercises rendered UI layout scans, completion, state recovery probes, input preservation, errors/recovery, keyboard and accessibility (KWCAG/WCAG) on the real product or iOS XCTest captures. | An accessible product and safe fixtures; the bundled web driver needs Node.js 22 and Playwright. |
+| **ergonomics** *(experimental)* | Screens reach, touch, perception, timing and layout with simulated profiles and route-level warning grouping (`--list-threshold`). | Relevant scenarios; model results remain separate from real-device and human evidence. |
+| **loop** | Records bounded fixes, strict stdlib PNG/pixel-diff verification, current-build replay, regression and preserved-intent checks. | Host browser/Figma tools and actual receipts. Existing improvement authority is recorded explicitly for scoped local patches. |
 
 The host-agent instructions implement this integrated entry path. The CLI validates
 imported evidence, applies bounded local text patches and can execute owned core

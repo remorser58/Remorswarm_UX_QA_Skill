@@ -505,7 +505,7 @@ the recorded evidence and are not assigned to any of these profiles.
 Drives a real Chromium page with Playwright, emulating one catalogued device, and
 writes the evidence that `ergoqa analyze` consumes: `ergo-snapshot.v1` files
 (screenshot + measured element geometry/colour) and one `ergo-run.v1` per run.
-The contract is [repository documentation: `docs/ergonomic-swarm-spec.md`](https://github.com/remorser58/remorsearch_UX_QA/blob/main/docs/ergonomic-swarm-spec.md)
+The contract is [repository documentation: `docs/ergonomic-swarm-spec.md`](https://github.com/remorser58/Remorswarm_UX_QA_Skill/blob/main/docs/ergonomic-swarm-spec.md)
 sections 3, 5 and 10. The driver measures; it never scores ergonomics and never
 role-plays a user.
 

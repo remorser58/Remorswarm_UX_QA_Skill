@@ -103,7 +103,7 @@ python3 scripts/check_release.py --output dist/release-check
 
 The checker runs the Python suite, release-file checks, the offline build,
 tree/ZIP verification, extraction, relocated CLI and reference reads, both
-synthetic smoke workflows, and the Chromium driver selftest from the extracted
+synthetic smoke workflows, and the Chromium driver selftest suites (`selftest.mjs`, `state_oracle_selftest.mjs`, `temporal_selftest.mjs`) from the extracted
 installation. It copies already prepared driver dependencies into that disposable
 installation and performs no downloads or install hooks. It verifies package
 integrity again after the browser test and compares the candidate with current

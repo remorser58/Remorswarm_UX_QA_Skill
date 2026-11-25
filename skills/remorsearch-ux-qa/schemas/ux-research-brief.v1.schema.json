@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/remorser58/remorsearch_UX_QA/schemas/ux-research-brief.v1.schema.json",
+  "$id": "https://github.com/remorser58/Remorswarm_UX_QA_Skill/schemas/ux-research-brief.v1.schema.json",
   "title": "UX Research Brief v1",
   "description": "What one research run is about and the limits it runs under. Read by `ux_research.py start --brief`, which checks these shapes itself. Budgets above the defaults need a recorded reason and can never pass the maxima.",
   "type": "object",
