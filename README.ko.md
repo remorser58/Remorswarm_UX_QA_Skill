@@ -36,6 +36,8 @@ cp -R Remorsearch_UX_QA_Skill/skills/remorsearch-ux-qa ~/.codex/skills/
 
 폴더를 복사하면 스킬 설치가 끝납니다. 유지보수용 패키징과 무결성 검사는
 [빌드와 배포 전 검사](docs/release.md)에 정리했습니다.
+선택적 동반 React 디자인 시스템 스킬도 함께 설치하려면 `skills/react-design-system/`을
+`skills/remorsearch-ux-qa/` 옆에 복사하거나 `https://github.com/remorser58/react-design-system-skill`에서 설치합니다.
 
 폴더에는 Python 도구, JSON 스키마, 시연용 예제, 실시간 웹 드라이버와 검색 원문,
 참조 자료, 출처 기록이 들어 있습니다.
@@ -182,11 +184,14 @@ skills/remorsearch-ux-qa/    설치하는 스킬(이 폴더를 복사함)
   ergoqa/ schemas/           인체공학 패키지와 CLI가 쓰는 JSON 스키마
   drivers/web/               실시간 Playwright 드라이버(Node.js)
   examples/loop/             loop CLI용 합성 시연 예제
+skills/react-design-system/  React + Vite 디자인 시스템, Base UI, Motion, Storybook, Safe Area, TanStack/Zustand/ky 동반 스킬
 tests/                       단위 테스트와 픽스처
 benchmarks/                  정답이 있는 블라인드 벤치마크
 docs/                        설계 노트, 인체공학 연구, 검증 기록
 README.md, README.ko.md      이 문서의 영어판과 한국어판
 ```
+
+동반 스킬: [react-design-system](skills/react-design-system/SKILL.md) (단독 저장소: [react-design-system-skill](https://github.com/remorser58/react-design-system-skill)).
 
 ## 개발
 

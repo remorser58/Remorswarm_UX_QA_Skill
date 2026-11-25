@@ -56,6 +56,8 @@ cp -R Remorsearch_UX_QA_Skill/skills/remorsearch-ux-qa ~/.codex/skills/
 
 Copying the folder completes the skill installation. Maintainer-only packaging
 and integrity checks are documented in [build and release checks](docs/release.md).
+To also install the optional companion React design-system skill, copy `skills/react-design-system/`
+alongside `skills/remorsearch-ux-qa/` (or install from `https://github.com/remorser58/react-design-system-skill`).
 
 The folder contains the Python tools, JSON schemas, demo fixtures, live web
 driver, and original search instructions with their references and provenance.
@@ -362,11 +364,14 @@ skills/remorsearch-ux-qa/    the installable skill (copy this folder)
   ergoqa/ schemas/           ergonomics package and the JSON schemas used by the CLIs
   drivers/web/               live Playwright driver (Node.js)
   examples/loop/             synthetic demo fixture for the loop CLI
+skills/react-design-system/  optional companion skill for React + Vite design systems, Base UI, Motion, Storybook, Safe Area, and TanStack/Zustand/ky
 tests/                       unit tests and fixtures
 benchmarks/                  blind benchmark suites with answer keys
 docs/                        design notes, human-factors research, validation records
 README.md, README.ko.md      this page in English and in Korean
 ```
+
+Companion skill: [react-design-system](skills/react-design-system/SKILL.md) (standalone mirror at [react-design-system-skill](https://github.com/remorser58/react-design-system-skill)).
 
 ## Development
 

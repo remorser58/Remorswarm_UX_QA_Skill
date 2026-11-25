@@ -1,0 +1,96 @@
+{
+  "files": {
+    "SKILL.ko.md": {
+      "bytes": 19142,
+      "sha256": "e6e838ef815373f5a5599dd6ffc7249489e09e6b03a8c27542b456f2a892a89e"
+    },
+    "SKILL.md": {
+      "bytes": 18143,
+      "sha256": "9039c4747417b80a9d238065986a2efb861f31c8dc170eb925f8874269e7ef26"
+    },
+    "assets/evals/react-design-system-cases.jsonl": {
+      "bytes": 15719,
+      "sha256": "b61f4ce1a5cbc73517bc591efe19c0f8a139e3e68c798086292e27ce5008ce5c"
+    },
+    "assets/templates/glass-and-motion.css": {
+      "bytes": 8444,
+      "sha256": "cc389f5449df800a9e6964b39579890a94f42281f509a837aac43a82bac28df8"
+    },
+    "assets/templates/index.html": {
+      "bytes": 2537,
+      "sha256": "a2b79f0e64d17549daf6a831ae0720deda26c05761ef3ef053cff4a26322ae33"
+    },
+    "assets/templates/storybook-preview.tsx": {
+      "bytes": 2117,
+      "sha256": "aa0704d2a66c0a4922ff268e562169d2ebeb151bea7cf3503981bda78d5dc5a8"
+    },
+    "assets/templates/visual-qa-probe.js": {
+      "bytes": 4018,
+      "sha256": "d5f1035041d8af5421cf8cea35dce79011960d7a708c715da85703a6c48d3b22"
+    },
+    "references/horon-and-glass-patterns.ko.md": {
+      "bytes": 10253,
+      "sha256": "440cc1f12201931a6750f02522edaee45c7e1523ad69c86f7102a93ba96912df"
+    },
+    "references/horon-and-glass-patterns.md": {
+      "bytes": 9682,
+      "sha256": "a12aeff6b39e92cccd81728c6ee6c7eb6e9e5ed9b16baee8e8c7bd37c4988eaf"
+    },
+    "references/landing-21st-dev-patterns.ko.md": {
+      "bytes": 8285,
+      "sha256": "d7050e2fe9ad929fb647bdd5ef8bb14ded225750e946f2e1bb02f9c94f74570a"
+    },
+    "references/landing-21st-dev-patterns.md": {
+      "bytes": 7885,
+      "sha256": "48b30b59ed18eb742d0aa8c971de58c805faf2a539e48e8d1595882d0b4baf73"
+    },
+    "references/react-vite-stack-blueprint.ko.md": {
+      "bytes": 8208,
+      "sha256": "5cb8bf4716f7312a25de2df160d8dfc747912e9deb302d3615c533ec6e112005"
+    },
+    "references/react-vite-stack-blueprint.md": {
+      "bytes": 7923,
+      "sha256": "91fd43a5f7ce1976b58035429d0b1299428b3f403aec0a96e433bc62de228a77"
+    },
+    "rules/base-ui-motion-and-storybook.ko.md": {
+      "bytes": 7279,
+      "sha256": "aa648345f007f24912a90d1117b2700e2cc9740be7895329cb0a135e756c7f93"
+    },
+    "rules/base-ui-motion-and-storybook.md": {
+      "bytes": 6746,
+      "sha256": "ac0c37105b07cda1c01db01ffcdc744afc9208c4f6c9b5c2f7283f718c26dc37"
+    },
+    "rules/react-vite-optimization.ko.md": {
+      "bytes": 6136,
+      "sha256": "6c27c4845bd946c78bf3adbdd91d7a7d51ed10c2f9a60a3c52da2739be175530"
+    },
+    "rules/react-vite-optimization.md": {
+      "bytes": 5634,
+      "sha256": "2fde160305c12d98e7ee1c1540fca1c89795d00a8e8a27a59d71ee68d5299792"
+    },
+    "rules/reference-mining-and-surface.ko.md": {
+      "bytes": 5046,
+      "sha256": "5ba5f8713559720bf7465b7ac7645af077cccb045395e8158778efe0e16d5cc6"
+    },
+    "rules/reference-mining-and-surface.md": {
+      "bytes": 4640,
+      "sha256": "c6d730005b1de2858a2b9e69646d3c35cfdf427eae4b4f9661614d69b6347b67"
+    },
+    "rules/responsive-safe-area-and-visual-qa.ko.md": {
+      "bytes": 6549,
+      "sha256": "4fa136414f7246b0becd27e5a1acfc8570f605915ee306bcdc0fbf89a99ade74"
+    },
+    "rules/responsive-safe-area-and-visual-qa.md": {
+      "bytes": 6009,
+      "sha256": "7672d898391e59b6e8b04fd56097924ef56ad6e7e27c6ea9ce2b28474ab1d4e4"
+    },
+    "scripts/audit-react-ds.sh": {
+      "bytes": 15843,
+      "sha256": "07b27ac35d7dd1420ad075de5a4ddeee088619ba1cd4ef70d056859937c720ed"
+    }
+  },
+  "license": "MIT",
+  "snapshot_date": "2026-11-26",
+  "source_commit": "8a4a27b99a66058fd22f44965f8bdd85bb011839",
+  "source_repository": "https://github.com/remorser58/react-design-system-skill"
+}

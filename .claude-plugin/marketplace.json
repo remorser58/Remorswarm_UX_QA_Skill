@@ -27,7 +27,9 @@
         "kwcag",
         "ergonomics",
         "persona",
-        "korean"
+        "korean",
+        "design-system",
+        "react"
       ]
     }
   ]

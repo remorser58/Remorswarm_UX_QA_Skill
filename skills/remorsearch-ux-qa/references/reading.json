@@ -103,7 +103,8 @@
         "references/loop/cli.md",
         "references/agent-setup.md",
         "drivers/web/README.md",
-        "references/ergonomics/visual-science.md"
+        "references/ergonomics/visual-science.md",
+        "references/loop/react-design-system.md"
       ],
       "later_conditions": {
         "causal_analysis": [
@@ -149,7 +150,8 @@
         "references/loop/cli.md",
         "references/agent-setup.md",
         "drivers/web/README.md",
-        "references/ergonomics/visual-science.md"
+        "references/ergonomics/visual-science.md",
+        "references/loop/react-design-system.md"
       ],
       "later_conditions": {
         "causal_analysis": [
@@ -192,7 +194,8 @@
         "references/loop/cli.md",
         "references/agent-setup.md",
         "drivers/web/README.md",
-        "references/ergonomics/visual-science.md"
+        "references/ergonomics/visual-science.md",
+        "references/loop/react-design-system.md"
       ],
       "later_conditions": {
         "causal_analysis": [
@@ -235,7 +238,8 @@
         "references/loop/cli.md",
         "references/agent-setup.md",
         "drivers/web/README.md",
-        "references/ergonomics/visual-science.md"
+        "references/ergonomics/visual-science.md",
+        "references/loop/react-design-system.md"
       ],
       "later_conditions": {
         "causal_analysis": [
