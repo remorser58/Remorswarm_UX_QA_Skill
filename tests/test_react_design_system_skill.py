@@ -116,6 +116,28 @@ class ReactDesignSystemIntegrationTests(unittest.TestCase):
             self.assertEqual(res.returncode, 0, res.stderr)
             self.assertTrue(json.loads(res.stdout)["ok"])
 
+            # Keep the clean control intact; remove only the reduced-motion fallback.
+            dirty = root / "dirty"
+            shutil.copytree(clean, dirty)
+            motion = dirty / "src/design-system/motion/motion.css"
+            motion.write_text(
+                motion.read_text(encoding="utf-8").replace(
+                    "(prefers-reduced-motion: reduce)", "print"
+                ),
+                encoding="utf-8",
+            )
+            res = subprocess.run(
+                ["bash", str(script), "--root", str(dirty), "--strict", "--json"],
+                capture_output=True, text=True,
+            )
+            report = json.loads(res.stdout)
+            self.assertFalse(report["ok"])
+            self.assertEqual(report["summary"]["errors"], 1)
+            self.assertEqual(
+                [v["code"] for v in report["violations"] if v["severity"] == "error"],
+                ["REDUCED_MOTION_MISSING"],
+            )
+
     def test_loop_reference_is_registered_lookup_only_and_bounded(self):
         self.assertTrue(LOOP_REFERENCE.is_file())
         manifest = json.loads(READING_JSON.read_text(encoding="utf-8"))
