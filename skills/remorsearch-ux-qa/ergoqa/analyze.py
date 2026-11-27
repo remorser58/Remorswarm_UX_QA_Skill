@@ -13,7 +13,7 @@ import hashlib
 import json
 import re
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 from urllib.parse import urlsplit, urlunsplit
 
 from . import checks, png
@@ -51,50 +51,55 @@ def screen_identity(snapshot: dict[str, Any]) -> dict[str, Any]:
             "route": route, "heading": next((text for _, text in headings if text), "") or surface.get("title") or ""}
 
 
-_CONSPICUITY_CACHE: dict[tuple[str, int], list[list[float]] | None] = {}
+_CONSPICUITY_CACHE: dict[tuple[str, str, int], list[list[float]]] = {}
 
 
-def conspicuity_for_snapshot(snapshot: dict[str, Any], cell_css_px: int = 8) -> list[list[float]] | None:
-    """Bottom-up conspicuity grid for a snapshot screenshot (None if unavailable).
-
-    Prefers the driver's CSS-scale copy (``screenshot.css``); results are cached
-    by screenshot hash so repeated analyses do not decode again.
-    """
-    shot = snapshot.get("screenshot", {})
-    path = shot.get("resolved_path")
-    if not path or not Path(path).is_file():
-        return None
-    css = shot.get("css") if isinstance(shot.get("css"), dict) else None
-    if css and isinstance(css.get("path"), str):
-        try:
-            from .snapshot import resolve_within, sha256_file
-
-            css_path = resolve_within(Path(path).parent, css["path"])
-            if css_path.is_file() and (not css.get("sha256") or sha256_file(css_path) == css["sha256"]):
-                path = str(css_path)
-            else:
-                css = None
-        except Exception:  # noqa: BLE001 - fall back to the full screenshot
-            css = None
-    cache_key = (str(shot.get("sha256") or path) + ("|css" if css else ""), cell_css_px)
-    if cache_key in _CONSPICUITY_CACHE:
-        return _CONSPICUITY_CACHE[cache_key]
-    try:
-        image = png.to_rgb(png.read_png(path))
-    except (png.PNGError, OSError):
-        _CONSPICUITY_CACHE[cache_key] = None
-        return None
-    dpr = 1.0 if css else float(snapshot.get("device", {}).get("dpr") or 1.0)
-    factor = max(1, int(round(cell_css_px * dpr)))
-    small = png.downsample(image, factor)
+def _conspicuity_grid(image: png.Image, factor: int) -> list[list[float]]:
+    small = png.downsample(png.to_rgb(image), factor)
     data = small.data
     rows = []
     for y in range(small.height):
         base = y * small.width * 3
         rows.append([(data[base + 3 * x], data[base + 3 * x + 1], data[base + 3 * x + 2]) for x in range(small.width)])
-    grid = gaze.conspicuity_map(rows)
-    _CONSPICUITY_CACHE[cache_key] = grid
-    return grid
+    return gaze.conspicuity_map(rows)
+
+
+def conspicuity_for_snapshot(
+    snapshot: dict[str, Any], cell_css_px: int = 8, *, on_css_fallback: Callable[[], None] | None = None,
+) -> list[list[float]] | None:
+    """Prefer a decodable CSS-scale copy, then use the original at device scale."""
+    shot = snapshot.get("screenshot", {})
+    path = shot.get("resolved_path")
+    if not path or not Path(path).is_file():
+        return None
+    css = shot.get("css")
+    if css is not None:
+        try:
+            css_path = resolve_within(Path(path).parent, css["path"])
+            with css_path.open("rb") as stream:
+                raw = stream.read(png.MAX_FILE_BYTES + 1)
+            if len(raw) > png.MAX_FILE_BYTES:
+                raise png.PNGError("CSS screenshot exceeds the PNG size limit")
+            digest = hashlib.sha256(raw).hexdigest()
+            if css.get("sha256") and digest != css["sha256"]:
+                raise png.PNGError("CSS screenshot does not match its recorded SHA-256")
+            factor = max(1, int(round(cell_css_px)))
+            key = ("css", digest, factor)
+            if key not in _CONSPICUITY_CACHE:
+                _CONSPICUITY_CACHE[key] = _conspicuity_grid(png.decode(raw), factor)
+            return _CONSPICUITY_CACHE[key]
+        except (KeyError, TypeError, ValueError, OSError):
+            if on_css_fallback is not None:
+                on_css_fallback()
+    dpr = float(snapshot.get("device", {}).get("dpr") or 1.0)
+    factor = max(1, int(round(cell_css_px * dpr)))
+    key = ("original", str(shot.get("sha256") or path), factor)
+    if key not in _CONSPICUITY_CACHE:
+        try:
+            _CONSPICUITY_CACHE[key] = _conspicuity_grid(png.read_png(path), factor)
+        except (png.PNGError, OSError):
+            return None
+    return _CONSPICUITY_CACHE[key]
 
 
 def _device_for(snapshot: dict[str, Any], profile: dict[str, Any]):

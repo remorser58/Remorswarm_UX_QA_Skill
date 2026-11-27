@@ -82,6 +82,64 @@ class ReachHeatmapContract(unittest.TestCase):
         self.assertFalse(self.out.exists())
 
 
+class GazeHeatmapCSSContract(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.root = Path(tmp.name)
+        self.profile = sample_profiles(1, 7, ["iphone-15"])[0]
+        (self.root / "profiles.json").write_text(json.dumps([self.profile]))
+        self.original = self.root / "source.png"
+        # A nonuniform original provides contrast away from the position prior.
+        pixels = bytes(v for y in range(96) for x in range(128)
+                       for v in ((0, 0, 0) if 12 <= x < 44 and 48 <= y < 76 else (255, 255, 255)))
+        png.write_png(self.original, png.make_image(128, 96, 3, pixels))
+        self.css = self.root / "css.png"
+        self.shot = dict(path=self.original.name, sha256=sha256_file(self.original))
+
+    def render(self):
+        snap = self.root / "snapshot.json"
+        snap.write_text(json.dumps({
+            "device": {"id": "iphone-15", "viewport_css": [64, 48], "dpr": 2},
+            "screenshot": self.shot,
+        }))
+        out = self.root / "heat.png"
+        out.unlink(missing_ok=True)
+        err = io.StringIO()
+        with redirect_stdout(io.StringIO()), redirect_stderr(err):
+            code = cli.main(["heatmap", "--kind", "gaze", "--snapshot", str(snap),
+                             "--profiles", str(self.root / "profiles.json"), "--profile",
+                             self.profile["profile_id"], "--out", str(out)])
+        self.assertEqual(code, cli.EXIT_OK, err.getvalue())
+        return out.read_bytes(), err.getvalue()
+
+    def bind_css(self):
+        self.shot["css"] = {"path": self.css.name, "sha256": sha256_file(self.css)}
+
+    def test_unreadable_css_uses_original_and_does_not_poison_valid_css(self):
+        original, original_err = self.render()
+        self.assertEqual(original_err, "")
+        self.css.write_bytes(b"not a PNG")
+        self.bind_css()
+        restored, err = self.render()
+        self.assertTrue(restored == original, "fallback must preserve contrast from the original")
+        self.assertIn("using the original screenshot", err)
+        png.write_png(self.css, png.new_image(64, 48, 3, (255, 255, 255)))
+        self.bind_css()
+        using_css, err = self.render()
+        self.assertFalse(using_css == original, "valid CSS capture should still take precedence")
+        self.assertEqual(err, "")
+
+    def test_unverified_css_uses_original_and_warns(self):
+        original, _ = self.render()
+        png.write_png(self.css, png.new_image(64, 48, 3, (255, 255, 255)))
+        self.bind_css()
+        self.shot["css"]["sha256"] = "0" * 64
+        fallback, err = self.render()
+        self.assertTrue(fallback == original)
+        self.assertIn("using the original screenshot", err)
+
+
 def scenario_doc(scenario_id: str) -> dict:
     return {
         "schema_version": "ergo-scenario.v1",

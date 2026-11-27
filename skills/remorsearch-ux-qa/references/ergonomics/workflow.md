@@ -69,7 +69,7 @@ P0/P1은 정확한 `finding_id`의 캡처·텍스트 재검토 기록을 `--seco
 
 Add `--audience audience.json` only for a completed audience. Use the emitted bundle path if this version names it differently. Outputs: findings.json, analyses.json, report.md and an evidence bundle. Segment groups/segments_affected describe triggered profiles, never user shares. Record model IDs and differential conditions (shared by triggered profiles and no untriggered profile). Use `python3 scripts/ergo_qa.py heatmap --help` for reach/gaze review options.
 
-For `heatmap --kind gaze`, `--profile` is required but does not affect the map. The PNG shows estimated visual attention from the snapshot, not measured eye movements.
+For `heatmap --kind gaze`, `--profile` is required but does not affect the map. The PNG shows estimated visual attention from the snapshot, not measured eye movements. If a recorded CSS-scale screenshot cannot be verified or decoded, the CLI warns and computes contrast from the original screenshot.
 
 Reach overlays require matching device and orientation. Non-touch input/grip or one-hand tablet-like geometry: exit 2, no image. Matched touch cradle: unchanged image, labeled **no modeled reach penalty**. Neither is scored RH-01/RH-02 coverage or evidence of human reach.
 
