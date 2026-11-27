@@ -306,6 +306,63 @@ never serialized. Temporary browser handles are disposed. Checks precede later
 focus/reflow probes. Matching endpoints do not exclude a transition that returns
 to the same state during capture; rapidly changing targets need another capture.
 
+## Select one profile for a recorded run
+
+From a writable work directory outside the installed skill, set `SKILL_DIR` to the absolute path of the skill folder containing `SKILL.md` (in a source checkout, `skills/remorsearch-ux-qa`). Use the same shell for the instructions below. Input and output paths such as `work/` and `runs/` belong to the work directory, not the installed skill.
+
+```sh
+SKILL_DIR=/absolute/path/to/remorsearch-ux-qa
+if [ ! -e work/profiles.json ] && [ ! -L work/profiles.json ]; then
+  python3 "$SKILL_DIR/scripts/ergo_qa.py" profiles --count 16 --seed 7 --devices galaxy-s24,iphone-15 --out work/profiles.json
+fi
+```
+
+The command builds a default stratified list only when none exists.
+
+`--profile` takes one `ergo-profile.v1` object, not the whole profiles document. Choose a profile ID and the device and orientation planned for the capture. The values below match `EP-01` in the stratified example above. For a different profile, set all three and choose a new output path.
+
+```sh
+PROFILE_ID=EP-01
+DEVICE_ID=galaxy-s24
+ORIENTATION=portrait
+PROFILE_FILE=work/EP-01.json
+python3 - "$PROFILE_ID" "$DEVICE_ID" "$ORIENTATION" "$PROFILE_FILE" <<'PY'
+import json
+from pathlib import Path
+import sys
+
+profile_id, device_id, orientation, output = sys.argv[1:]
+profiles = json.loads(Path("work/profiles.json").read_text(encoding="utf-8"))["profiles"]
+matches = [p for p in profiles if p["profile_id"] == profile_id]
+if len(matches) != 1:
+    raise SystemExit("Choose a unique profile_id from work/profiles.json.")
+profile = matches[0]
+attrs = profile["attributes"]
+if profile["schema_version"] != "ergo-profile.v1" or (attrs["device_id"], attrs["orientation"]) != (device_id, orientation):
+    raise SystemExit("Choose an ergo-profile.v1 profile for the planned device and orientation.")
+with Path(output).open("x", encoding="utf-8") as file:
+    json.dump(profile, file, ensure_ascii=False, indent=2)
+    file.write("\n")
+PY
+```
+
+The command refuses to overwrite an existing file. Keep `work/profiles.json` unchanged for analysis and use `PROFILE_FILE` and `PROFILE_ID` in the capture and attachment commands below.
+
+### Capture and attach the selected profile
+
+Use a matching scenario and set `PRODUCT_BUILD_ID` to the actual product build identity. The recorder keeps that operator-supplied identity on the run and its captures. Without it, do not claim same-build reproduction. A capture made with `--device` alone is for cross-profile analysis, not QA attachment as a recorded persona.
+
+```sh
+node "$SKILL_DIR/drivers/web/ergo_drive.mjs" run --scenario sc.json --profile "$PROFILE_FILE" \
+  --build-id "$PRODUCT_BUILD_ID" --out runs/ --run-id R-persona-01
+python3 "$SKILL_DIR/scripts/ergo_qa.py" analyze --runs runs/R-persona-01 --profiles work/profiles.json --scenario sc.json --out analysis.json
+python3 "$SKILL_DIR/scripts/ergo_qa.py" attach --bundle qa/bundle.json --runs runs/R-persona-01 --profiles work/profiles.json \
+  --scenario sc.json --bind "scenario-1=$PROFILE_ID" --receipts-dir receipts/ --out qa/bundle.ergo.json
+python3 "$SKILL_DIR/scripts/validate_bundle.py" qa/bundle.ergo.json --artifacts-root receipts/
+```
+
+Ordinary profile-based capture uses `--profile`. Add `--bind-profile` to `run` or `serve` only when you need to pin the exact profile content and evaluator revision; otherwise the profile revision remains unverified.
+
 ## Binding a run to authored profile inputs
 
 For a new run with an authored profile, add `--bind-profile` to `run` or `serve`.
