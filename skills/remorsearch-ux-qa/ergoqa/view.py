@@ -76,13 +76,13 @@ def _box_blur_rgb(image: png.Image, radius: int) -> png.Image:
 
 
 def profile_view(image: png.Image, profile: dict[str, Any], dpr: float = 1.0) -> tuple[png.Image, list[str]]:
-    """Return (degraded RGB image at CSS-pixel scale, list of applied transforms)."""
+    """Return (illustrative RGB preview, applied transforms); dimensions may differ from the CSS viewport."""
     applied: list[str] = []
     rgb = png.to_rgb(image)
     factor = max(1, int(round(dpr)))
     if factor > 1:
         rgb = png.downsample(rgb, factor)
-        applied.append(f"downsample x{factor} to CSS px")
+        applied.append(f"downsample x{factor} for preview; dimensions may differ from CSS viewport")
     attrs = profile.get("attributes", {})
     vision = attrs.get("vision", {})
     kind = vision.get("cvd", "none")
