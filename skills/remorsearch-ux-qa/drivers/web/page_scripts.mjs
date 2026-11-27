@@ -1204,7 +1204,7 @@ export function extractSnapshot(args) {
 
   // Keep the authored target for size checks and the viewport/overflow
   // intersection for checks that require it. Non-rectangular clipping stays unknown.
-  const visibleBoxOf = (el) => {
+  const visibleBoxOf = (el, clipAncestors) => {
     const r = geo(el).r;
     let x0 = Math.max(VX0, r.left), y0 = Math.max(VY0, r.top);
     let x1 = Math.min(VX1, r.right), y1 = Math.min(VY1, r.bottom);
@@ -1214,12 +1214,15 @@ export function extractSnapshot(args) {
       if ((cs.clipPath && cs.clipPath !== 'none') || (cs.clip && cs.clip !== 'auto')
         || (cs.maskImage && cs.maskImage !== 'none')
         // Individual rotate (including axis/3D forms) is separate from transform.
-        || (cs.rotate && cs.rotate !== 'none')) return { visible_box: null, visible_geometry: 'unsupported' };
+        || (cs.rotate && cs.rotate !== 'none')
+        || (clipAncestors && cs.scale && cs.scale !== 'none')
+        || (clipAncestors && cs.offsetPath && cs.offsetPath !== 'none')) return { visible_box: null, visible_geometry: 'unsupported' };
       if (cs.transform && cs.transform !== 'none') {
         const m = new DOMMatrixReadOnly(cs.transform);
-        if (!m.is2D || Math.abs(m.b) > 1e-6 || Math.abs(m.c) > 1e-6) return { visible_box: null, visible_geometry: 'unsupported' };
+        if (!m.is2D || Math.abs(m.b) > 1e-6 || Math.abs(m.c) > 1e-6
+          || (clipAncestors && !(m.a > 0 && m.d > 0))) return { visible_box: null, visible_geometry: 'unsupported' };
       }
-      if (p === el) continue; // an element's own overflow clips its children
+      if (p === el || (clipAncestors && !clipAncestors.has(p))) continue; // own overflow clips children only
       const clipX = ['hidden', 'clip', 'auto', 'scroll'].includes(cs.overflowX);
       const clipY = ['hidden', 'clip', 'auto', 'scroll'].includes(cs.overflowY);
       if (!clipX && !clipY) continue;
@@ -1234,7 +1237,8 @@ export function extractSnapshot(args) {
       if (old.some((v, i) => v !== [x0, y0, x1, y1][i])) clipped = true;
     }
     if (x1 <= x0 || y1 <= y0) return { visible_box: null, visible_geometry: 'empty' };
-    return { visible_box: { x: round2(x0), y: round2(y0), w: round2(x1 - x0), h: round2(y1 - y0) },
+    const px = clipAncestors ? (v) => v : round2;
+    return { visible_box: { x: px(x0), y: px(y0), w: px(x1 - x0), h: px(y1 - y0) },
       visible_geometry: clipped ? 'ancestor_clipped' : 'measured' };
   };
 
@@ -1995,6 +1999,27 @@ export function extractSnapshot(args) {
     const a = /rgba\(.*,\s*([\d.]+)\)/.exec(bg);
     return (bg && bg !== 'transparent' && !(a && parseFloat(a[1]) === 0)) || (cs.backgroundImage && cs.backgroundImage !== 'none');
   };
+  // Positioned descendants escape overflow between themselves and their containing
+  // block. Bound the sheet's rectangular footprint; keep the old heuristic if unknown.
+  const sheetClipAncestors = (el) => {
+    const clippers = new Set();
+    for (let p = el; p && p !== document.body && p !== document.documentElement;) {
+      const cs = style(p);
+      if (p !== el && [cs.overflowX, cs.overflowY].some((o) => ['hidden', 'clip', 'auto', 'scroll'].includes(o))) {
+        // A different overflow clip edge is outside visibleBoxOf's padding-box model.
+        if ([cs.overflowX, cs.overflowY].includes('clip') && cs.overflowClipMargin !== '0px') return null;
+        clippers.add(p);
+      }
+      if (cs.position === 'absolute' || cs.position === 'fixed') {
+        if (!(p instanceof HTMLElement)) return null;
+        const cb = p.offsetParent;
+        // offsetParent may also report an effective-zoom boundary; do not guess.
+        if (cb && (!cb.contains(p) || !Number.isFinite(p.currentCSSZoom) || p.currentCSSZoom !== cb.currentCSSZoom)) return null;
+        p = cb;
+      } else p = p.assignedSlot || parentOf(p);
+    }
+    return clippers;
+  };
   for (const n of all) {
     if (layers.length >= 8) break;
     if (n === document.body || n === document.documentElement) continue;
@@ -2017,6 +2042,11 @@ export function extractSnapshot(args) {
       if ((w * h) / vpArea < 0.4) continue;
       const pos = style(n).position;
       if ((pos === 'fixed' || pos === 'absolute') && painted(n)) {
+        const clipAncestors = sheetClipAncestors(n);
+        if (clipAncestors?.size) {
+          const { visible_box: box, visible_geometry: geometry } = visibleBoxOf(n, clipAncestors);
+          if (geometry === 'empty' || (box && (box.w * box.h) / vpArea < 0.4)) continue;
+        }
         // An overlay sits over content that is still rendered underneath; a screen that
         // replaced the previous one (display:none swaps) covers nothing.
         let over = 0;
