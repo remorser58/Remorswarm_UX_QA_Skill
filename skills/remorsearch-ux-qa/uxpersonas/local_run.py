@@ -733,7 +733,7 @@ def render(summary):
     for issue in audit["issues"]:
         lines.append(f"- 근거 무결성 차단: {issue['task_id']} · {issue['code']}")
     for duplicate in audit["duplicates"]:
-        lines.append(f"- 중복 관측: {duplicate['requirement_id']}/{duplicate['obligation_id']} · 과제 {', '.join(duplicate['task_ids'])} · 독립 신호 1건으로만 계산")
+        lines.append(f"- 중복 관측: {duplicate['requirement_id']}/{duplicate['obligation_id']} · 과제 {', '.join(duplicate['task_ids'])} · 같은 관측 1건으로 계산")
     for conflict in audit["conflicts"]:
         lines.append(f"- 상충 관측: {conflict['requirement_id']}/{conflict['obligation_id']} · 과제 {', '.join(conflict['task_ids'])} · {', '.join(conflict['statuses'])}")
     for conflict in audit["definition_conflicts"]:

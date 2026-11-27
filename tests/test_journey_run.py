@@ -124,7 +124,11 @@ class JourneyRunTests(unittest.TestCase):
         duplicate = audit["duplicates"][0]
         self.assertEqual(set(duplicate["task_ids"]), {"T-EXPLORE", "T-RETURN"})
         self.assertEqual(duplicate["distinct_observations"], 1)
-        self.assertIn("중복 관측", Path(report["report_path"]).read_text())
+        markdown = Path(report["report_path"]).read_text(encoding="utf-8")
+        duplicate_rows = [line for line in markdown.splitlines() if line.startswith("- 중복 관측:")]
+        self.assertEqual(len(duplicate_rows), 1)
+        self.assertIn("같은 관측 1건", duplicate_rows[0])
+        self.assertNotIn("독립 신호", duplicate_rows[0])
 
     def test_contradictory_persona_observations_remain_unresolved(self):
         report = self._shared_obligation_report(RUNNER)
