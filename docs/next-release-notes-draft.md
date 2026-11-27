@@ -1,6 +1,6 @@
 # Draft: next release notes
 
-Unreleased. This draft covers #40–#51, which are on `main` and are not in the published [v1.2.0 ZIP](https://github.com/remorser58/Remorswarm_UX_QA_Skill/releases/tag/v1.2.0).
+Unreleased. This draft covers #40–#51 and #53, which are on `main` and are not in the published [v1.2.0 ZIP](https://github.com/remorser58/Remorswarm_UX_QA_Skill/releases/tag/v1.2.0).
 
 ## What users will notice
 
