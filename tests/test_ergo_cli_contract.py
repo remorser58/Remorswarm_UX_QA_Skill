@@ -8,6 +8,7 @@ import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
+from unittest.mock import patch
 
 import _paths  # noqa: F401  (puts the skill folder on sys.path)
 from test_ergo_pipeline import make_run  # the owned synthetic recorded run fixture
@@ -129,6 +130,16 @@ class GazeHeatmapCSSContract(unittest.TestCase):
         using_css, err = self.render()
         self.assertFalse(using_css == original, "valid CSS capture should still take precedence")
         self.assertEqual(err, "")
+
+    def test_css_must_be_a_regular_file_before_opening(self):
+        original, _ = self.render()
+        png.write_png(self.css, png.new_image(64, 48, 3, (255, 255, 255)))
+        self.bind_css()
+        real_is_file = Path.is_file
+        with patch.object(Path, "is_file", lambda path: path != self.css and real_is_file(path)):
+            output, warning = self.render()
+        self.assertTrue(output == original)
+        self.assertIn("using the original screenshot", warning)
 
     def test_unverified_css_uses_original_and_warns(self):
         original, _ = self.render()

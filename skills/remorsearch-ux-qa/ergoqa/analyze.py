@@ -76,6 +76,8 @@ def conspicuity_for_snapshot(
     if css is not None:
         try:
             css_path = resolve_within(Path(path).parent, css["path"])
+            if not css_path.is_file():
+                raise OSError("CSS screenshot is not a regular file")
             with css_path.open("rb") as stream:
                 raw = stream.read(png.MAX_FILE_BYTES + 1)
             if len(raw) > png.MAX_FILE_BYTES:
