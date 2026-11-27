@@ -239,18 +239,29 @@ def _report(work, state):
     return publish_report(work, summary, render(summary))
 
 
-def publish_report(work, summary, text):
+def publish_report(work, summary, text, *, legacy_markdown=None):
     """Publish immutable paired MD/JSON; shared by entry and current execution."""
     reports = safe_path(work / "reports", work)
     reports.mkdir(mode=0o700, exist_ok=True)
     stem = digest(summary)[:16]
+    verified_json = False
+    missing = []
     for suffix, raw in ((".json", canonical(summary)), (".md", text.encode("utf-8"))):
         dest = reports / (stem + suffix)
-        if dest.exists():
-            if read_file(work, str(dest.relative_to(work))) != raw:
-                stop("report_changed", "이전 보고서 내용이 바뀌었습니다.", "기존 보고서를 보존하고 변경을 확인합니다.")
-        else:
-            atomic(dest, raw)
+        if not dest.exists():
+            missing.append((dest, raw))
+            continue
+        stored = read_file(work, str(dest.relative_to(work)))
+        if stored != raw:
+            # Only an existing, verified JSON companion can authorize an exact older rendering.
+            if suffix == ".md" and verified_json and legacy_markdown is not None and stored == legacy_markdown.encode("utf-8"):
+                continue
+            stop("report_changed", "이전 보고서 내용이 바뀌었습니다.", "기존 보고서를 보존하고 변경을 확인합니다.")
+        if suffix == ".json":
+            verified_json = True
+    # Do not create a missing companion until every existing artifact has been checked.
+    for dest, raw in missing:
+        atomic(dest, raw)
     return {**summary, "report_path": str(reports / (stem + ".md"))}
 
 
