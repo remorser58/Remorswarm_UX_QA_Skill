@@ -55,6 +55,8 @@ elsewhere on the screen. A matching focused role/name proves the destination,
 not a visible cue. If the state cannot be held comparable, keep the observed
 destination and report cue visibility as unverified.
 
+The keyboard-walk crops around the control suppress animations; to verify reduced-motion behavior, record the same action under both motion preferences with capture-time animation suppression off.
+
 For visible labels, handle rendered nonbreaking spaces deliberately without
 altering the product text or accepting a different control.
 
