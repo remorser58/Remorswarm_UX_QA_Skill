@@ -268,7 +268,7 @@ RF01 = _register(CheckSpec(
     "RF-01", "layout", "measured", "320 CSS px 폭에서 내용이 가로로 넘침(리플로)",
     "Content sticks out sideways at 320 CSS px (reflow)",
     ("REF-wcag22-1410",), ("web", "desktop"), "visual",
-    "고정 폭(width: 400px 등)을 max-width: 100%와 줄바꿈되는 배치로 바꿔, 320 CSS px 폭(400 % 확대)에서 가로 스크롤 없이 읽히게 하세요.",
+    "고정 폭(width: 400px 등)을 max-width: 100%와 줄바꿈되는 배치로 바꿔, 320 CSS px 폭에서도 가로 스크롤 없이 읽히게 하세요.",
 ))
 RF02 = _register(CheckSpec(
     "RF-02", "layout", "measured", "텍스트 간격 변경 뒤 글자가 잘림",
@@ -2744,7 +2744,7 @@ def check_reflow(run: dict[str, Any], profile: dict[str, Any], snapshots: dict[s
                 {"name": "visible_share_at_320", "value": lost.get("visible_320"), "unit": "fraction", "threshold": 0.5, "comparator": ">=",
                  "visible_share_full": lost.get("visible_full"), "viewport_css_px": rec.get("width")},
                 False, "P2",
-                f"'{(lost.get('text') or anchor)[:30]}'이(가) 원래 폭에서는 보이지만 320 CSS px 폭(400 % 확대)에서는 상자에 잘려 {100 * (lost.get('visible_320') or 0):.0f}%만 보입니다(WCAG 1.4.10).",
+                f"'{(lost.get('text') or anchor)[:30]}'이(가) 원래 폭에서는 보이지만 320 CSS px 폭의 정적 검사에서는 상자에 잘려 {100 * (lost.get('visible_320') or 0):.0f}%만 보입니다(WCAG 1.4.10).",
                 extra={"anchor_selectors": [anchor], "context_selectors": [f"#{a}" for a in lost.get("ancestor_ids") or [] if a]},
             ))
         page_overflow = scrolls or bool(rec.get("root_clips"))
@@ -2768,7 +2768,7 @@ def check_reflow(run: dict[str, Any], profile: dict[str, Any], snapshots: dict[s
                  "viewport_css_px": rec.get("width"), "page_scroll_width": rec.get("scroll_width"), "root_clips": bool(rec.get("root_clips")),
                  "offender_count": len(eligible), "in_fixed_bar": any(o.get("fixed") for o in eligible)},
                 False, "P2",
-                f"320 CSS px 폭(400 % 확대)에서 이 화면이 재배치되지 않습니다: 요소 {len(eligible)}개({', '.join(names)} 등)가 오른쪽으로 넘쳐 "
+                f"320 CSS px 폭의 정적 검사에서 이 화면이 재배치되지 않습니다: 요소 {len(eligible)}개({', '.join(names)} 등)가 오른쪽으로 넘쳐 "
                 f"가장 먼 끝이 {max(rights):.0f}px이고 {how}(WCAG 1.4.10).",
                 extra={"anchor_selectors": [o["selector"] for o in eligible if o.get("selector")],
                        "context_selectors": sorted({f"#{a}" for o in eligible for a in o.get("ancestor_ids") or [] if a})},
@@ -2793,7 +2793,7 @@ def check_reflow(run: dict[str, Any], profile: dict[str, Any], snapshots: dict[s
                  "viewport_css_px": rec.get("width"), "page_scroll_width": rec.get("scroll_width"), "root_clips": bool(rec.get("root_clips")),
                  "in_fixed_bar": bool(off.get("fixed"))},
                 False, "P2",
-                f"320 CSS px 폭(400 % 확대)에서 '{(off.get('text') or off.get('selector') or '')[:30]}'의 오른쪽 끝이 {right:.0f}px라 {how}(WCAG 1.4.10).",
+                f"320 CSS px 폭의 정적 검사에서 '{(off.get('text') or off.get('selector') or '')[:30]}'의 오른쪽 끝이 {right:.0f}px라 {how}(WCAG 1.4.10).",
                 extra={"anchor_selectors": [off["selector"]] if off.get("selector") else [],
                        "context_selectors": [f"#{a}" for a in off.get("ancestor_ids") or [] if a]},
             ))
@@ -2810,7 +2810,7 @@ def check_reflow(run: dict[str, Any], profile: dict[str, Any], snapshots: dict[s
                 {"name": "page_scroll_width_css_px", "value": rec.get("scroll_width"), "unit": "css_px", "threshold": width, "comparator": "<=",
                  "viewport_css_px": rec.get("width"), "scan_capped": bool(rec.get("scan_capped"))},
                 False, "P2",
-                f"320 CSS px 폭(400 % 확대)에서 페이지 폭이 {rec.get('scroll_width')}px라 가로 스크롤이 생깁니다(WCAG 1.4.10). 넘치는 요소는 특정하지 못했습니다.",
+                f"320 CSS px 폭의 정적 검사에서 페이지 폭이 {rec.get('scroll_width')}px라 가로 스크롤이 생깁니다(WCAG 1.4.10). 넘치는 요소는 특정하지 못했습니다.",
                 extra={"anchor_selectors": ["html"]},
             ))
     return out
