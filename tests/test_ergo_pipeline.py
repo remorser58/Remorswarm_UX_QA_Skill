@@ -281,6 +281,20 @@ class PipelineTests(unittest.TestCase):
         self.assertIn("커버리지", text)
         self.assertIn("RH-01", text)
 
+    def test_report_distinguishes_profile_devices_from_run_devices(self) -> None:
+        profiles = [
+            {"profile_id": "EP-desktop", "attributes": {"device_id": "desktop-1920", "orientation": "landscape"}},
+            {"profile_id": "EP-phone", "attributes": {"device_id": "galaxy-s24", "orientation": "portrait"}},
+        ]
+        desktop_run = {**self.analysis, "device_id": "desktop-1920", "orientation": "landscape",
+                       "profiles_evaluated": ["EP-desktop"]}
+        text = report.render([], profiles, [desktop_run])
+        run_section, profile_section = text.split("## 3. 시뮬레이션 프로필", 1)
+        self.assertIn("desktop-1920 (landscape)", run_section)
+        self.assertNotIn("galaxy-s24", run_section)
+        self.assertIn("- 프로필 구성에 포함된 기기: desktop-1920, galaxy-s24", profile_section)
+        self.assertNotIn("- 테스트한 기기:", profile_section)
+
     def test_bench_scoring(self) -> None:
         key = {
             "suite": "unit",
