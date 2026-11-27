@@ -7,7 +7,8 @@ is launched. Real browser validation belongs to the separate CLI diagnostic.
 import copy
 import importlib.util
 import json
-from contextlib import contextmanager
+from contextlib import contextmanager, redirect_stdout
+from io import StringIO
 from pathlib import Path
 import sys
 import tempfile
@@ -17,7 +18,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "skills/remorsearch-ux-qa"))
 from ergoqa.png import encode, new_image
-from uxpersonas import browser_run, local_run, workspace
+from uxpersonas import browser_run, cli, local_run, workspace
 from uxresearch.canonical import EngineError, byte_digest, canonical
 from uxresearch.storage import atomic
 
@@ -164,6 +165,42 @@ class BrowserJourneyAdmissionTests(unittest.TestCase):
         self.assertEqual(baseline, {p.name: p.read_bytes() for p in self.library.iterdir()})
         for row in result["tasks"]:
             self.assertEqual({a["kind"] for a in row["result"]["artifacts"]}, {"execution_log", "screenshot"})
+
+    def test_report_and_cli_only_claim_observed_ui_when_screenshots_are_admitted(self):
+        observed = "실제 headless 브라우저 관측입니다."
+        observed_limit = "소유 headless Chromium에서 실행한 자동화 관측입니다."
+        unobserved = "확인된 UI 관측 근거가 없습니다."
+
+        def command(name, *args):
+            out = StringIO()
+            with redirect_stdout(out):
+                code = cli.main([name, "--work", str(self.work), *args])
+            return code, out.getvalue()
+
+        for admitted in (False, True):
+            with self.subTest(admitted=admitted):
+                self.new_case()
+                if not admitted:
+                    self.omit = {"capture-2.png"}
+                with self.mocked():
+                    run_code, run_text = command("run", "--library", str(self.library),
+                                                 "--input", str(self.plan_path),
+                                                 "--allow-reviewed-local-runner")
+                text_code, status_text = command("status")
+                json_code, status_json = command("status", "--format", "json")
+                self.assertEqual((run_code, text_code, json_code), (1, 0, 0))
+                report = json.loads(status_json)
+                screenshot_count = sum(a["kind"] == "screenshot" for row in report["tasks"]
+                                       for a in (row["result"] or {}).get("artifacts", []))
+                self.assertIs(report["ui_observed"], admitted)
+                self.assertEqual(screenshot_count > 0, admitted)
+                note = Path(report["report_path"]).read_text(encoding="utf-8")
+                for rendered in (note, run_text, status_text):
+                    self.assertEqual(observed in rendered, admitted)
+                    self.assertEqual(observed_limit in rendered, admitted)
+                    self.assertEqual(unobserved in rendered, not admitted)
+                self.assertEqual(observed_limit in report["limitations"][0], admitted)
+                self.assertEqual(unobserved in report["limitations"][0], not admitted)
 
     def test_completed_readback_neither_invokes_nor_rechecks_runtime(self):
         with self.mocked():
