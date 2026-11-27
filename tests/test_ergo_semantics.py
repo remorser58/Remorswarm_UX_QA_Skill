@@ -132,6 +132,7 @@ class Reflow(unittest.TestCase):
         self.assertEqual([(o.check_id, o.element_key.split("|")[0], o.severity) for o in obs], [("RF-01", "#fee-summary", "P2")])
         self.assertEqual(obs[0].extra["context_selectors"], ["#step3"])
         self.assertEqual(obs[0].measurement["value"], 408)
+        self.assertIn("320 CSS px 폭의 정적 검사", obs[0].message_ko)
 
     def test_no_overflow_no_finding_unless_the_root_clips(self) -> None:
         self.assertEqual(checks.check_reflow(self.run_doc(320), {"profile_id": "P"}, {}), [])
@@ -144,6 +145,7 @@ class Reflow(unittest.TestCase):
         obs = checks.check_reflow(doc, {"profile_id": "P"}, {})
         self.assertEqual([(o.check_id, o.element_key, o.severity) for o in obs], [("RF-01", "html|/a", "P2")])
         self.assertTrue(obs[0].measurement["scan_capped"])
+        self.assertIn("320 CSS px 폭의 정적 검사", obs[0].message_ko)
         # A page that scrolls only because of exempt content (a data table) is not reported.
         table = dict(doc["reflow"][0], exempt_right=522)
         self.assertEqual(checks.check_reflow({"run_id": "R", "reflow": [table]}, {"profile_id": "P"}, {}), [])
@@ -175,6 +177,7 @@ class Reflow(unittest.TestCase):
         self.assertEqual([(o.element_key.split("|")[1], o.measurement["offender_count"], o.measurement["value"]) for o in obs], [("/admin", 5, 468.0)])
         self.assertEqual(obs[0].extra["anchor_selectors"], [f"#b{i}" for i in range(5)])
         self.assertIn("재배치되지 않습니다", obs[0].message_ko)
+        self.assertIn("320 CSS px 폭의 정적 검사", obs[0].message_ko)
         # Up to three boxes stay separate findings.
         few = dict(rec, offenders=offs[:3])
         self.assertEqual(len(checks.check_reflow({"run_id": "R", "reflow": [few]}, {"profile_id": "P"}, {})), 3)
@@ -192,6 +195,7 @@ class Reflow(unittest.TestCase):
         self.assertEqual(obs[0].measurement["name"], "visible_share_at_320")
         self.assertEqual(obs[0].extra["context_selectors"], ["#qbar", "#view-quiz"])
         self.assertEqual(obs[0].element_ids, ["qbar-timer"])
+        self.assertIn("320 CSS px 폭의 정적 검사", obs[0].message_ko)
 
 
 class FocusManagement(unittest.TestCase):
