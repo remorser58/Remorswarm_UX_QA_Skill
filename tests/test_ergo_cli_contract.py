@@ -135,8 +135,17 @@ class GazeHeatmapCSSContract(unittest.TestCase):
         original, _ = self.render()
         png.write_png(self.css, png.new_image(64, 48, 3, (255, 255, 255)))
         self.bind_css()
-        real_is_file = Path.is_file
-        with patch.object(Path, "is_file", lambda path: path != self.css and real_is_file(path)):
+        # resolve_within canonicalizes before testing the file; the temporary
+        # directory may have an alias (for example /var on macOS).
+        resolved_css = self.css.resolve()
+        real_is_file, real_open = Path.is_file, Path.open
+
+        def open_without_css(path, *args, **kwargs):
+            self.assertNotEqual(path, resolved_css, "unverified CSS must not be opened")
+            return real_open(path, *args, **kwargs)
+
+        with patch.object(Path, "is_file", lambda path: path != resolved_css and real_is_file(path)), \
+             patch.object(Path, "open", open_without_css):
             output, warning = self.render()
         self.assertTrue(output == original)
         self.assertIn("using the original screenshot", warning)
