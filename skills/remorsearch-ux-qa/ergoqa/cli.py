@@ -307,7 +307,11 @@ def cmd_heatmap(args: argparse.Namespace) -> int:
     else:
         image = png.to_rgb(png.read_png(shot))
         snapshot["screenshot"]["resolved_path"] = str(shot)
-        grid = analyze.conspicuity_for_snapshot(snapshot) or []
+        def warn_css_fallback():
+            print("WARNING: CSS-scale screenshot could not be verified or decoded; using the original screenshot for gaze contrast.",
+                  file=sys.stderr)
+
+        grid = analyze.conspicuity_for_snapshot(snapshot, on_css_fallback=warn_css_fallback) or []
         form = getattr(device, "form_factor", "phone")
         gh = len(grid)
         gw = len(grid[0]) if gh else 0
