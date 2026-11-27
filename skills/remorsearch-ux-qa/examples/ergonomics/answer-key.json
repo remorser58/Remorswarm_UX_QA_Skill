@@ -1,0 +1,19 @@
+{
+  "suite": "synthetic-icon-toggle",
+  "defects": [
+    {
+      "id": "unnamed-toggle",
+      "scenario_id": "SC-synthetic-toggle",
+      "category": "semantics",
+      "element_selector": "#toggle",
+      "severity_min": "P1"
+    },
+    {
+      "id": "unexplained-toggle",
+      "scenario_id": "SC-synthetic-toggle",
+      "category": "visual",
+      "element_selector": "#toggle",
+      "severity_min": "P2"
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "schema_version": "ergo-snapshot.v1",
+  "snapshot_id": "S-synthetic-after",
+  "run_id": "R-synthetic-toggle",
+  "step_index": 1,
+  "captured_at": "2026-01-01T12:00:01Z",
+  "surface": {
+    "kind": "web",
+    "title": "Synthetic icon toggle"
+  },
+  "device": {
+    "id": "desktop-1920",
+    "orientation": "landscape",
+    "dpr": 1.0,
+    "input": "mouse",
+    "form_factor": "desktop",
+    "viewport_css": [
+      1920,
+      1080
+    ]
+  },
+  "screenshot": {
+    "path": "S-synthetic-after.png",
+    "sha256": "488e6a10e32bd35aa1434fc30bcd46d9634ffcd2f5f0e36f8b0b1fa493b95d26",
+    "width_px": 1920,
+    "height_px": 1080,
+    "viewport_raster_reference": "Full authored synthetic viewport, at CSS pixel scale"
+  },
+  "viewport_alignment": {
+    "basis": "emulated-full-viewport",
+    "origin_css": [
+      0,
+      0
+    ]
+  },
+  "elements": [
+    {
+      "id": "toggle",
+      "role": "button",
+      "name": "",
+      "text": "",
+      "tag": "button",
+      "selector": "#toggle",
+      "box": {
+        "x": 912,
+        "y": 508,
+        "w": 96,
+        "h": 64
+      },
+      "interactive": true,
+      "visible": true,
+      "enabled": true,
+      "in_viewport": true,
+      "roles": [],
+      "source": "dom",
+      "a11y": {
+        "name_source": "none",
+        "focusable": true,
+        "hidden": false,
+        "rendered": true
+      }
+    }
+  ],
+  "focus_point": {
+    "x": 960,
+    "y": 540
+  },
+  "notes": [
+    "Constructed pixels and DOM fields; not a browser or assistive-technology capture."
+  ]
+}
