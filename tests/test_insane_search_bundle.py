@@ -307,6 +307,42 @@ class BundleTests(unittest.TestCase):
         self.assertIn("UI-01", report)
         self.assertEqual((score["defects"], score["recall_strict"], score["severity_agreement"]), (2, 1.0, 1.0))
 
+    def test_shipped_ergonomics_view_labels_integer_reduction_as_preview(self):
+        from ergoqa import png
+        from ergoqa.scan import default_profile
+
+        self.build()
+        extracted = self.root / "view-installation"
+        with zipfile.ZipFile(self.output / self.builder.ARCHIVE_NAME) as archive:
+            archive.extractall(extracted)
+        skill = extracted / "remorsearch-ux-qa"
+        cases = (
+            ("galaxy-s24-ultra", (384, 824), 3.75, (1440, 3090), (360, 773)),
+            ("galaxy-s24", (360, 780), 3, (1080, 2340), (360, 780)),
+        )
+        for device, css, dpr, raw, expected in cases:
+            with self.subTest(device=device):
+                work = self.root / device
+                work.mkdir()
+                png.write_png(work / "source.png", png.new_image(*raw, 3, (22, 81, 129)))
+                snapshot = {"device": {"viewport_css": css, "dpr": dpr}, "screenshot": {"path": "source.png"}}
+                (work / "snapshot.json").write_text(json.dumps(snapshot), encoding="utf-8")
+                profile = default_profile(device)
+                (work / "profiles.json").write_text(json.dumps([profile]), encoding="utf-8")
+                inputs = source_snapshot(work)
+                result = self.launcher("ergonomics", "view", "--snapshot", "snapshot.json",
+                                       "--profiles", "profiles.json", "--profile", profile["profile_id"],
+                                       "--out", "preview.png", root=skill, cwd=work)
+                self.assertEqual((result.returncode, result.stderr), (0, ""))
+                preview = png.read_png(work / "preview.png")
+                self.assertEqual((preview.width, preview.height), expected)
+                self.assertEqual({k: v for k, v in source_snapshot(work).items() if k != "preview.png"}, inputs)
+                self.assertIn(f"downsample x{round(dpr)} for preview", result.stdout)
+                self.assertIn("dimensions may differ from CSS viewport", result.stdout)
+                self.assertIn("[illustrative, not a measurement]", result.stdout)
+                self.assertNotIn("to CSS px", result.stdout)
+                self.assertNotIn(str(work), result.stdout)
+
     def test_output_never_overwrites_or_recurses_into_source(self):
         self.output.mkdir()
         sentinel = self.output / "keep.txt"
