@@ -10,6 +10,7 @@ dismisses what the pixels do not show.
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import time
 from pathlib import Path
@@ -124,7 +125,7 @@ def run_scan(url: str, out: Path, devices: tuple[str, ...] = DEFAULT_DEVICES, ti
     analyses: list[dict[str, Any]] = []
     profiles: list[dict[str, Any]] = []
     coverage: list[dict[str, Any]] = []
-    run_dirs: dict[str, Path] = {}
+    run_sources: dict[str, tuple[Path, str]] = {}
     for device_id in devices:
         profile = default_profile(device_id)
         scenario = scenario_for(url, device_id, tiles)
@@ -157,7 +158,7 @@ def run_scan(url: str, out: Path, devices: tuple[str, ...] = DEFAULT_DEVICES, ti
             coverage.append(entry)
             continue
         profiles.append(profile)
-        run_dirs[run_id] = run_dir
+        run_sources[run_id] = (run_dir, device_id)
         result = analyze.analyze_run(run_dir, [profile], scenario, cross_profile=True, gaze_enabled=False)
         result["observations"] = [o for o in result["observations"] if o.get("basis") == "measured"]
         analyses.append(result)
@@ -195,7 +196,7 @@ def run_scan(url: str, out: Path, devices: tuple[str, ...] = DEFAULT_DEVICES, ti
                           "uncaptured_css": gaps})
         coverage.append(entry)
     findings = swarm.aggregate(analyses, profiles) if analyses else []
-    observations = {o["id"]: (o, run_dirs.get(o["run_id"])) for a in analyses for o in a["observations"]}
+    observations = {o["id"]: (o, run_sources.get(o["run_id"])) for a in analyses for o in a["observations"]}
     # One row per check and element: the same cut chip on the phone and the laptop is
     # one candidate seen on two devices, with the first device's crop.
     merged: dict[tuple[str, str], dict[str, Any]] = {}
@@ -206,29 +207,34 @@ def run_scan(url: str, out: Path, devices: tuple[str, ...] = DEFAULT_DEVICES, ti
         if SEVERITY_RANK.get(finding.get("severity"), 4) < SEVERITY_RANK.get(row.get("severity"), 4):
             row["severity"] = finding.get("severity")
     candidates = []
+    crop_sources: dict[int, tuple[str, str]] = {}
     for n, finding in enumerate(sorted(merged.values(), key=lambda f: (SEVERITY_RANK.get(f.get("severity"), 4), f["check_id"], f["element_key"])), 1):
-        obs, run_dir = next((observations[i] for i in finding.get("observation_ids", []) if i in observations), (None, None))
+        obs, source = next((observations[i] for i in finding.get("observation_ids", []) if i in observations), (None, None))
+        snapshot_id = obs.get("snapshot_id") if obs else None
         crop = None
-        if obs and run_dir:
+        if obs and source:
+            run_dir, device_id = source
             try:
                 crop = write_crop(run_dir, obs, crops / f"{n:02d}-{finding['check_id']}.png")
             except (OSError, ValueError, png.PNGError):
                 crop = None
+            if crop and isinstance(snapshot_id, str) and re.fullmatch(r"S-[A-Za-z0-9_-]+", snapshot_id):
+                crop_sources[n] = (device_id, snapshot_id)
         candidates.append({
             "n": n, "check_id": finding["check_id"], "severity": finding.get("severity"), "title_ko": finding.get("title_ko"),
             "devices": sorted({run_id.removeprefix("SCAN-") for run_id in finding.get("run_ids", [])}),
             "element": finding["element_key"], "selectors": finding.get("selectors") or [],
             "summary_ko": finding.get("summary_ko"), "measurement": finding.get("measurement"),
-            "snapshot": obs.get("snapshot_id") if obs else None, "crop": crop,
+            "snapshot": snapshot_id, "crop": crop,
         })
     result = {"schema_version": "ergo-scan.v1", "url": url, "devices": list(devices), "coverage": coverage,
               "candidates": candidates, "status": "candidates_need_visual_confirmation"}
     (out / "scan.json").write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")
-    (out / "scan.md").write_text(render_markdown(result), encoding="utf-8")
+    (out / "scan.md").write_text(render_markdown(result, crop_sources=crop_sources), encoding="utf-8")
     return result
 
 
-def render_markdown(result: dict[str, Any]) -> str:
+def render_markdown(result: dict[str, Any], *, crop_sources: dict[int, tuple[str, str]] | None = None) -> str:
     lines = [f"# Layout scan: {result['url']}", "",
              "Measured candidates. Open each crop and the full screenshot before reporting one; dismiss what the pixels do not show.", ""]
     for c in result["coverage"]:
@@ -250,6 +256,10 @@ def render_markdown(result: dict[str, Any]) -> str:
         element = c["element"].split("|", 1)
         label = element[0] + (f" ({element[1]})" if len(element) > 1 and element[1] else "")
         crop = Path(c["crop"]).name if c.get("crop") else "-"
+        source = (crop_sources or {}).get(c["n"])
+        if c.get("crop") and source:
+            device_id, snapshot_id = source
+            crop += f" (source: `{device_id}`, `{snapshot_id}`)"
         summary = (c.get("summary_ko") or c.get("title_ko") or "").replace("|", "/").replace("\n", " ")
         lines.append(f"| {c['n']} | {c['severity']} | {c['check_id']} | {', '.join(c['devices'])} | {label.replace('|', '/')} | {summary} | {crop} |")
     if not result["candidates"]:
