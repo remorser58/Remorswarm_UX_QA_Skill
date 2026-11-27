@@ -1,5 +1,7 @@
 # Platform Drivers
 
+## Supported surfaces
+
 Every finding must come from the real surface. Drivers measure; they never score
 ergonomics or role-play a user. All of them emit `ergo-snapshot.v1` /
 `ergo-run.v1` (`docs/ergonomic-swarm-spec.md`), so `scripts/ergo_qa.py` analyses
