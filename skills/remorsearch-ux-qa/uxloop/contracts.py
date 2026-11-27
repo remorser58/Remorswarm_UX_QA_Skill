@@ -115,7 +115,9 @@ def validate_packet(packet: Any) -> list[str]:
     if len(set(paths)) != len(paths):
         errors.append("artifact paths must be unique and immutable per artifact id")
     for figma in records["figma"].values():
-        artifact(figma.get("readback_artifact_ref"), {"figma_readback"}, f"figma {figma['id']}")
+        readback = maps["artifacts"].get(figma.get("readback_artifact_ref"))
+        if readback is None or readback["kind"] != "figma_readback":
+            errors.append(f"figma {figma['id']}.readback_artifact_ref: use a registered figma_readback artifact ID")
         try:
             timestamp(figma["read_at"])
         except ContractError as exc:

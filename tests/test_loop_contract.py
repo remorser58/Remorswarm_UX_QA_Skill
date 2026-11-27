@@ -75,8 +75,19 @@ class ContractTests(unittest.TestCase):
         self.assertTrue(any('Figma' in x for x in validate_packet(self.packet)))
 
     def test_figma_url_alone_is_not_readback(self):
-        self.packet['bundle']['records']['figma'][0]['readback_artifact_ref'] = 'https://figma.com/file/example'
-        self.assertTrue(validate_packet(self.packet))
+        locator = 'https://example.test/design-reference'
+        self.packet['bundle']['records']['figma'][0]['readback_artifact_ref'] = locator
+        errors = validate_packet(self.packet)
+        self.assertEqual(len(errors), 1)
+        self.assertIn('readback_artifact_ref: use a registered figma_readback artifact ID', errors[0])
+        self.assertNotIn(locator, errors[0])
+
+    def test_figma_readback_ref_rejects_an_artifact_of_the_wrong_kind(self):
+        other = next(item for item in self.packet['artifacts'] if item['kind'] != 'figma_readback')
+        self.packet['bundle']['records']['figma'][0]['readback_artifact_ref'] = other['id']
+        errors = validate_packet(self.packet)
+        self.assertEqual(len(errors), 1)
+        self.assertIn('readback_artifact_ref: use a registered figma_readback artifact ID', errors[0])
 
     def test_visual_pass_cannot_hide_side_accent_failure(self):
         self.packet['visual_checks'][1]['checks']['side_accents'] = 'failed'
