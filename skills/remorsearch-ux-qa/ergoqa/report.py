@@ -85,7 +85,7 @@ def render(
             origin += f" ({p['coverage_stratum']})"
         lines.append(f"| {p['profile_id']} | {p.get('label_ko', '')} | {a.get('device_id')} | {origin} |")
     devices = sorted({p["attributes"]["device_id"] for p in profiles})
-    lines += ["", f"- 테스트한 기기: {', '.join(devices)}"]
+    lines += ["", f"- 프로필 구성에 포함된 기기: {', '.join(devices)}"]
     if composed:
         names = {s["segment_id"]: s["name_ko"] for s in (audience or {}).get("segments", [])}
         lines.append("- 프로필은 대상 사용자 리서치(ergo-audience.v1)의 세그먼트에서 구성했습니다. 세그먼트 비중은 배분에만 썼고 실제 사용자 비율이 아닙니다.")
