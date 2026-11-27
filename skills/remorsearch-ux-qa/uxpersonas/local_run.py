@@ -30,6 +30,7 @@ BROWSER_STATE = "ux-journey-browser-state.v1"
 MARKER = "local-execution.json"
 DIRECTORY = "local-execution"
 MAX_OUTPUT = 256 * 1024
+BROWSER_UI_UNOBSERVED = "검토한 정적 복사본의 브라우저 과제에 확인된 UI 관측 근거가 없습니다."
 
 
 def stop(code, reason):
@@ -703,7 +704,8 @@ def report_locked(work, prepared, state=None, current=None):
                      "실패 없는 코어 관측도 최종 통과가 아닙니다. 미실행 기준과 근거 부족을 그대로 표시합니다."])
     if is_browser:
         summary["limitations"] = [
-            "검토한 정적 복사본을 소유 headless Chromium에서 실행한 자동화 관측입니다. 실제 사용자·실제 기기·실서비스 효과는 검증하지 않았습니다.",
+            ("검토한 정적 복사본을 소유 headless Chromium에서 실행한 자동화 관측입니다. 실제 사용자·실제 기기·실서비스 효과는 검증하지 않았습니다."
+             if ui_observed else f"{BROWSER_UI_UNOBSERVED} 실제 사용자·실제 기기·실서비스 효과는 검증하지 않았습니다."),
             "페르소나는 PRD 또는 저장된 연구에 연결된 합성 가설입니다. 현재 연구·버전·기한 검사는 출처 진위나 대표성을 보장하지 않습니다.",
             "고정한 행동과 측정 기준만 실행하며 사람처럼 스스로 판단하거나 누락된 PRD 의미를 검증하지 않습니다.",
             "정적 파일 요청을 검토한 바이트로만 응답하고 외부 요청을 차단합니다. 코드 검토가 필수이며 OS 네트워크 샌드박스는 아닙니다.",
@@ -724,6 +726,8 @@ def render(summary, *, _legacy_duplicate_wording=False):
     c = summary["counts"]
     lines = ["# 사용자 목표별 로컬 QA 결과", "", f"실패 {c['failed']} · 판정 보류 {c['inconclusive']} · 대기 {c['pending']} · 통과 {c['passed']}.",
              ("검토한 정적 복사본의 실제 headless 브라우저 관측입니다. 실제 사용자 효과·제품 준비 완료는 미검증입니다."
+              if summary["ui_observed"] else
+              f"{BROWSER_UI_UNOBSERVED} 실제 사용자 효과·제품 준비 완료는 미검증입니다."
               if summary["evidence_kind"] == "owned_static_browser_observations" else
               "실제 UI와 사용자 효과는 미검증입니다. 코어 실행 완료와 제품 통과를 구분합니다."), ""]
     audit = summary["evidence_audit"]
