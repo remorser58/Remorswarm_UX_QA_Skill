@@ -352,8 +352,12 @@ ergo_qa.py swarm --runs runs/ --profiles profiles.json --out report_dir [--bundl
       -> report_dir/findings.json, report_dir/report.md (Korean), report_dir/bundle.json
 ergo_qa.py heatmap --snapshot runs/R-x/S-..json --profile EP-01 --kind reach|gaze|touch --out map.png
 ergo_qa.py bench --key benchmarks/.../answer_key.json --findings report_dir/findings.json
-ergo_qa.py android-snapshot --xml dump.xml --png screen.png --device galaxy-s24 --out snap.json
+ergo_qa.py android-snapshot --xml dump.xml --png screen.png --device galaxy-s24 --density "$DENSITY_DPI" --out snap.json
 ```
+Set `DENSITY_DPI` to the effective density in integer DPI from `adb shell wm density`
+on the device or emulator that produced the capture: use `Override density` if
+present, otherwise use `Physical density`.
+
 Exit codes: 0 ok, 1 findings at/above `--fail-on` severity, 2 usage/input error.
 
 ## 10. Web driver (`drivers/web/ergo_drive.mjs`)
