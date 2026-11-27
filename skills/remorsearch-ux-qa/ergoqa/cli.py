@@ -554,7 +554,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("heatmap", help="render a reach or gaze-priority heatmap over a snapshot")
     p.add_argument("--snapshot", required=True)
     p.add_argument("--profiles", required=True)
-    p.add_argument("--profile", required=True)
+    p.add_argument("--profile", required=True, help="required for both kinds; affects reach only (gaze is not personalized)")
     p.add_argument("--kind", choices=("reach", "gaze"), default="reach")
     p.add_argument("--out", required=True)
     p.set_defaults(func=cmd_heatmap)
