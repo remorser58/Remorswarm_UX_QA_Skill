@@ -713,10 +713,11 @@ def report_locked(work, prepared, state=None, current=None):
             summary["next_action"] = "측정한 실패와 미관측 조건을 검토합니다. 실제 제품·사용자 효과 검증은 별도 범위로 남아 있습니다."
     summary["task_scope_passed"] = bool(is_browser and not audit_needs_review and not uncertain and not quarantined
         and counts["passed"] == len(tasks) and current and current["coverage_summary"]["all_declared_requirements_passed"])
-    return workspace.publish_report(work, summary, render(summary))
+    legacy = render(summary, _legacy_duplicate_wording=True) if evidence_audit["duplicates"] else None
+    return workspace.publish_report(work, summary, render(summary), legacy_markdown=legacy)
 
 
-def render(summary):
+def render(summary, *, _legacy_duplicate_wording=False):
     def text(value):
         return str(value).replace("|", "\\|").replace("\n", " ").replace("<", "&lt;").replace(">", "&gt;")
     labels = dict(failed="실패", inconclusive="판정 보류", pending="대기", running="실행 확인 필요", blocked="차단", skipped="미실행", passed="통과")
@@ -732,8 +733,9 @@ def render(summary):
         "이 검사는 저장된 실행 로그와 receipt를 결정적으로 대조합니다. 독립적인 사람/모델 평가가 아니며, 서로 다른 관측도 독립 참가자나 사실성의 증거가 아닙니다."]
     for issue in audit["issues"]:
         lines.append(f"- 근거 무결성 차단: {issue['task_id']} · {issue['code']}")
+    duplicate_wording = "독립 신호 1건으로만 계산" if _legacy_duplicate_wording else "같은 관측 1건으로 계산"
     for duplicate in audit["duplicates"]:
-        lines.append(f"- 중복 관측: {duplicate['requirement_id']}/{duplicate['obligation_id']} · 과제 {', '.join(duplicate['task_ids'])} · 같은 관측 1건으로 계산")
+        lines.append(f"- 중복 관측: {duplicate['requirement_id']}/{duplicate['obligation_id']} · 과제 {', '.join(duplicate['task_ids'])} · {duplicate_wording}")
     for conflict in audit["conflicts"]:
         lines.append(f"- 상충 관측: {conflict['requirement_id']}/{conflict['obligation_id']} · 과제 {', '.join(conflict['task_ids'])} · {', '.join(conflict['statuses'])}")
     for conflict in audit["definition_conflicts"]:

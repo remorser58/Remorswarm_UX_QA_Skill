@@ -130,6 +130,45 @@ class JourneyRunTests(unittest.TestCase):
         self.assertIn("같은 관측 1건", duplicate_rows[0])
         self.assertNotIn("독립 신호", duplicate_rows[0])
 
+    def _legacy_duplicate_report(self):
+        report = self._shared_obligation_report(RUNNER.replace('if request["task"]["id"] == "T-RETURN":', "if False:"))
+        markdown = Path(report["report_path"])
+        rendered = markdown.read_text(encoding="utf-8")
+        row = next(line for line in rendered.splitlines() if line.startswith("- 중복 관측:"))
+        self.assertTrue(row.endswith("같은 관측 1건으로 계산"))
+        # Recreate the single historical field without calling the compatibility renderer.
+        legacy_row = row.removesuffix("같은 관측 1건으로 계산") + "독립 신호 1건으로만 계산"
+        markdown.write_text(rendered.replace(row, legacy_row, 1), encoding="utf-8")
+        return report, markdown
+
+    def test_legacy_duplicate_report_reopens_without_replacing_evidence(self):
+        report, markdown = self._legacy_duplicate_report()
+        files = {p: (p.read_bytes(), p.stat().st_mtime_ns) for p in self.work.rglob("*") if p.is_file()}
+        with patch.object(local_run, "_invoke", side_effect=AssertionError("duplicate dispatch")):
+            self.assertEqual(workspace.status(self.work), report)
+            self.assertEqual(local_run.execute(self.work), report)
+        self.assertEqual({p: (p.read_bytes(), p.stat().st_mtime_ns) for p in self.work.rglob("*") if p.is_file()}, files)
+        self.assertIn("독립 신호 1건으로만 계산", markdown.read_text(encoding="utf-8"))
+
+    def test_legacy_duplicate_wording_does_not_excuse_other_report_changes(self):
+        _, markdown = self._legacy_duplicate_report()
+        companion = markdown.with_suffix(".json")
+        for path, altered in ((markdown, markdown.read_bytes() + b"\n"),
+                              (companion, companion.read_bytes() + b"\n"),
+                              (companion, None)):
+            with self.subTest(suffix=path.suffix, missing=altered is None):
+                original = path.read_bytes()
+                if altered is None:
+                    path.unlink()
+                else:
+                    path.write_bytes(altered)
+                before = {p: (p.read_bytes(), p.stat().st_mtime_ns) for p in markdown.parent.iterdir()}
+                with self.assertRaises(EngineError) as caught:
+                    workspace.status(self.work)
+                self.assertEqual(caught.exception.issue["code"], "report_changed")
+                self.assertEqual({p: (p.read_bytes(), p.stat().st_mtime_ns) for p in markdown.parent.iterdir()}, before)
+                path.write_bytes(original)
+
     def test_contradictory_persona_observations_remain_unresolved(self):
         report = self._shared_obligation_report(RUNNER)
         audit = report["evidence_audit"]
