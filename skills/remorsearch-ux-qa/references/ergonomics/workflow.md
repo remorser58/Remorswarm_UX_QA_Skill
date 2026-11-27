@@ -27,11 +27,7 @@ State/temporal/focus replay contracts: see the driver README.
 
 ## 2. Compose profiles
 
-Default stratified coverage:
-
-```sh
-python3 scripts/ergo_qa.py profiles --count 16 --seed 7 --devices galaxy-s24,iphone-15 --out work/profiles.json
-```
+For default stratified coverage and a standalone recording profile, see [profile selection](../../drivers/web/README.md#select-one-profile-for-a-recorded-run).
 
 Cover per device right/left one-hand, two-thumb and cradled grips; pointer devices use mouse right/left and keyboard-only. Include condition strata: deutan, presbyopia 60s, mild tremor, walking, low vision, 70s+, small hand; alternate hands. Pointer devices skip walking/small-hand/tremor because only the touch model reads them. Base rates fill remaining slots, never measure this product's audience. Record assumptions, seed, sampled and unfilled facets.
 
@@ -67,16 +63,7 @@ python3 scripts/ergo_qa.py swarm --runs runs/ --profiles work/profiles.json --sc
 python3 scripts/validate_bundle.py report/bundle.json
 ```
 
-기록된 프로필의 실행은 기존 QA 증거 묶음에 연결할 수 있습니다. `references/persona-qa/workflow.md`의 예시는 `work/EP-01.json`을 생성하고 같은 프로필과 빌드 ID로 `R-persona-01`을 기록합니다. 기기만 기록한 위의 `--device` 예시는 분석용 대조에 사용합니다. QA 연결에는 아래처럼 `--profile`을 사용합니다. 제품의 실제 빌드 ID를 넘기면 실행과 모든 캡처에 제공자 지정 정보로 남습니다. 빌드 정보가 없는 결과는 미검증 상태이며 같은 빌드 재현을 주장할 수 없습니다.
-
-```sh
-node drivers/web/ergo_drive.mjs run --scenario sc.json --profile work/EP-01.json \
-  --build-id "$PRODUCT_BUILD_ID" --out runs/ --run-id R-persona-01
-python3 scripts/ergo_qa.py analyze --runs runs/R-persona-01 --profiles work/profiles.json --scenario sc.json --out analysis.json
-python3 scripts/ergo_qa.py attach --bundle qa/bundle.json --runs runs/R-persona-01 --profiles work/profiles.json \
-  --scenario sc.json --bind scenario-1=EP-01 --receipts-dir receipts/ --out qa/bundle.ergo.json
-python3 scripts/validate_bundle.py qa/bundle.ergo.json --artifacts-root receipts/
-```
+For a profile-based capture and QA attachment, see [profile selection](../../drivers/web/README.md#select-one-profile-for-a-recorded-run) and its capture commands. A run recorded only with `--device` is for analytical comparison.
 
 P0/P1은 정확한 `finding_id`의 캡처·텍스트 재검토 기록을 `--second-pass`로 제출합니다. 완료된 값 불일치는 `TI-01` 증거로 연결되며 과업 실패 상태를 유지합니다. 정상 실행도 검사 범위·캡처가 남습니다. 기기·방향·실행 중 캡처 시각과 reflow/focus의 뷰포트·DPR·문맥을 보존합니다. `--out`은 입력·실행 폴더 밖의 새 파일입니다.
 
