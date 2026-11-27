@@ -1683,7 +1683,12 @@ export class WebSession {
           state_still_visible: await replay.page.locator(check.selector).isVisible(),
           return_focus: await replay.page.evaluate(focusInfo),
           expected_return_selector: check.return_selector ?? null,
-          returned: check.return_selector ? await replay.page.locator(check.return_selector).evaluate((el) => el === document.activeElement) : null,
+          returned: check.return_selector ? await replay.page.locator(check.return_selector).evaluate((el) => {
+            // Match the focused control, not the document-level retargeted open shadow host.
+            let active = document.activeElement;
+            while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+            return el === active;
+          }) : null,
         };
         const escapeCapture = await replay.snapshot(actions.length, ['focus_probe_escape']);
         record.escape.snapshot_id = escapeCapture.id;

@@ -14,6 +14,7 @@ export async function runTemporalSelftest({ base, tmp, runDriver, check }) {
       { action: 'click', target: '#open' }, { action: 'press', key: 'Escape' },
       { action: 'click', target: '#validate' }, { action: 'click', target: '#details' },
       { action: 'click', target: '#many' },
+      { action: 'click', target: '#open-in-shadow' }, { action: 'press', key: 'Escape' },
     ],
     timing_windows: [{ id: 'notice', selector: '#notice', kind: 'transient_text', measure: 'visible_duration', recovery: { selector: '#receipt', after_step: 2 } }],
     focus_walks: [
@@ -21,6 +22,8 @@ export async function runTemporalSelftest({ base, tmp, runDriver, check }) {
       { id: 'modal', state: 'modal', after_step: 3, selector: '#review', return_selector: '#open', fixture: true },
       { id: 'error', state: 'validation_error', after_step: 5, selector: '#error', fixture: true },
       { id: 'detail', state: 'detail', after_step: 6, selector: '#detail', fixture: true },
+      { id: 'shadow-modal', state: 'modal', after_step: 8, selector: '#shadow-review', return_selector: '#open-in-shadow', fixture: true },
+      { id: 'shadow-wrong-return', state: 'modal', after_step: 8, selector: '#shadow-review', return_selector: '#open', fixture: true },
     ],
     success: { selector_visible: '#detail' },
   };
@@ -42,16 +45,24 @@ export async function runTemporalSelftest({ base, tmp, runDriver, check }) {
   const window = run.timing_windows[0];
   check('temporal: same visible receipt text establishes recovery with capture provenance',
     window.visible_ms > 0 && window.recovery.status === 'available' && window.recovery.snapshot_id, window);
-  check('keyboard: all four intermediate states replay in separate recorded runs',
-    run.probe_replays.length === 4 && run.probe_replays.every((p) => p.status === 'observed'
+  check('keyboard: all six intermediate checks replay in separate recorded runs',
+    run.probe_replays.length === 6 && run.probe_replays.every((p) => p.status === 'observed'
       && p.source_snapshot_id && p.run_id !== run.run_id && fs.existsSync(path.join(directory, p.run_path))), run.probe_replays);
   const modal = run.probe_replays.find((p) => p.id === 'modal');
   check('keyboard: normal modal loop supports reverse navigation and Escape returns focus',
     modal?.walks?.some((w) => w.direction === 'Tab' && w.ended === 'cycle')
     && modal.walks.some((w) => w.direction === 'Shift+Tab') && modal.escape.returned === true
     && modal.escape.state_still_visible === false, modal);
+  const shadowModal = run.probe_replays.find((p) => p.id === 'shadow-modal');
+  check('keyboard: Escape matches the actual return to a nested open shadow opener',
+    shadowModal?.escape?.return_focus?.selector === '#open-in-shadow'
+    && shadowModal.escape.state_still_visible === false && shadowModal.escape.returned === true, shadowModal?.escape);
+  const wrongReturn = run.probe_replays.find((p) => p.id === 'shadow-wrong-return');
+  check('keyboard: Escape does not match an unrelated return selector',
+    wrongReturn?.escape?.return_focus?.selector === '#open-in-shadow'
+    && wrongReturn.escape.state_still_visible === false && wrongReturn.escape.returned === false, wrongReturn?.escape);
   check('temporal: page sampling cap is explicit rather than a clean observation', run.temporal_sampling_truncated === true);
-  check('keyboard: probe does not replace task steps or task captures', run.steps.length === 7
+  check('keyboard: probe does not replace task steps or task captures', run.steps.length === 9
     && run.snapshots.every((s) => !s.snapshot_id.includes('-focus-')));
   const analyzed = spawnSync(process.env.ERGOQA_PYTHON || 'python3', ['-c', [
     'import json, sys',

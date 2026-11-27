@@ -12,6 +12,7 @@ dialog { border: 2px solid #222; padding: 24px; }
 <h1>Request desk</h1>
 <button id="save">Save request</button>
 <button id="open">Review request</button>
+<span id="shadow-review-host"></span>
 <button id="validate">Check required field</button>
 <button id="details">View details</button>
 <button id="many">Show many updates</button>
@@ -21,6 +22,7 @@ dialog { border: 2px solid #222; padding: 24px; }
 <div id="error" role="alert" hidden>Enter the required field.</div>
 <section id="detail" hidden><h2>Request details</h2><button id="detail-close">Close details</button></section>
 <dialog id="review"><h2>Review request</h2><button id="approve">Approve</button><button id="cancel">Cancel</button></dialog>
+<dialog id="shadow-review"><h2>Review from nested control</h2><button>Confirm</button></dialog>
 <script>
 const $ = (id) => document.getElementById(id);
 $('save').onclick = () => {
@@ -31,6 +33,18 @@ $('save').onclick = () => {
   setTimeout(() => { $('notice').hidden = true; }, 700);
 };
 $('open').onclick = () => $('review').showModal();
+const outer = $('shadow-review-host').attachShadow({ mode: 'open' });
+const inner = outer.appendChild(document.createElement('span')).attachShadow({ mode: 'open' });
+const shadowOpener = inner.appendChild(document.createElement('button'));
+shadowOpener.id = 'open-in-shadow';
+shadowOpener.textContent = 'Review from nested control';
+const shadowReview = $('shadow-review');
+shadowOpener.onclick = () => shadowReview.showModal();
+shadowReview.addEventListener('cancel', (event) => {
+  event.preventDefault();
+  shadowReview.close();
+  shadowOpener.focus();
+});
 $('review').addEventListener('keydown', (event) => {
   if (event.key !== 'Tab') return;
   if (event.shiftKey && document.activeElement === $('approve')) {
