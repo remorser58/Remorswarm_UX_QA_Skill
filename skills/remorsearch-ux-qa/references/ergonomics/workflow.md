@@ -3,6 +3,8 @@
 
 Default to a stratified detector run on the real surface: one recorded flow per device/orientation, analyzed across profiles. It needs no subagents. Persona agents, interviews and simulated experience boards are opt-in. Reports can be English or Korean.
 
+For a first offline run, [score the synthetic icon toggle](../../examples/ergonomics/README.md) from the release ZIP. It produces a report and score without capturing a real product.
+
 ## Phase 0 recap
 
 Use `SKILL.md` Phase 0: scope/build/tasks, devices/orientations, input, supplied data, grants and tools. Choose detector coverage or requested persona-agent behavior. Missing audience research takes the stratified path; explain it. Korean product QA reads `references/persona-qa/kwcag-card.md`; Korean research users/channels open `references/research/korea/overview.md` only when research runs. Before an external page, including a later lead, carry `references/shared/access-card.md` and use research's evidence card. Ask at most one grouped question for necessary missing inputs.

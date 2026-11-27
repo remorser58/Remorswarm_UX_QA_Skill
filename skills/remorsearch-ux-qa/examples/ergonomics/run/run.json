@@ -1,0 +1,67 @@
+{
+  "schema_version": "ergo-run.v1",
+  "run_id": "R-synthetic-toggle",
+  "scenario_id": "SC-synthetic-toggle",
+  "profile_id": "EP-01",
+  "profile_binding": {
+    "schema_version": "ergo-profile-binding.v1",
+    "device": {
+      "id": "desktop-1920",
+      "orientation": "landscape",
+      "dpr": 1.0,
+      "input": "mouse",
+      "form_factor": "desktop",
+      "viewport_css": [
+        1920,
+        1080
+      ]
+    },
+    "model_id": "thumb-reach-v3-uncalibrated",
+    "profile_file_sha256": "043d7f8ad1311662abab9bd8f0dca3e8430bb8827d4dcdfd4cc26667912000f8",
+    "profile_sha256": "00f7797b72cd4ad35d76608bd9ba9f481f73cf5b43df0b9139349ab4ea61fc12",
+    "condition_sha256": "0b02c20c324248b1de8d91f400c6d59a9db1608668a145d214eadff9fc20f4ed",
+    "model_revision_sha256": "e38906aba17d0d99cec63afd8648f9bb67b53167d8afd1c7f1dc029fb9926e62"
+  },
+  "driver": {
+    "name": "synthetic-example",
+    "version": "1",
+    "browser": null
+  },
+  "device": {
+    "id": "desktop-1920",
+    "orientation": "landscape",
+    "dpr": 1.0,
+    "input": "mouse",
+    "form_factor": "desktop",
+    "viewport_css": [
+      1920,
+      1080
+    ]
+  },
+  "mode": "scripted",
+  "started_at": "2026-01-01T12:00:00Z",
+  "ended_at": "2026-01-01T12:00:01Z",
+  "status": "completed",
+  "success": true,
+  "steps": [
+    {
+      "step_index": 1,
+      "action": {
+        "action": "click",
+        "target": "#toggle"
+      },
+      "target_element_id": "toggle",
+      "point": {
+        "x": 960,
+        "y": 540
+      },
+      "before": "S-synthetic-before",
+      "after": "S-synthetic-after",
+      "t_start_ms": 0,
+      "t_end_ms": 100,
+      "feedback_latency_ms": 80,
+      "result": "ok",
+      "error": null
+    }
+  ]
+}

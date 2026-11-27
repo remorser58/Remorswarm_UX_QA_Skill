@@ -1,0 +1,61 @@
+[
+  {
+    "schema_version": "ergo-profile.v1",
+    "profile_id": "EP-01",
+    "origin": "stratified_coverage",
+    "persona_ref": null,
+    "label_ko": "30s · 오른손잡이 · 오른손 마우스",
+    "attributes": {
+      "age_band": "30s",
+      "handedness": "right",
+      "grip": "mouse_right",
+      "thumb_length_mm": 102.6,
+      "hand_percentile": 25,
+      "device_id": "desktop-1920",
+      "orientation": "landscape",
+      "vision": {
+        "acuity": "normal",
+        "presbyopia": false,
+        "cvd": "none",
+        "cvd_severity": 1.0,
+        "viewing_distance_mm": 650
+      },
+      "motor": {
+        "tremor": "none",
+        "touch_sigma_multiplier": 1.0,
+        "touch_sigma_mm": 1.3
+      },
+      "context": {
+        "mobility": "seated",
+        "lighting": "indoor",
+        "free_hands": 2,
+        "interruptions": false
+      },
+      "cognition": {
+        "familiarity": "returning",
+        "time_pressure": "low",
+        "reading_wpm_ko": 587
+      },
+      "reaction_time_ms": 440
+    },
+    "assumption_fields": [
+      "handedness",
+      "grip",
+      "thumb_length_mm",
+      "hand_percentile",
+      "device_id",
+      "orientation",
+      "vision",
+      "motor",
+      "context",
+      "reaction_time_ms"
+    ],
+    "base_rate_refs": {
+      "handedness": "REF-kr-handedness-2009; REF-gallup-kr-2025",
+      "grip": "REF-hoober2013",
+      "age_band": "REF-kr-population",
+      "cvd": "REF-kr-cvd"
+    },
+    "coverage_stratum": "mouse_right"
+  }
+]

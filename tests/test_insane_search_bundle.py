@@ -285,6 +285,28 @@ class BundleTests(unittest.TestCase):
             self.build()
         self.assertFalse(self.output.exists())
 
+    def test_shipped_ergonomics_example_reports_and_scores_from_extracted_zip(self):
+        self.build()
+        extracted = self.root / "empty folder"
+        with zipfile.ZipFile(self.output / self.builder.ARCHIVE_NAME) as archive:
+            archive.extractall(extracted)
+        skill = extracted / "remorsearch-ux-qa"
+        sample = Path("examples/ergonomics")
+        result = Path("../ergonomics-result")
+        for arguments in [
+            ("swarm", "--runs", sample / "run", "--profiles", sample / "profiles.json", "--out", result),
+            ("bench", "--key", sample / "answer-key.json", "--findings", result / "findings.json",
+             "--profiles", sample / "profiles.json", "--out", result / "score.json"),
+        ]:
+            run = self.launcher("ergonomics", *map(str, arguments), root=skill, cwd=skill)
+            self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+        report = (skill / result / "report.md").read_text(encoding="utf-8")
+        score = json.loads((skill / result / "score.json").read_text(encoding="utf-8"))
+        self.assertIn("#toggle", report)
+        self.assertIn("SM-01", report)
+        self.assertIn("UI-01", report)
+        self.assertEqual((score["defects"], score["recall_strict"], score["severity_agreement"]), (2, 1.0, 1.0))
+
     def test_output_never_overwrites_or_recurses_into_source(self):
         self.output.mkdir()
         sentinel = self.output / "keep.txt"
