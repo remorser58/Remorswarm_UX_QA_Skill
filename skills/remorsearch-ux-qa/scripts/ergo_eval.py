@@ -943,6 +943,9 @@ def main() -> int:
         p.add_argument("--out", required=True, type=Path, help="work folder (score-agents: the agent-run folder with runs/ and profiles.json)")
         p.add_argument("--c5-seeds", type=int, default=C5_SEEDS, help="pre-registered: 20; fewer only for pipeline tests")
         if name == "score":
+            p.epilog = ("In the prespecified confirmatory sequence, 'tested' means the step was reached. "
+                        "A 'not_run' verdict means the test did not run and stops confirmatory testing of later steps. "
+                        "A 'descriptive' result is not confirmatory, even if its numerical verdict is 'pass'.")
             p.add_argument("--open", action="store_true", help="also list per-defect misses (development suites only)")
         if name == "agents-plan":
             p.add_argument("--budget", type=int, default=4, help="operator profiles per product (pre-registered: 4)")
