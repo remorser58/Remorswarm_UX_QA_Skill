@@ -8,6 +8,7 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { readFocusPaintCover } from './focus_paint.mjs';
 
 import { openBrowser } from './browser_transport.mjs';
 import { resolveDevice } from './devices.mjs';
@@ -1543,6 +1544,34 @@ export class WebSession {
     let repeats = 0;
     let viewportChecks = 0;
     let cdp = null;
+    let probeCdp;
+    let ownedProbe;
+    let walkEnded = false;
+    const getCdp = async () => {
+      if (page === this.page) return this.cdp;
+      if (cdp) return cdp;
+      ownedProbe ||= page.context().newCDPSession(page).then((session) => {
+        if (walkEnded) {
+          void session.detach().catch(() => {});
+          return null;
+        }
+        probeCdp = session;
+        return session;
+      });
+      return ownedProbe;
+    };
+    const measureFocus = async () => {
+      const info = await page.evaluate(focusInfo);
+      if (info?.in_viewport && !info.frame && info.obscured_fraction < 1) {
+        const paint = await readFocusPaintCover(page, getCdp, { walk: true, domId: info.dom_id });
+        if (paint && paint.fraction > info.obscured_fraction) {
+          info.obscured_fraction = paint.fraction;
+          info.obscured_by = this.redactRecord(paint.selector, 'selector');
+          info.obscured_user_opened = paint.user_opened;
+        }
+      }
+      return info;
+    };
     for (let i = 0; i < FOCUS_WALK_MAX; i++) {
       if (epochNow() > deadline) {
         ended = 'time_budget';
@@ -1550,7 +1579,7 @@ export class WebSession {
       }
       await page.keyboard.press(direction);
       await this.settleScroll(page);
-      const info = await page.evaluate(focusInfo);
+      const info = await measureFocus();
       if (!info) {
         ended = 'left_document';
         break;
@@ -1639,6 +1668,8 @@ export class WebSession {
       }
       stops.push(stop);
     }
+    walkEnded = true;
+    if (probeCdp) void probeCdp.detach().catch(() => {});
     if (cdp) await cdp.detach().catch(() => {});
     this.focusWalks.push({ phase, snapshot_id: snapshotId, url: page.url(), direction, ended, stops });
   }
@@ -2422,6 +2453,13 @@ export class WebSession {
         png = await this.page.screenshot({ type: 'png', scale: 'device', animations: 'allow', caret: 'initial', timeout: 15000,
           mask: selectors.map((selector) => this.page.locator(`css=${selector}`)) });
         ex = await this.extract();
+        if (this.scenario.surface_kind !== 'game' && ex.focus?.dom_id && ex.focus.dom_id !== this.lastSnapshotFocusId) {
+          const focused = ex.elements.find((el) => el.dom_id === ex.focus.dom_id);
+          if (focused?.in_viewport && focused.occluded_fraction !== 1) {
+            const paint = await readFocusPaintCover(this.page, async () => this.cdp, { domId: ex.focus.dom_id });
+            if (paint) ex.focus.paint_cover = paint;
+          }
+        }
         break;
       } catch (err) {
         for (const handle of taskSamples.values()) await handle?.dispose().catch(() => {});
@@ -2497,6 +2535,7 @@ export class WebSession {
     this.recordFiles.add(jsonPath);
     this.snapshots.push({ snapshot_id: id, step_index: stepIndex, path: `${id}.json`, png: `${id}.png` });
     this.lastSnapshotId = id;
+    this.lastSnapshotFocusId = ex.focus?.dom_id ?? null;
     if (taskCheckpoint !== undefined) await this.evaluateTaskChecks(taskCheckpoint, { id, snap: safeSnap }, taskStepResult, taskSamples);
     await this.keepForReflow(id);
     // Keep recent element lists to anchor persona notes (note -> element -> selector).

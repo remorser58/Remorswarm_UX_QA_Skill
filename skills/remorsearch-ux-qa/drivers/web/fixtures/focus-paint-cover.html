@@ -1,0 +1,47 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Focus paint cover fixture</title>
+<style>
+  html, body { background: white; margin: 0 }
+  button { position: absolute; left: 120px; width: 160px; height: 44px; z-index: 1; background: #fff; color: #111 }
+  button:focus-visible { outline: 4px solid #063; outline-offset: 2px }
+  .cover { position: fixed; left: 108px; width: 184px; height: 60px; pointer-events: none; background: #c10051; z-index: 2 }
+  #opaque, #block { top: 100px } #block { top: 92px }
+  #transparent, #glass { top: 210px } #glass { top: 202px; background: transparent }
+  #behind, #under { top: 320px } #under { top: 312px; z-index: 0 }
+  #partial, #half { top: 430px } #half { top: 422px; width: 85px }
+  #edge, #center-cover { top: 540px } #center-cover { top: 532px; left: 136px; width: 128px }
+  #opened, #user-cover { top: 635px } #user-cover { top: 627px }
+  #clipped, #clip-cover { top: 722px } #clip-cover { top: 714px; clip-path: inset(0 10%) }
+  #user-cover.still-covered { background: linear-gradient(#c10051, #c10051) }
+  #normal { top: 840px }
+  #open-control { top: 10px }
+  #status { position: absolute; top: 925px }
+  #mutations { position: absolute; top: 950px }
+</style>
+<button id="opaque">Paint-hidden</button><div class="cover" id="block" aria-hidden="true"></div>
+<button id="transparent">Transparent control</button><div class="cover" id="glass" aria-hidden="true"></div>
+<button id="behind">Higher control</button><div class="cover" id="under" aria-hidden="true"></div>
+<button id="partial">Partly covered</button><div class="cover" id="half" aria-hidden="true"></div>
+<!-- The already-expanded control models state left after a user's disclosure. -->
+<button id="open-control" tabindex="-1" aria-expanded="true" aria-controls="user-cover">Disclosed cover</button>
+<button id="edge">Visible edges</button><div class="cover" id="center-cover" aria-hidden="true"></div>
+<button id="opened">User opened layer</button><div class="cover" id="user-cover" aria-hidden="true"></div>
+<button id="clipped">Clip path control</button><div class="cover" id="clip-cover" aria-hidden="true"></div>
+<button id="normal">Regular control</button><p id="status">Not activated</p><p id="mutations">No cover style changes</p>
+<script>
+  for (const button of document.querySelectorAll('button')) {
+    button.addEventListener('click', () => document.querySelector('#status').textContent = button.id + ' activated');
+  }
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && document.activeElement?.id === 'opened') {
+      // Same painted cover; changing its CSS representation can't reveal the control.
+      document.querySelector('#user-cover').classList.add('still-covered');
+    }
+  });
+  new MutationObserver((changes) => {
+    if (changes.some(({ target }) => target.matches('button, .cover'))) {
+      document.querySelector('#mutations').textContent = 'Cover style changed';
+    }
+  }).observe(document.body, { attributes: true, subtree: true, attributeFilter: ['style'] });
+</script>

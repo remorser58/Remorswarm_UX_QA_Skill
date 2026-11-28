@@ -25,6 +25,7 @@ import { capturePage } from './read_capture.mjs';
 import { STATE_KEY, armBinaryControl, pageInit, extractSnapshot } from './page_scripts.mjs';
 import { WebSession } from './session.mjs';
 import { decodePng } from './png.mjs';
+import { readFocusPaintCover } from './focus_paint.mjs';
 import { snapshotReply } from './serve.mjs';
 import { normalizeAction, normalizeBuildId, normalizeScenario } from './validate.mjs';
 import { writeJsonAtomic } from './util.mjs';
@@ -184,7 +185,7 @@ function readFixture(pathname, res, req) {
 }
 
 // Fixture files served at /<name> (same origin as the pages, no CORS headers).
-const FIXTURE_FILES = Object.fromEntries(['temporal_keyboard.html', 'layers.html', 'dialog.html', 'reflow.html', 'reflow2.html', 'reflow2.css', 'reflow_adaptation.html', 'viewport.html', 'focus.html', 'focus2.html', 'feedback_ambient.html', 'native_feedback.html', 'inspect.html', 'painted_state.html', 'typography.html']
+const FIXTURE_FILES = Object.fromEntries(['temporal_keyboard.html', 'layers.html', 'dialog.html', 'reflow.html', 'reflow2.html', 'reflow2.css', 'reflow_adaptation.html', 'viewport.html', 'focus.html', 'focus2.html', 'focus-paint-cover.html', 'feedback_ambient.html', 'native_feedback.html', 'inspect.html', 'painted_state.html', 'typography.html']
   .map((f) => [`/${f}`, f]));
 
 function startFixtureServer() {
@@ -1152,6 +1153,128 @@ async function focusTest(base, tmp) {
   const touch = loadRun(path.join(outDir, 'R-layers')).run;
   check('focus: no walk and no focus probe on touch devices by default', Array.isArray(touch.focus_walks) && touch.focus_walks.length === 0
     && touch.steps.every((s) => !s.focus_probe), touch.focus_walks);
+}
+
+async function focusPaintCoverTest(base, tmp) {
+  const counted = { probes: 0, resolves: 0, releases: 0 };
+  const samples = (points) => ({ evaluate: async () => ({ points, box: [10, 10, 20, 20] }) });
+  const bounded = await readFocusPaintCover(samples([{ x: 12, y: 12 }, { x: 12, y: 12 }, { x: 16, y: 16 }]), async () => ({
+    send: async (method) => {
+      if (method === 'DOM.getNodeForLocation') { counted.probes += 1; return { backendNodeId: 7 }; }
+      if (method === 'DOM.resolveNode') { counted.resolves += 1; return { object: { objectId: 'test-object' } }; }
+      if (method === 'Runtime.releaseObject') { counted.releases += 1; return {}; }
+      return { result: { value: { selector: '#solid', full_box: true, box_fraction: 1 } } };
+    },
+  }));
+  check('focus paint cover: duplicate locations/nodes reuse queries and release the resolved node',
+    bounded?.fraction === 0.6 && counted.probes === 2 && counted.resolves === 1 && counted.releases === 1, counted);
+  const offline = await readFocusPaintCover(samples([{ x: 12, y: 12 }]), async () => ({
+    send: async () => { throw new Error('not supported'); },
+  }));
+  let resolved = false;
+  const clutter = await readFocusPaintCover(samples([0, 1, 2, 3, 4].map((x) => ({ x, y: 12 }))), async () => ({
+    send: async (method, params) => {
+      if (method === 'DOM.getNodeForLocation') return { backendNodeId: params.x + 1 };
+      resolved = true;
+      return {};
+    },
+  }));
+  check('focus paint cover: unsupported or crowded CDP produces no replacement evidence', !offline && !clutter && !resolved);
+  const beforeSlow = performance.now();
+  let continueLate;
+  const pending = new Promise((resolve) => { continueLate = resolve; });
+  let lateQueries = 0;
+  const slow = await readFocusPaintCover(samples([{ x: 12, y: 12 }]), async () => ({
+    send: async () => { lateQueries += 1; return pending; },
+  }));
+  const waited = performance.now() - beforeSlow;
+  continueLate({ backendNodeId: 7 });
+  await new Promise((resolve) => setImmediate(resolve));
+  check('focus paint cover: a stalled CDP does not delay existing captures or launch follow-up queries',
+    slow === null && waited < 1000 && lateQueries === 1, { waited, lateQueries });
+  const profilePath = path.join(tmp, 'p-desk.json');
+  const scenarioPath = path.join(tmp, 'focus-paint-cover.json');
+  const runId = 'R-focus-paint-cover';
+  const outDir = path.join(tmp, 'runs');
+  const runDir = path.join(outDir, runId);
+  const tab = { action: 'press', key: 'Tab' };
+  writeJson(scenarioPath, {
+    schema_version: 'ergo-scenario.v1', scenario_id: 'SC-focus-paint-cover',
+    surface: { kind: 'web', url: '{BASE}/focus-paint-cover.html' },
+    task_goal_ko: '실제 Tab과 클릭으로 시각 가림을 구분한다', device_ids: ['desktop-1920'],
+    targets: { primary: ['#opaque'], destructive: [], critical_message: [] },
+    steps: [tab, { action: 'click', target: '#opaque' }, ...Array(7).fill(tab), { action: 'click', target: '#normal' }],
+    success: { text_present: ['normal activated'] },
+  });
+  const r = await runDriver(['run', '--scenario', scenarioPath, '--profile', profilePath, '--bind-profile',
+    '--out', outDir, '--run-id', runId, '--base', base, '--focus-walk', '--no-reflow', '--no-visual-feedback',
+    '--settle-ms', '40', '--feedback-timeout-ms', '250']);
+  if (!check('focus paint cover: real steps complete', r.code === 0, r.err || r.out)) return;
+
+  const run = JSON.parse(fs.readFileSync(path.join(runDir, 'run.json'), 'utf8'));
+  const snap = (id) => JSON.parse(fs.readFileSync(path.join(runDir, id + '.json'), 'utf8'));
+  const enter = snap(run.steps[0].after);
+  const click = snap(run.steps[1].after);
+  const terminal = snap(run.steps.at(-1).after);
+  const target = bySel(enter, '#opaque');
+  const im = decodePng(fs.readFileSync(path.join(runDir, enter.screenshot.path)));
+  const x = target.box.x + Math.floor(target.box.w / 2);
+  const y = target.box.y + Math.floor(target.box.h / 2);
+  const i = (y * im.width + x) * im.channels;
+  check('focus paint cover: focused target pixel is opaque while real click still activates the button',
+    enter.focus?.dom_id === 'opaque' && im.data[i] === 193 && im.data[i + 1] === 0 && im.data[i + 2] === 81
+    && run.steps[1].target_hit === true && bySel(click, '#status')?.text === 'opaque activated'
+    && run.steps.at(-1).target_hit === true && bySel(terminal, '#status')?.text === 'normal activated', run.steps[1]);
+  check('focus paint cover: detector leaves cover/target styles and layout unchanged',
+    bySel(terminal, '#mutations')?.text === 'No cover style changes'
+    && JSON.stringify(target.box) === JSON.stringify(bySel(terminal, '#opaque')?.box));
+  check('focus paint cover: the focused snapshot records full visual coverage, not pointer blocking',
+    target?.occluded_fraction === 0 && enter.focus.paint_cover?.fraction === 1 && enter.focus.paint_cover?.selector === '#block', enter.focus);
+
+  const load = run.focus_walks.find((w) => w.phase === 'load');
+  const stop = (selector) => load?.stops.find((s) => s.selector === selector);
+  check('focus paint cover: real Tab walk separates opaque, transparent, behind, partial and normal',
+    stop('#opaque')?.obscured_fraction === 1 && stop('#opaque')?.obscured_by === '#block'
+    && stop('#transparent')?.obscured_fraction === 0 && stop('#behind')?.obscured_fraction === 0
+    && stop('#partial')?.obscured_fraction > 0 && stop('#partial')?.obscured_fraction < 1
+    && stop('#normal')?.obscured_fraction === 0 && stop('#normal')?.indicator_px > 4,
+    ['#opaque', '#transparent', '#behind', '#partial', '#normal'].map((s) => [s, stop(s)?.obscured_fraction]));
+  const edgeSnap = run.steps.map((step) => snap(step.after)).find((s) => s.focus?.dom_id === 'edge');
+  const edge = stop('#edge');
+  const opened = stop('#opened');
+  const endOpened = run.focus_walks.find((w) => w.phase === 'end')?.stops.find((s) => s.selector === '#opened');
+  const edgeImage = decodePng(fs.readFileSync(path.join(runDir, edgeSnap.screenshot.path)));
+  const edgeTarget = bySel(edgeSnap, '#edge').box;
+  const pink = (xx, yy) => {
+    const pixel = (yy * edgeImage.width + xx) * edgeImage.channels;
+    return edgeImage.data[pixel] === 193 && edgeImage.data[pixel + 1] === 0 && edgeImage.data[pixel + 2] === 81;
+  };
+  const middleY = edgeTarget.y + Math.floor(edgeTarget.h / 2);
+  check('focus paint cover: a layer over every interior sample cannot hide visibly exposed outer edges',
+    edge?.obscured_fraction > 0 && edge?.obscured_fraction < 0.999
+    && (edgeSnap?.focus?.paint_cover?.fraction ?? 0) < 0.999
+    && pink(edgeTarget.x + Math.floor(edgeTarget.w / 2), middleY) && !pink(edgeTarget.x + 4, middleY),
+    [edge?.obscured_fraction, edgeSnap?.focus?.paint_cover]);
+  check('focus paint cover: a user-opened or clipped layer does not enter the supplemental path',
+    opened?.obscured_fraction === 0 && opened?.obscured_user_opened === null && !Object.hasOwn(opened, 'escape_reveals')
+    && endOpened?.obscured_fraction === 0 && !Object.hasOwn(endOpened, 'escape_reveals')
+    && stop('#clipped')?.obscured_fraction === 0, [opened, endOpened, stop('#clipped')]);
+  const py = process.env.ERGOQA_PYTHON || 'python3';
+  const profilesPath = path.join(tmp, 'focus-paint-profiles.json');
+  writeJson(profilesPath, [JSON.parse(fs.readFileSync(profilePath, 'utf8'))]);
+  const analysisOut = path.join(tmp, 'focus-paint-analysis');
+  const analysis = spawnSync(py, [path.join(REPO, 'scripts/ergo_qa.py'), 'swarm', '--runs', runDir,
+    '--profiles', profilesPath, '--out', analysisOut, '--no-gaze'], { encoding: 'utf8' });
+  if (check('focus paint cover: strict swarm exits 0', analysis.status === 0, analysis.stderr)) {
+    const obs = JSON.parse(fs.readFileSync(path.join(analysisOut, 'analyses.json'), 'utf8')).analyses[0].observations;
+    const covered = obs.filter((o) => o.check_id === 'SM-06');
+    check('focus paint cover: SM-06 full/partial findings, not SM-05 for the fully covered button',
+      covered.some((o) => o.selectors.includes('#opaque') && o.measurement.phase === 'step' && o.severity === 'P2')
+      && covered.some((o) => o.selectors.includes('#partial') && o.severity === 'P3')
+      && covered.some((o) => o.selectors.includes('#edge') && o.severity === 'P3')
+      && covered.every((o) => o.selectors.every((s) => s === '#opaque' || (o.severity === 'P3' && ['#partial', '#edge'].includes(s))))
+      && !obs.some((o) => o.check_id === 'SM-05' && o.selectors.includes('#opaque')), covered);
+  }
 }
 
 async function focusProbeTest(base, tmp) {
@@ -3133,6 +3256,7 @@ async function main() {
     if (want('layers') || want('focus')) await layersTest(base, tmp); // focus reads the layers run (touch: no probe)
     if (want('focus')) await focusTest(base, tmp);
     if (want('focus2')) await focusProbeTest(base, tmp);
+    if (want('focus-paint-cover')) await focusPaintCoverTest(base, tmp);
     if (want('feedback') && !want('focus2')) await feedbackReversalTest(base, tmp);
     if (want('native-feedback')) await nativeFeedbackTest(base, tmp);
     if (want('read')) await readPageTest(base, tmp);

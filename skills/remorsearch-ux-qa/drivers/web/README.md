@@ -973,7 +973,18 @@ they belong to (0 = initial load), so a step can own two snapshots.
   small wrappers and 4 px around them, between the focused state and the same
   element blurred at the same scroll position) and `obscured_fraction` /
   `obscured_by` (share of nine sample points covered by a painting fixed or sticky
-  layer that does not contain the element). `ended` says why a walk stopped
+  layer that does not contain the element). A bounded, read-only Chromium probe
+  can also detect a solid opaque fixed/sticky HTML layer with
+  `pointer-events: none`: it checks the top node at the same sample points
+  independently of pointer input. Full coverage also requires a single opaque
+  rectangle enclosing the focused element and the same top layer at its corners;
+  the interior sample count alone does not prove full coverage. On a recorded
+  focus change the supplement, when available, appears as `focus.paint_cover`.
+  It does not alter click targeting or general element occlusion data. Recognized
+  user-opened layers, complex clipping/compositing, frames and unsupported
+  protocol results (including a 350 ms probe timeout) keep the existing evidence. A missed painted cover is still
+  possible and the screenshot remains the visual record.
+  `ended` says why a walk stopped
   (`cycle`, `left_document`, `max_stops`, `time_budget`, `opaque_frame`).
 - **Focus probe before clicks** (same devices and switch as the walk): the walks see
   only the initial and end screens, so before a `tap`/`click` on a focusable
