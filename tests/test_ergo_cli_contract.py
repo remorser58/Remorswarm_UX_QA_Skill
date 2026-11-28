@@ -472,6 +472,69 @@ class ScenarioBindingContract(unittest.TestCase):
                 self.assertNotIn("실행 상태 경고", section1)
                 self.assertFalse(any("RF-01" in note for note in result["limitations"]))
 
+    def test_swarm_reports_prepass_reflow_budget_only_for_exact_web_dossier(self):
+        profile = json.loads(self.profiles_path.read_text())["profiles"][0]
+        bind_fixture_profile(self.run_dir, profile)
+        run_path = self.run_dir / "run.json"
+        original = json.loads(run_path.read_text())
+        web = {**original["driver"], "name": "playwright-web"}
+        warning = "reflow pass skipped: finish browser budget exhausted"
+        unrelated = "unrelated hint https://synthetic.invalid/<private-warning>"
+        out = self.root / "swarm-budget"
+
+        def swarm(dossier, *flags):
+            run_path.write_text(json.dumps({**original, "driver": web, **dossier}), encoding="utf-8")
+            code, stdout, stderr = self.run_cli("swarm", "--runs", str(self.run_dir), "--profiles",
+                                                 str(self.profiles_path), "--out", str(out), "--bundle", *flags)
+            analysis = json.loads((out / "analyses.json").read_text())["analyses"][0]
+            findings = json.loads((out / "findings.json").read_text())["findings"]
+            report = (out / "report.md").read_text(encoding="utf-8").split("## 2.", 1)[0]
+            bundle = json.loads((out / "bundle.json").read_text())
+            self.assertNotIn(unrelated, stdout + stderr + report + json.dumps(analysis["limitations"]))
+            self.assertEqual((analysis["profile_binding_status"], analysis["verified_owner_profile_id"]),
+                             ("matched", "EP-01"))
+            return code, stderr, analysis, findings, report, bundle
+
+        _, _, clean, clean_findings, _, _ = swarm({"reflow": []})
+        exact = {"warnings": [unrelated, warning], "reflow": []}
+        for flags, expected_exit in (((), cli.EXIT_DEGRADED), (("--allow-degraded",), cli.EXIT_OK)):
+            with self.subTest(flags=flags):
+                code, err, result, findings, report, bundle = swarm(exact, *flags)
+                self.assertEqual((code, result["health"]), (expected_exit, "degraded"))
+                self.assertEqual((result["run_status"], result["run_success"]), ("completed", True))
+                self.assertIn("run health:", err)
+                note, = result["limitations"]
+                self.assertIn("RF-01", note)
+                self.assertIn("종료 시간 한도", note)
+                self.assertIn("해당 실행의 '발견 없음'은 통과가 아닙니다", report)
+                self.assertIn(note, report)
+                self.assertIn(note, bundle["notes"]["limitations"])
+                self.assertEqual(result["observations"], clean["observations"])
+                self.assertEqual(findings, clean_findings)
+        with self.subTest("already failed"):
+            code, err, result, _, report, _ = swarm({**exact, "status": "failed", "success": False})
+            self.assertEqual((code, result["health"], result["run_status"], result["run_success"]),
+                             (cli.EXIT_DEGRADED, "failed", "failed", False))
+            self.assertIn("run health:", err)
+            self.assertIn("종료 시간 한도", report)
+
+        measured = {"snapshot_id": "S-R-1-000", "width": 320, "client_width": 320, "scroll_width": 320,
+                    "viewport_overflow_x": "auto", "root_clips": False, "offenders": [], "lost": []}
+        for label, dossier in (
+            ("no reflow key", {"warnings": [warning]}),
+            ("null reflow", {**exact, "reflow": None}),
+            ("other driver", {**exact, "driver": original["driver"]}),
+            ("measured row", {**exact, "reflow": [measured]}),
+            ("substring only", {"reflow": [], "warnings": [unrelated, f"{warning} details"]}),
+            ("not a warning list", {"reflow": [], "warnings": warning}),
+            ("unrelated warning", {"reflow": [], "warnings": [unrelated]}),
+        ):
+            with self.subTest(label):
+                code, err, result, _, report, _ = swarm(dossier)
+                self.assertEqual((code, err, result["health"], result["limitations"]),
+                                 (cli.EXIT_OK, "", "ok", []))
+                self.assertNotIn("실행 상태 경고", report)
+
     def test_matching_scenario_is_bound_and_reaches_run_health(self):
         code, _, err = self.analyze("--scenario", str(self.matching))
         self.assertEqual(code, cli.EXIT_OK, err)
