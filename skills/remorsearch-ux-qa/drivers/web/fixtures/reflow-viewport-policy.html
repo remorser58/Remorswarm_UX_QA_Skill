@@ -49,6 +49,13 @@
     :is(.local-margin-zero, .local-margin-fifty) body { width: 240px; }
     :is(.local-margin-zero, .local-margin-fifty) main { padding-inline-start: 250px; }
   }
+  :is(.ancestor-margin-visible, .ancestor-margin-beyond) main { overflow: clip; overflow-clip-margin: 50px; }
+  :is(.ancestor-margin-visible, .ancestor-margin-beyond) #pay { appearance: none; width: 36px; padding: 0; }
+  @media (max-width: 340px) {
+    :is(.ancestor-margin-visible, .ancestor-margin-beyond) main { width: 230px; }
+    .ancestor-margin-visible #pay { margin-inline-start: 235px; }
+    .ancestor-margin-beyond #pay { margin-inline-start: 282px; }
+  }
   @media (max-width: 340px) {
     .icon-loss { overflow-y: auto; }
     .icon-loss body { overflow-x: clip; }
@@ -66,10 +73,11 @@
   const mode = new URLSearchParams(location.search).get('case');
   document.documentElement.className = mode;
   const localMargin = mode === 'local-margin-zero' || mode === 'local-margin-fifty';
+  const ancestorMargin = mode === 'ancestor-margin-visible' || mode === 'ancestor-margin-beyond';
   if (['html-clip', 'body-clip'].includes(mode)) document.querySelector('#ornament').hidden = false;
   if (mode === 'hidden-content') document.querySelector('#timer').hidden = false;
   if (mode === 'table') { document.querySelector('main').remove(); document.querySelector('#wide-table').hidden = false; }
-  if (localMargin || ['local-loss', 'contained-loss', 'local-decor', 'escaping-control', 'fixed-control', 'nested-control', 'icon-loss',
+  if (localMargin || ancestorMargin || ['local-loss', 'contained-loss', 'local-decor', 'escaping-control', 'fixed-control', 'nested-control', 'icon-loss',
        'sticky-loss', 'boxless-body', 'boxless-local', 'absolute-relative', 'absolute-transform', 'absolute-filter',
        'absolute-nested', 'absolute-nested-escape'].includes(mode)) {
     const main = document.querySelector('main');
@@ -77,7 +85,7 @@
     main.innerHTML = mode === 'local-decor' ? '<div id="local-art" aria-hidden="true"></div>'
       : mode === 'icon-loss' ? '<button id="pay" aria-label="Confirm payment"></button>'
       : mode === 'sticky-loss' ? '<button id="pay"><span>Confirm payment</span></button>'
-      : localMargin ? '<button id="pay">Pay</button>'
+      : (localMargin || ancestorMargin) ? '<button id="pay">Pay</button>'
       : '<button id="pay">Confirm payment</button>';
   }
 </script>

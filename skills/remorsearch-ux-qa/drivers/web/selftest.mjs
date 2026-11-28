@@ -1882,7 +1882,7 @@ async function reflowMarginBrowserProof(base, cases) {
     copy = await transport.browser.newContext({ viewport, deviceScaleFactor: 1, javaScriptEnabled: false });
     const source = await live.newPage();
     const page = await copy.newPage();
-    for (const [mode, margin] of cases) {
+    for (const [mode, margin, ancestor] of cases) {
       const url = `${base}/reflow-viewport-policy.html?case=${mode}`;
       const { scenario } = normalizeScenario({
         schema_version: 'ergo-scenario.v1', scenario_id: 'SC-reflow-margin-copy', surface: { kind: 'web', url },
@@ -1897,28 +1897,36 @@ async function reflowMarginBrowserProof(base, cases) {
       if (!check(`RF01 margin: kept Chromium copy (${mode})`, !!screen)) continue;
       await page.setViewportSize(viewport);
       await session.loadReflowCopy(page, screen);
+      let widePaint = 0;
       for (const width of [1920, 320]) {
         await page.setViewportSize({ width, height: viewport.height });
-        const measured = await page.evaluate(() => {
+        const measured = await page.evaluate((ancestor) => {
           const pay = document.querySelector('#pay');
           const { x, y, width, height } = pay.getBoundingClientRect();
-          const style = getComputedStyle(document.body);
-          return { box: { x, y, width, height }, edge: document.body.getBoundingClientRect().right,
+          const clipper = ancestor ? pay.parentElement : document.body;
+          const style = getComputedStyle(clipper);
+          return { box: { x, y, width, height }, tag: clipper.localName, edge: clipper.getBoundingClientRect().right,
             styles: [style.overflowX, style.overflowY, style.overflowClipMargin],
             hit: document.elementFromPoint(x + width / 2, y + height / 2) === pay };
-        });
+        }, !!ancestor);
         const image = decodePng(await page.screenshot({ clip: measured.box }));
         let paint = 0;
         for (let i = 0; i < image.data.length; i += image.channels) {
           if (image.data[i] === 182 && image.data[i + 1] === 0 && image.data[i + 2] === 59) paint++;
         }
         const narrow = width === 320;
+        if (!narrow) widePaint = paint;
+        const expectedY = ancestor ? 'clip' : 'visible';
+        const expectedEdge = ancestor ? 230 : 240;
+        const expectedX = ancestor?.x ?? 250;
+        const expectedHit = ancestor?.visible ?? false;
         check(`RF01 margin: Chromium copy paint and hit (${mode}, ${width}px)`,
-          measured.styles.join() === `clip,visible,${margin}`
+          measured.styles.join() === `clip,${expectedY},${margin}` && (!ancestor || measured.tag === 'main')
           && image.width === 36 && image.height === 42
-          && (narrow ? measured.edge === 240 && measured.box.x === 250 && !measured.hit && paint === 0
+          && (narrow ? measured.edge === expectedEdge && measured.box.x === expectedX && measured.hit === expectedHit
+            && (expectedHit ? paint > 0 && paint >= 0.9 * widePaint : paint === 0)
             : measured.box.x === 0 && measured.hit && paint > 0),
-          { ...measured, paint });
+          { ...measured, paint, widePaint });
       }
     }
   } finally {
@@ -1928,7 +1936,9 @@ async function reflowMarginBrowserProof(base, cases) {
 
 async function reflowViewportPolicyTest(base, tmp) {
   const marginCases = [['local-margin-zero', '0px'], ['local-margin-fifty', '50px']];
-  await reflowMarginBrowserProof(base, marginCases);
+  const ancestorCases = [['ancestor-margin-visible', '50px', { x: 235, visible: true }],
+    ['ancestor-margin-beyond', '50px', { x: 282, visible: false }]];
+  await reflowMarginBrowserProof(base, [...marginCases, ...ancestorCases]);
   const cases = [
     ['grid', 'auto', false, '#right'],
     ['html-clip', 'hidden', true, null],
@@ -1953,6 +1963,7 @@ async function reflowViewportPolicyTest(base, tmp) {
     ['absolute-nested', 'auto', false, '#pay', 'lost'],
     ['absolute-nested-escape', 'auto', false, '#pay'],
     ...marginCases.map(([mode]) => [mode, 'auto', false, '#pay', 'margin']),
+    ...ancestorCases.map(([mode, , fixture]) => [mode, 'auto', false, '#pay', fixture.visible ? 'ancestor-visible' : 'ancestor-beyond']),
   ];
   const profile = path.join(tmp, 'p-desk.json');
   const profiles = path.join(tmp, 'reflow-viewport-profiles.json');
@@ -1992,6 +2003,19 @@ async function reflowViewportPolicyTest(base, tmp) {
         && lost.visible_full === 1 && lost.visible_320 === 0
         && rf.length === 1 && rf[0].selectors.includes(expected) && rf[0].severity === 'P2'
         && rf[0].measurement?.name === 'visible_share_at_320' && rf[0].message_ko.includes('잘려'),
+        { lost: rec?.lost, offenders: rec?.offenders, rf });
+      continue;
+    }
+    if (kind === 'ancestor-visible' || kind === 'ancestor-beyond') {
+      const beyond = kind === 'ancestor-beyond';
+      const lost = rec?.lost?.[0];
+      const marker = beyond ? 'RF01_ANCESTOR_CLIP_MARGIN_BEYOND_P2' : 'RF01_ANCESTOR_CLIP_MARGIN_BAND_VISIBLE_NO_P2';
+      check(`${marker} (${mode})`,
+        rec?.offenders?.length === 0 && (beyond
+          ? rec?.lost?.length === 1 && lost?.dom_id === 'pay' && lost.visible_full === 1 && lost.visible_320 === 0
+            && rf.length === 1 && rf[0].selectors.includes(expected) && rf[0].severity === 'P2'
+            && rf[0].measurement?.name === 'visible_share_at_320' && rf[0].message_ko.includes('잘려')
+          : rec?.lost?.length === 0 && rf.length === 0),
         { lost: rec?.lost, offenders: rec?.offenders, rf });
       continue;
     }
