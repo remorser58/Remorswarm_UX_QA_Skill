@@ -2228,6 +2228,45 @@ async function adaptationTest(base, tmp) {
   finally { if (failure.browserTransport) await failure.browserTransport.close([failure.context]); }
   check('RF01 outer context initialization: persisted unmeasured run keeps measured task success', initWitness);
 
+  const spentDir = path.join(tmp, 'runs', 'R-reflow-budget-before-first-screen');
+  fs.mkdirSync(spentDir, { recursive: true });
+  const spent = new WebSession({ pw, pwInfo: info, scenario: { ...scenario, steps: [] },
+    runDir: spentDir, runId: 'R-reflow-budget-before-first-screen', profileId: 'EP-S24',
+    deviceRequest: { id: 'galaxy-s24' }, mode: 'scripted', warnings: [],
+    options: { headed: false, settleMs: 0, feedbackTimeoutMs: 0, focusWalk: false, reflow: true,
+      visualFeedback: false, locale: 'ko-KR', timezoneId: 'Asia/Seoul' } });
+  let firstScreenWitness = false;
+  try {
+    await spent.start();
+    const initial = spent.lastSnapshotId;
+    const originalContexts = spent.browser.contexts();
+    const ready = originalContexts.includes(spent.context) && spent.reflowScreens.length > 0
+      && spent.reflowDropped.size === 0 && spent.reflow.length === 0;
+    const hadDeadline = Object.hasOwn(spent, 'finishBrowserDeadline');
+    const originalDeadline = spent.finishBrowserDeadline;
+    try {
+      spent.finishBrowserDeadline = 0;
+      await spent.reflowPass();
+    } finally {
+      if (hadDeadline) spent.finishBrowserDeadline = originalDeadline;
+      else delete spent.finishBrowserDeadline;
+    }
+    const remainingContexts = spent.browser.contexts();
+    const cleaned = !spent.page.isClosed() && spent.reflowScreens.length === 0
+      && remainingContexts.length === originalContexts.length
+      && remainingContexts.every((context, index) => context === originalContexts[index]);
+    const fin = await spent.finish();
+    const raw = JSON.parse(fs.readFileSync(path.join(spentDir, 'run.json'), 'utf8'));
+    const reflowWarnings = raw.warnings.filter((warning) => /^reflow(?: |:)/.test(warning));
+    firstScreenWitness = ready && cleaned && fin.exitCode === 0 && raw.status === 'completed'
+      && raw.success === true && raw.success_basis === 'measured' && raw.snapshots.some((snap) => snap.snapshot_id === initial)
+      && Array.isArray(raw.reflow) && raw.reflow.length === 0
+      && reflowWarnings.length === 1 && reflowWarnings[0] === 'reflow pass stopped at its 40000 ms budget'
+      && JSON.stringify(raw) === JSON.stringify(fin.run);
+  } catch { /* The fixed result below is enough; do not print run data. */ }
+  finally { if (spent.browserTransport) await spent.browserTransport.close([spent.context]); }
+  check('RF01 first-screen reflow budget: persisted zero rows and measured task success', firstScreenWitness);
+
   const cleanScenario = { schema_version: 'ergo-scenario.v1', scenario_id: 'SC-adaptation-clean',
     surface: { kind: 'web', url: `${base}/reflow_adaptation.html?clean` }, targets: {},
     steps: [{ action: 'type', target: '#private-note', text: 'TYPED-PRIVATE-SENTINEL-8fb2', redact: true }],
