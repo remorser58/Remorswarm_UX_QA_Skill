@@ -41,6 +41,14 @@
   .fixed-control #pay { position: fixed; left: 265px; top: 80px; }
   .nested-control main { overflow-x: auto; }
   .nested-control #pay { margin-inline-start: 332px; }
+  .local-margin-zero, .local-margin-fifty { overflow-y: auto; }
+  .local-margin-zero body, .local-margin-fifty body { overflow-x: clip; overflow-y: visible; overflow-clip-margin: 0px; }
+  .local-margin-fifty body { overflow-clip-margin: 50px; }
+  :is(.local-margin-zero, .local-margin-fifty) #pay { appearance: none; width: 36px; padding: 0; }
+  @media (max-width: 340px) {
+    :is(.local-margin-zero, .local-margin-fifty) body { width: 240px; }
+    :is(.local-margin-zero, .local-margin-fifty) main { padding-inline-start: 250px; }
+  }
   @media (max-width: 340px) {
     .icon-loss { overflow-y: auto; }
     .icon-loss body { overflow-x: clip; }
@@ -57,10 +65,11 @@
 <script>
   const mode = new URLSearchParams(location.search).get('case');
   document.documentElement.className = mode;
+  const localMargin = mode === 'local-margin-zero' || mode === 'local-margin-fifty';
   if (['html-clip', 'body-clip'].includes(mode)) document.querySelector('#ornament').hidden = false;
   if (mode === 'hidden-content') document.querySelector('#timer').hidden = false;
   if (mode === 'table') { document.querySelector('main').remove(); document.querySelector('#wide-table').hidden = false; }
-  if (['local-loss', 'contained-loss', 'local-decor', 'escaping-control', 'fixed-control', 'nested-control', 'icon-loss',
+  if (localMargin || ['local-loss', 'contained-loss', 'local-decor', 'escaping-control', 'fixed-control', 'nested-control', 'icon-loss',
        'sticky-loss', 'boxless-body', 'boxless-local', 'absolute-relative', 'absolute-transform', 'absolute-filter',
        'absolute-nested', 'absolute-nested-escape'].includes(mode)) {
     const main = document.querySelector('main');
@@ -68,6 +77,7 @@
     main.innerHTML = mode === 'local-decor' ? '<div id="local-art" aria-hidden="true"></div>'
       : mode === 'icon-loss' ? '<button id="pay" aria-label="Confirm payment"></button>'
       : mode === 'sticky-loss' ? '<button id="pay"><span>Confirm payment</span></button>'
+      : localMargin ? '<button id="pay">Pay</button>'
       : '<button id="pay">Confirm payment</button>';
   }
 </script>

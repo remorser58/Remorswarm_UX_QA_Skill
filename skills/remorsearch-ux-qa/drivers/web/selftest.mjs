@@ -1872,7 +1872,63 @@ async function viewportTest(base, tmp) {
   }
 }
 
+async function reflowMarginBrowserProof(base, cases) {
+  const { pw, info } = loadPlaywright();
+  const transport = await openBrowser(pw, info);
+  const viewport = { width: 1920, height: 1080 };
+  let live, copy;
+  try {
+    live = await transport.browser.newContext({ viewport, deviceScaleFactor: 1 });
+    copy = await transport.browser.newContext({ viewport, deviceScaleFactor: 1, javaScriptEnabled: false });
+    const source = await live.newPage();
+    const page = await copy.newPage();
+    for (const [mode, margin] of cases) {
+      const url = `${base}/reflow-viewport-policy.html?case=${mode}`;
+      const { scenario } = normalizeScenario({
+        schema_version: 'ergo-scenario.v1', scenario_id: 'SC-reflow-margin-copy', surface: { kind: 'web', url },
+        task_goal_ko: '복제된 화면에서 결제 버튼 확인', device_ids: ['desktop-1920'], steps: [{ action: 'snapshot' }],
+      }, { requireSteps: true });
+      const session = new WebSession({ pw, pwInfo: info, scenario, options: {} });
+      session.page = source;
+      session.dev = { snapshotDevice: { form_factor: 'desktop' } };
+      await source.goto(url);
+      await session.keepForReflow('S-reflow-margin-copy');
+      const screen = session.reflowScreens[0];
+      if (!check(`RF01 margin: kept Chromium copy (${mode})`, !!screen)) continue;
+      await page.setViewportSize(viewport);
+      await session.loadReflowCopy(page, screen);
+      for (const width of [1920, 320]) {
+        await page.setViewportSize({ width, height: viewport.height });
+        const measured = await page.evaluate(() => {
+          const pay = document.querySelector('#pay');
+          const { x, y, width, height } = pay.getBoundingClientRect();
+          const style = getComputedStyle(document.body);
+          return { box: { x, y, width, height }, edge: document.body.getBoundingClientRect().right,
+            styles: [style.overflowX, style.overflowY, style.overflowClipMargin],
+            hit: document.elementFromPoint(x + width / 2, y + height / 2) === pay };
+        });
+        const image = decodePng(await page.screenshot({ clip: measured.box }));
+        let paint = 0;
+        for (let i = 0; i < image.data.length; i += image.channels) {
+          if (image.data[i] === 182 && image.data[i + 1] === 0 && image.data[i + 2] === 59) paint++;
+        }
+        const narrow = width === 320;
+        check(`RF01 margin: Chromium copy paint and hit (${mode}, ${width}px)`,
+          measured.styles.join() === `clip,visible,${margin}`
+          && image.width === 36 && image.height === 42
+          && (narrow ? measured.edge === 240 && measured.box.x === 250 && !measured.hit && paint === 0
+            : measured.box.x === 0 && measured.hit && paint > 0),
+          { ...measured, paint });
+      }
+    }
+  } finally {
+    await transport.close([copy, live]);
+  }
+}
+
 async function reflowViewportPolicyTest(base, tmp) {
+  const marginCases = [['local-margin-zero', '0px'], ['local-margin-fifty', '50px']];
+  await reflowMarginBrowserProof(base, marginCases);
   const cases = [
     ['grid', 'auto', false, '#right'],
     ['html-clip', 'hidden', true, null],
@@ -1896,6 +1952,7 @@ async function reflowViewportPolicyTest(base, tmp) {
     ['absolute-filter', 'auto', false, '#pay', 'lost'],
     ['absolute-nested', 'auto', false, '#pay', 'lost'],
     ['absolute-nested-escape', 'auto', false, '#pay'],
+    ...marginCases.map(([mode]) => [mode, 'auto', false, '#pay', 'margin']),
   ];
   const profile = path.join(tmp, 'p-desk.json');
   const profiles = path.join(tmp, 'reflow-viewport-profiles.json');
@@ -1928,6 +1985,16 @@ async function reflowViewportPolicyTest(base, tmp) {
     if (!check('reflow viewport: strict swarm completed (' + mode + ')', py.status === 0, py.stderr || py.stdout)) continue;
     const a = JSON.parse(fs.readFileSync(path.join(result, 'analyses.json'), 'utf8')).analyses[0];
     const rf = a.observations.filter((o) => o.check_id === 'RF-01');
+    if (kind === 'margin') {
+      const lost = rec?.lost?.[0];
+      check(`RF01_SINGLE_AXIS_CLIP_MARGIN_LOCAL_P2 (${mode})`,
+        rec?.offenders?.length === 0 && rec?.lost?.length === 1 && lost?.dom_id === 'pay'
+        && lost.visible_full === 1 && lost.visible_320 === 0
+        && rf.length === 1 && rf[0].selectors.includes(expected) && rf[0].severity === 'P2'
+        && rf[0].measurement?.name === 'visible_share_at_320' && rf[0].message_ko.includes('잘려'),
+        { lost: rec?.lost, offenders: rec?.offenders, rf });
+      continue;
+    }
     check('reflow viewport: meaningful and correctly worded findings only (' + mode + ')',
       expected ? rf.some((o) => o.severity === 'P2' && o.selectors.includes(expected)
         && (kind === 'fixed' ? /고정 막대 안|상자에 잘려/.test(o.message_ko)
