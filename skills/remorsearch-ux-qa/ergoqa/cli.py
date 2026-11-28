@@ -167,6 +167,35 @@ def cmd_scenario_stubs(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def _note_unmeasured_reflow(run: dict[str, Any], analysis: dict[str, Any]) -> None:
+    """Explain missing CLI coverage without adding observations or changing binding."""
+    records = run.get("reflow")
+    if not isinstance(records, list):
+        return
+    errors = lost_styles = 0
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        error = record.get("error")
+        if isinstance(error, str) and error.strip():
+            errors += 1
+            continue
+        styles = record.get("styles_lost")
+        if isinstance(styles, dict) and styles.keys() == {"live_rules", "copy_rules"}:
+            live, copied = styles["live_rules"], styles["copy_rules"]
+            if type(live) is int and type(copied) is int and live >= 20 and 0 <= 10 * copied < 9 * live:
+                lost_styles += 1
+    reasons = []
+    if errors:
+        reasons.append(f"재현 오류 {errors}건")
+    if lost_styles:
+        reasons.append(f"CSS 규칙 손실 {lost_styles}건")
+    if reasons:
+        if analysis["health"] == "ok":
+            analysis["health"] = "degraded"
+        analysis["limitations"].append(f"RF-01 복제 검사 미측정: {', '.join(reasons)}. 해당 화면을 다시 기록하세요.")
+
+
 def _analyses(args: argparse.Namespace, profiles: list[dict[str, Any]], scenarios: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
     runs_root = Path(args.runs)
     run_dirs = [runs_root] if (runs_root / "run.json").is_file() else sorted(p for p in runs_root.iterdir() if (p / "run.json").is_file())
@@ -175,9 +204,11 @@ def _analyses(args: argparse.Namespace, profiles: list[dict[str, Any]], scenario
     out = []
     for run_dir in run_dirs:
         run_doc = load_json(run_dir / "run.json")
-        out.append(analyze.analyze_run(run_dir, profiles, _bound_scenario(scenarios, run_doc, run_dir),
+        analysis = analyze.analyze_run(run_dir, profiles, _bound_scenario(scenarios, run_doc, run_dir),
                                        cross_profile=args.cross_profile, gaze_enabled=not args.no_gaze,
-                                       analytical_rescore=args.analytical_rescore))
+                                       analytical_rescore=args.analytical_rescore)
+        _note_unmeasured_reflow(run_doc, analysis)
+        out.append(analysis)
     return out
 
 
