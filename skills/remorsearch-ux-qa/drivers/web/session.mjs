@@ -408,9 +408,27 @@ function reflowInfo(arg) {
   const se = document.scrollingElement || document.documentElement;
   const cw = se.clientWidth;
   const sw = se.scrollWidth;
-  const clipX = (n) => ['hidden', 'clip'].includes(getComputedStyle(n).overflowX);
-  const rootClips = clipX(document.documentElement) || (document.body ? clipX(document.body) : false);
-  const out = { client_width: cw, scroll_width: sw, root_clips: rootClips, offenders: [], lost: [], exempt_right: null, scan_capped: capped || !!full.capped };
+  // Overflow propagates to the viewport from the root. HTML body is the
+  // exception only when both root axes are visible and containment permits it.
+  // A viewport 'clip' is used as 'hidden'; scrollWidth is still geometric.
+  const root = document.documentElement;
+  const rootStyle = getComputedStyle(root);
+  const body = document.body;
+  const bodyStyle = body ? getComputedStyle(body) : null;
+  const contained = (style) => style.contain !== 'none' || (style.containerType || 'normal') !== 'normal'
+    || (style.contentVisibility || 'visible') !== 'visible';
+  let x = rootStyle.display === 'none' ? null : rootStyle.overflowX;
+  if (root.localName === 'html' && root.namespaceURI === 'http://www.w3.org/1999/xhtml'
+      && x === 'visible' && rootStyle.overflowY === 'visible' && body?.localName === 'body'
+      && body.parentElement === root && bodyStyle.display !== 'none' && !contained(rootStyle) && !contained(bodyStyle)) {
+    x = bodyStyle.overflowX;
+  }
+  const viewportOverflowX = x === 'visible' || x === 'auto' ? 'auto'
+    : x === 'clip' || x === 'hidden' ? 'hidden'
+    : x === 'scroll' ? 'scroll' : 'unknown';
+  const rootClips = viewportOverflowX === 'hidden';
+  const out = { client_width: cw, scroll_width: sw, root_clips: rootClips, viewport_overflow_x: viewportOverflowX,
+    offenders: [], lost: [], exempt_right: null, scan_capped: capped || !!full.capped };
   const ids = (n) => {
     const list = [];
     for (let m = up(n); m && list.length < 6; m = up(m)) if (idOf(m)) list.push(idOf(m));

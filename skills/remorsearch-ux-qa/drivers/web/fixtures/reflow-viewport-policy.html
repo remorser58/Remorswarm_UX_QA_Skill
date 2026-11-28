@@ -1,0 +1,35 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Viewport overflow policy fixture</title>
+<style>
+  html, body { margin: 0; background: #fff; color: #151515; font: 16px/1.5 Arial, sans-serif; }
+  * { letter-spacing: 0px; word-spacing: 0px; line-height: 24px; }
+  h1 { font-size: 18px; margin: 8px; }
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(174px, 1fr)); gap: 12px; }
+  .grid section { padding: 6px; min-width: 0; background: #e9f5fb; }
+  .grid h2 { font-size: 16px; }
+  .html-clip { overflow-x: clip; }
+  .body-clip body, .local-body-clip body, .contained-body-clip body { overflow-x: clip; }
+  .local-body-clip { overflow-y: auto; }
+  .local-body-clip body, .contained-body-clip body { min-width: 360px; }
+  .contained-body-clip body { contain: layout; }
+  .html-clip .grid, .body-clip .grid, .hidden-content .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #ornament { position: absolute; left: 360px; top: 180px; width: 14px; height: 10px; background: #a31971; }
+  .hidden-content { overflow-x: hidden; }
+  #timer { position: absolute; left: 338px; top: 110px; width: 100px; }
+  #wide-table { width: 425px; }
+</style>
+<h1>Review delivery</h1>
+<main class="grid">
+  <section><h2>Delivery</h2><p>Awaiting review</p></section>
+  <section id="right"><h2>Payment</h2><p>Amount due today</p><button id="continue">Continue</button></section>
+</main>
+<span id="ornament" hidden></span><p id="timer" hidden>Timer 09:41</p>
+<table id="wide-table" hidden><tbody><tr><td>Column one</td><td>Column two</td></tr></tbody></table>
+<script>
+  const mode = new URLSearchParams(location.search).get('case');
+  document.documentElement.className = mode;
+  if (['html-clip', 'body-clip'].includes(mode)) document.querySelector('#ornament').hidden = false;
+  if (mode === 'hidden-content') document.querySelector('#timer').hidden = false;
+  if (mode === 'table') { document.querySelector('main').remove(); document.querySelector('#wide-table').hidden = false; }
+</script>

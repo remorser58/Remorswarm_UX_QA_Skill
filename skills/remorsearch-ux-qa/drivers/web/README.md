@@ -1044,6 +1044,12 @@ they belong to (0 = initial load), so a step can own two snapshots.
   rest). After the run each copy is loaded under its own URL (fulfilled from memory,
   scripts off) at the device width and at 320 CSS px. `run.reflow[]` has
   `snapshot_id`, `url`, `width`, `client_width`, `scroll_width`, `root_clips`,
+  and `viewport_overflow_x` (effective horizontal viewport policy: `auto`,
+  `scroll`, `hidden`, or `unknown`). The DOM's `scroll_width` can exceed the
+  viewport even when the root stops direct user scrolling. The HTML body's
+  overflow affects the viewport only when CSS overflow propagation applies.
+  Older ambiguous records ask for a new capture instead of inferring possible
+  scrolling from geometric width alone. The record also contains
   `offenders[]` (outermost elements past the right edge, `fixed` when a fixed box
   holds them), `exempt_right` (how far exempt content reaches), `lost[]` (text ≥ 90 %
   visible at the device width, < 50 % at 320 px),

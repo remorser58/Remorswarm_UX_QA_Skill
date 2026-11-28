@@ -223,6 +223,10 @@ def run_health(run: dict[str, Any], snapshots: list[dict[str, Any]], scenario: d
         if rec.get("gaps"):
             health = "degraded" if health == "ok" else health
             notes.append(f"{rid}: {rec['kind']} 복제 검사 범위 미확인: {', '.join(rec['gaps'])}.")
+    if any(isinstance(rec, dict) and not rec.get("error") and not rec.get("styles_lost")
+           and checks.reflow_scroll_state(rec) == "unknown" for rec in run.get("reflow") or []):
+        health = "degraded" if health == "ok" else health
+        notes.append(f"{rid}: RF-01 가로 스크롤과 잘림을 구분할 뷰포트 정책이 기록되지 않았습니다. 해당 화면을 다시 기록하세요.")
     if run.get("reflow_screens_dropped"):
         health = "degraded" if health == "ok" else health
         notes.append(f"{rid}: 화면 수 상한으로 {run['reflow_screens_dropped']}개 화면의 복제 검사를 생략했습니다.")

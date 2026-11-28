@@ -152,6 +152,38 @@ class Reflow(unittest.TestCase):
         # A located offender makes the page-level finding unnecessary.
         self.assertEqual([o.element_key.split("|")[0] for o in checks.check_reflow(self.run_doc(416), {"profile_id": "P"}, {})], ["#fee-summary"])
 
+    def test_root_clipped_decoration_keeps_geometry_but_does_not_report_scrolling(self) -> None:
+        record = {"snapshot_id": "S-3", "url": "http://x/clip", "width": 320, "client_width": 320,
+                  "scroll_width": 374, "root_clips": True, "offenders": [], "lost": [], "scan_capped": False}
+        for viewport in ({"viewport_overflow_x": "hidden"}, {}):
+            with self.subTest(viewport=viewport):
+                doc = {"run_id": "R", "reflow": [{**record, **viewport}]}
+                self.assertEqual(checks.check_reflow(doc, {"profile_id": "P"}, {}), [])
+        self.assertEqual(record["scroll_width"], 374)
+
+    def test_known_viewport_hidden_reports_meaningful_clipping_not_user_scroll(self) -> None:
+        doc = self.run_doc(416, root_clips=True)
+        doc["reflow"][0]["viewport_overflow_x"] = "hidden"
+        obs = checks.check_reflow(doc, {"profile_id": "P"}, {})
+        self.assertEqual([(o.check_id, o.extra["anchor_selectors"], o.severity) for o in obs],
+                         [("RF-01", ["#fee-summary"], "P2")])
+        self.assertIn("잘려", obs[0].message_ko)
+        self.assertNotIn("가로 스크롤이 생깁니다", obs[0].message_ko)
+
+    def test_unknown_old_root_policy_preserves_named_overflow_and_marks_recapture(self) -> None:
+        from ergoqa.analyze import run_health
+
+        doc = self.run_doc(416, root_clips=True)
+        doc["status"] = "completed"
+        obs = checks.check_reflow(doc, {"profile_id": "P"}, {})
+        self.assertEqual(len(obs), 1)
+        self.assertEqual(obs[0].extra["anchor_selectors"], ["#fee-summary"])
+        self.assertEqual(obs[0].measurement["value"], 408)
+        self.assertNotIn("가로 스크롤이 생깁니다", obs[0].message_ko)
+        health, notes = run_health(doc, [], None)
+        self.assertEqual(health, "degraded")
+        self.assertTrue(any("RF-01" in note and "다시 기록" in note for note in notes))
+
     def test_fixed_bar_offender_without_page_scroll_and_lost_styles(self) -> None:
         # A fixed bottom bar whose second button runs past the edge: nothing scrolls, so
         # it cannot be reached. An ordinary offender without page overflow is shifted only.

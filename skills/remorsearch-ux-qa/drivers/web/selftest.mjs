@@ -185,7 +185,7 @@ function readFixture(pathname, res, req) {
 }
 
 // Fixture files served at /<name> (same origin as the pages, no CORS headers).
-const FIXTURE_FILES = Object.fromEntries(['temporal_keyboard.html', 'layers.html', 'dialog.html', 'reflow.html', 'reflow2.html', 'reflow2.css', 'reflow_adaptation.html', 'viewport.html', 'focus.html', 'focus2.html', 'focus-paint-cover.html', 'focus-paint-scroll.html', 'feedback_ambient.html', 'native_feedback.html', 'inspect.html', 'painted_state.html', 'typography.html']
+const FIXTURE_FILES = Object.fromEntries(['temporal_keyboard.html', 'layers.html', 'dialog.html', 'reflow.html', 'reflow2.html', 'reflow2.css', 'reflow-viewport-policy.html', 'reflow_adaptation.html', 'viewport.html', 'focus.html', 'focus2.html', 'focus-paint-cover.html', 'focus-paint-scroll.html', 'feedback_ambient.html', 'native_feedback.html', 'inspect.html', 'painted_state.html', 'typography.html']
   .map((f) => [`/${f}`, f]));
 
 function startFixtureServer() {
@@ -1825,6 +1825,49 @@ async function viewportTest(base, tmp) {
   }
 }
 
+async function reflowViewportPolicyTest(base, tmp) {
+  const cases = [
+    ['grid', 'auto', false, '#right'],
+    ['html-clip', 'hidden', true, null],
+    ['body-clip', 'hidden', true, null],
+    ['local-body-clip', 'auto', false, 'main'],
+    ['contained-body-clip', 'auto', false, 'main'],
+    ['hidden-content', 'hidden', true, '#timer'],
+    ['table', 'auto', false, null],
+  ];
+  const profile = path.join(tmp, 'p-desk.json');
+  const profiles = path.join(tmp, 'reflow-viewport-profiles.json');
+  writeJson(profiles, [JSON.parse(fs.readFileSync(profile, 'utf8'))]);
+  for (const [mode, expectedPolicy, expectedClip, expected] of cases) {
+    const runId = 'R-reflow-' + mode, outDir = path.join(tmp, 'runs'), runDir = path.join(outDir, runId);
+    const scenario = path.join(tmp, runId + '.json');
+    writeJson(scenario, {
+      schema_version: 'ergo-scenario.v1', scenario_id: 'SC-' + mode,
+      surface: { kind: 'web', url: '{BASE}/reflow-viewport-policy.html?case=' + mode },
+      task_goal_ko: '320 CSS px에서 뷰포트 가로 정책 확인', device_ids: ['desktop-1920'], targets: {},
+      steps: [{ action: 'snapshot' }], success: { text_present: ['Review delivery'] },
+    });
+    const r = await runDriver(['run', '--scenario', scenario, '--profile', profile, '--bind-profile',
+      '--out', outDir, '--run-id', runId, '--base', base, '--no-focus-walk']);
+    if (!check('reflow viewport: recorder completed (' + mode + ')', r.code === 0, r.err || r.out)) continue;
+    const run = JSON.parse(fs.readFileSync(path.join(runDir, 'run.json'), 'utf8'));
+    const rec = run.reflow?.[0];
+    check('reflow viewport: layout extent and effective viewport policy (' + mode + ')',
+      rec?.width === 320 && rec.client_width === 320 && rec.scroll_width > 324
+      && rec.viewport_overflow_x === expectedPolicy && rec.root_clips === expectedClip, rec);
+    const result = path.join(tmp, runId + '-swarm');
+    const py = spawnSync(process.env.ERGOQA_PYTHON || 'python3', [path.join(REPO, 'scripts/ergo_qa.py'),
+      'swarm', '--runs', runDir, '--profiles', profiles, '--out', result, '--no-gaze'], { encoding: 'utf8' });
+    if (!check('reflow viewport: strict swarm completed (' + mode + ')', py.status === 0, py.stderr || py.stdout)) continue;
+    const a = JSON.parse(fs.readFileSync(path.join(result, 'analyses.json'), 'utf8')).analyses[0];
+    const rf = a.observations.filter((o) => o.check_id === 'RF-01');
+    check('reflow viewport: meaningful and correctly worded findings only (' + mode + ')',
+      expected ? rf.some((o) => o.selectors.includes(expected)
+        && (expectedClip ? o.message_ko.includes('잘려') : o.message_ko.includes('가로 스크롤이 생깁니다')))
+        : rf.length === 0, rf);
+  }
+}
+
 async function reflowTest(base, tmp) {
   const sc = {
     schema_version: 'ergo-scenario.v1', scenario_id: 'SC-driver-reflow-01', surface: { kind: 'web', url: '{BASE}/reflow.html' },
@@ -3355,6 +3398,7 @@ async function main() {
     if (want('native-feedback')) await nativeFeedbackTest(base, tmp);
     if (want('read')) await readPageTest(base, tmp);
     if (want('reflow')) await reflowTest(base, tmp);
+    if (want('reflow-viewport')) await reflowViewportPolicyTest(base, tmp);
     if (want('reflow-copy')) await reflowCopyTest(base, tmp);
     if (want('adaptation')) await adaptationTest(base, tmp);
     if (want('viewport')) await viewportTest(base, tmp);
