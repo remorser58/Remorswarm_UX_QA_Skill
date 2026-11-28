@@ -281,6 +281,30 @@ class PipelineTests(unittest.TestCase):
         self.assertIn("커버리지", text)
         self.assertIn("RH-01", text)
 
+    def test_report_detail_keeps_element_key_in_a_single_code_span(self) -> None:
+        cases = (
+            ('p[data-testid="plain"]|배송', '`p[data-testid="plain"]|배송`'),
+            ('p[data-testid="one`part`"]|배송', '``p[data-testid="one`part`"]|배송``'),
+            ('p[data-testid="two``part``"]|배송', '```p[data-testid="two``part``"]|배송```'),
+            ('p[data-testid="mix`west``east`"]|배송', '```p[data-testid="mix`west``east`"]|배송```'),
+            ('`target|name', '`` `target|name ``'),
+            ('#target|name`', '`` #target|name` ``'),
+            ('`target|name``', '``` `target|name`` ```'),
+            (' #target|name ', '`  #target|name  `'),
+            (' #target|name', '` #target|name`'),
+            ('#target|name ', '`#target|name `'),
+            ('p[data-testid="a|b"]|이름 | 설명', '`p[data-testid="a|b"]|이름 | 설명`'),
+        )
+        for element_key, expected in cases:
+            with self.subTest(element_key=element_key):
+                finding = {**self.by_check["PC-01"][0], "element_key": element_key}
+                before = copy.deepcopy(finding)
+                text = report.render([finding], self.profiles, [self.analysis], list_threshold="P3")
+                details = text.split("## 5. 발견 상세\n", 1)[1].split("\n## ", 1)[0]
+                targets = [line for line in details.splitlines() if " · 대상: " in line]
+                self.assertEqual(targets, [f"- 시나리오: `{finding['scenario_id']}` · 대상: {expected}"])
+                self.assertEqual(finding, before)
+
     def test_report_distinguishes_profile_devices_from_run_devices(self) -> None:
         profiles = [
             {"profile_id": "EP-desktop", "attributes": {"device_id": "desktop-1920", "orientation": "landscape"}},
