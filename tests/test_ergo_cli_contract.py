@@ -388,6 +388,90 @@ class ScenarioBindingContract(unittest.TestCase):
         self.assertIn("# Next report\n", report_text)
         self.assertIn(report_name, report_text)
 
+    def test_swarm_marks_explicit_unmeasured_reflow_without_inventing_findings(self):
+        profile = json.loads(self.profiles_path.read_text())["profiles"][0]
+        bind_fixture_profile(self.run_dir, profile)
+        run_path = self.run_dir / "run.json"
+        original = json.loads(run_path.read_text())
+        first, second = [p.stem for p in sorted(self.run_dir.glob("S-*.json"))]
+        private = "https://synthetic.invalid/<private-reflow-error>"
+        failed = {"snapshot_id": second, "url": private, "width": 320}
+        measured = {"snapshot_id": first, "url": "http://127.0.0.1/checkout.html", "width": 320,
+                    "client_width": 320, "scroll_width": 320, "viewport_overflow_x": "auto",
+                    "root_clips": False, "offenders": [],
+                    "lost": [{"dom_id": "pay", "tag": "button", "ancestor_ids": [], "visible_full": 1,
+                              "visible_320": 0, "box": {"x": 330, "y": 250, "w": 90, "h": 44}, "text": "결제하기"}]}
+        out = self.root / "swarm-reflow"
+
+        def swarm(records, *flags, **changes):
+            run_path.write_text(json.dumps({**original, **changes, "reflow": records}), encoding="utf-8")
+            code, stdout, stderr = self.run_cli("swarm", "--runs", str(self.run_dir), "--profiles",
+                                                 str(self.profiles_path), "--out", str(out), *flags)
+            analysis = json.loads((out / "analyses.json").read_text())["analyses"][0]
+            findings = json.loads((out / "findings.json").read_text())["findings"]
+            report = (out / "report.md").read_text(encoding="utf-8")
+            section1 = report.split("## 2.", 1)[0]
+            self.assertNotIn(private, stdout + stderr + section1 + json.dumps(analysis["limitations"]))
+            return code, stderr, analysis, findings, section1
+
+        def rf01(rows):
+            return [row for row in rows if row["check_id"] == "RF-01"]
+
+        code, err, clean, clean_findings, clean_report = swarm([measured])
+        self.assertEqual((code, err, clean["health"]), (cli.EXIT_OK, "", "ok"))
+        self.assertEqual([f["severity"] for f in rf01(clean_findings)], ["P2"])
+        self.assertNotIn("실행 상태 경고", clean_report)
+        cases = [
+            ({**failed, "error": f"copy timed out at {private}"}, "재현 오류 1건"),
+            ({**failed, "styles_lost": {"live_rules": 40, "copy_rules": 12}}, "CSS 규칙 손실 1건"),
+        ]
+        for record, reason in cases:
+            for mixed in (False, True):
+                with self.subTest(reason=reason, mixed=mixed):
+                    rows = [measured, record] if mixed else [record]
+                    code, err, result, findings, section1 = swarm(rows)
+                    self.assertEqual((code, result["health"]), (cli.EXIT_DEGRADED, "degraded"), err)
+                    self.assertEqual((result["run_status"], result["run_success"], result["profile_binding_status"]),
+                                     ("completed", True, "matched"))
+                    self.assertIn("run health:", err)
+                    self.assertIn("해당 실행의 '발견 없음'은 통과가 아닙니다", section1)
+                    note = next(note for note in result["limitations"] if "RF-01" in note)
+                    self.assertIn(reason, note)
+                    self.assertIn(note, section1)
+                    self.assertEqual(rf01(result["observations"]), rf01(clean["observations"]) if mixed else [])
+                    self.assertEqual(rf01(findings), rf01(clean_findings) if mixed else [])
+                    allow, allowed_err, allowed, allowed_findings, allowed_report = swarm(rows, "--allow-degraded")
+                    self.assertEqual((allow, allowed_err, allowed, allowed_findings, allowed_report),
+                                     (cli.EXIT_OK, err, result, findings, section1))
+                    if mixed:
+                        gate, gate_err, gated, gated_findings, gated_report = swarm(
+                            rows, "--fail-on", "P2", "--fail-on-basis", "measured", "--allow-degraded")
+                        self.assertEqual((gate, gate_err, gated, gated_findings, gated_report),
+                                         (cli.EXIT_FINDINGS, err, result, findings, section1))
+
+        code, err, result, _, section1 = swarm(
+            [{**cases[0][0], "snapshot_id": first}, cases[1][0]], status="failed", success=False)
+        self.assertEqual((code, result["health"], result["run_status"], result["run_success"]),
+                         (cli.EXIT_DEGRADED, "failed", "failed", False))
+        self.assertIn("run health:", err)
+        self.assertIn("재현 오류 1건", section1)
+        self.assertIn("CSS 규칙 손실 1건", section1)
+
+        malformed = [
+            {**failed, "error": True}, {**failed, "error": " \t "},
+            {**failed, "styles_lost": {"live_rules": 40, "copy_rules": True}},
+            {**failed, "styles_lost": {"live_rules": 40, "copy_rules": 36}},
+            {**failed, "styles_lost": {"live_rules": 19, "copy_rules": 0}},
+        ]
+        for record in [None, *malformed]:
+            with self.subTest(not_explicit_failure=record):
+                code, err, result, findings, section1 = swarm(
+                    [measured] if record is None else [measured, record], warnings=[f"unstructured hint {private}"])
+                self.assertEqual((code, err, result["health"]), (cli.EXIT_OK, "", "ok"))
+                self.assertEqual(rf01(findings), rf01(clean_findings))
+                self.assertNotIn("실행 상태 경고", section1)
+                self.assertFalse(any("RF-01" in note for note in result["limitations"]))
+
     def test_matching_scenario_is_bound_and_reaches_run_health(self):
         code, _, err = self.analyze("--scenario", str(self.matching))
         self.assertEqual(code, cli.EXIT_OK, err)
