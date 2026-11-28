@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any, Iterable
 
 from . import checks
@@ -13,6 +14,14 @@ BASIS_KO = {
     "model": "모델 예측(inferred)",
     "judgment": "판단(LLM/사람, inferred)",
 }
+
+
+def _element_key_span(value: str) -> str:
+    delimiter = "`" * (1 + max(map(len, re.findall(r"`+", value)), default=0))
+    # Keep boundary backticks separate, and compensate for CommonMark's one-space trim.
+    if value.startswith("`") or value.endswith("`") or (value.startswith(" ") and value.endswith(" ") and value.strip(" ")):
+        value = f" {value} "
+    return f"{delimiter}{value}{delimiter}"
 
 
 def _fmt_measure(measurement: dict[str, Any]) -> str:
@@ -145,7 +154,7 @@ def render(
             f"### {f['id']} [{f['severity']}] {f['title_ko']}",
             "",
             f"- 체크: `{f['check_id']}` · 범주: {f['category']} · 근거: {BASIS_KO[f['basis']]}" + (f" · 모델: `{f['model']}`" if f.get("model") else ""),
-            f"- 시나리오: `{f['scenario_id']}` · 대상: `{f['element_key']}`",
+            f"- 시나리오: `{f['scenario_id']}` · 대상: {_element_key_span(f['element_key'])}",
             f"- 관찰: {f['summary_ko']}",
             f"- 측정: {_fmt_measure(f['measurement'])}",
             f"- 커버리지: {f['coverage_label']} — 발생 {', '.join(f['triggered_profiles'])}",
