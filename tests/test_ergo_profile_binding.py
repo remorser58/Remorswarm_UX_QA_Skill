@@ -11,7 +11,7 @@ from pathlib import Path
 
 from _paths import SKILL
 from ergoqa import analyze, bundle, swarm
-from ergoqa.profile_binding import prepare
+from ergoqa.profile_binding import match_status, prepare
 from ergoqa.profiles import sample_profiles
 from ergoqa.snapshot import SnapshotError, load_run_dir
 from test_ergo_pipeline import bind_fixture_profile, el, make_run
@@ -42,6 +42,40 @@ class ProfileBinding(unittest.TestCase):
     def reach(self, result):
         return next(o for o in result["observations"]
                     if o["check_id"] == "RH-01" and o["element_key"].startswith("#reach-probe"))
+
+    def test_personas_cli_profile_binds_without_relabelling(self):
+        audience_path = SKILL / "examples" / "audience" / "transit-card.audience.json"
+        out = self.root / "audience-profiles.json"
+        result = self.cli("personas", "--audience", audience_path, "--budget", "12", "--out", out)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        plan_bytes = out.read_bytes()
+        profile = next(p for p in json.loads(plan_bytes)["profiles"] if p["profile_id"] == "AP-01")
+        self.assertEqual(profile["origin"], "audience_composed")
+        self.assertTrue(profile["audience_ref"]["segment_id"])
+
+        raw = json.dumps(profile, ensure_ascii=False, indent=2).encode() + b"\n"
+        receipt = prepare(raw)
+        binding = receipt["binding"]
+        self.assertEqual(receipt["profile_id"], profile["profile_id"])
+        self.assertEqual(binding["profile_file_sha256"], hashlib.sha256(raw).hexdigest())
+        compact = json.dumps(profile, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+        reformatted = prepare(compact)["binding"]
+        self.assertNotEqual(reformatted["profile_file_sha256"], binding["profile_file_sha256"])
+        for key in ("profile_sha256", "condition_sha256", "model_revision_sha256"):
+            self.assertEqual(reformatted[key], binding[key])
+        self.assertEqual(match_status(binding, profile), "matched")
+        self.assertEqual(match_status(binding, {**profile, "origin": "manual"}), "profile_digest_mismatch")
+        self.assertEqual(match_status(None, profile), "legacy_unverified")
+        self.assertEqual(out.read_bytes(), plan_bytes)
+
+        for origin in ("stratified_coverage", "base_rate_sample", "manual"):
+            with self.subTest(origin=origin):
+                existing = {**self.profile, "origin": origin}
+                self.assertEqual(prepare(json.dumps(existing).encode())["profile_id"], existing["profile_id"])
+        for invalid in ({**profile, "origin": "survey"}, {k: v for k, v in profile.items() if k != "origin"}):
+            with self.subTest(origin=invalid.get("origin")):
+                with self.assertRaisesRegex(ValueError, r"\$\.origin"):
+                    prepare(json.dumps(invalid).encode())
 
     def test_cli_matches_then_rejects_changed_thumb_until_explicit_analytical_rescore(self):
         pfile = self.root / "profiles.json"

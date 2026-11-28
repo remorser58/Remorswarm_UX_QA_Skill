@@ -55,7 +55,7 @@ switch-handheld (handheld console, gamepad).
 {
   "schema_version": "ergo-profile.v1",
   "profile_id": "EP-01",
-  "origin": "stratified_coverage | base_rate_sample | manual",
+  "origin": "stratified_coverage | base_rate_sample | manual | audience_composed",
   "persona_ref": {"dataset": "nvidia/Nemotron-Personas-Korea", "revision": "...", "record_id": "..."} ,
   "label_ko": "왼손잡이 · 한 손 파지 · 이동 중",
   "attributes": {
