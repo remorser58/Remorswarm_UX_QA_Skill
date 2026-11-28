@@ -977,12 +977,16 @@ they belong to (0 = initial load), so a step can own two snapshots.
   can also detect a solid opaque fixed/sticky HTML layer with
   `pointer-events: none`: it checks the top node at the same sample points
   independently of pointer input. Full coverage also requires a single opaque
-  rectangle enclosing the focused element and the same top layer at its corners;
-  the interior sample count alone does not prove full coverage. On a recorded
+  rectangle enclosing the focused element and the same top layer at its corners.
+  One positive-area rectangle must enclose the target by itself; the bounding
+  union of wrapped inline fragments and the interior samples do not prove it.
+  Ordinary root scrolling is accounted for on both axes. If scroll or focus
+  geometry changes during the probe, the supplemental signal is discarded. On a recorded
   focus change the supplement, when available, appears as `focus.paint_cover`.
   It does not alter click targeting or general element occlusion data. Recognized
-  user-opened layers, complex clipping/compositing, frames and unsupported
-  protocol results (including a 350 ms probe timeout) keep the existing evidence. A missed painted cover is still
+  user-opened layers, complex clipping or masking (including Chromium's
+  mask-box-image), frames and unsupported protocol results keep the existing
+  evidence. The probe times out after 350 ms. A missed painted cover is still
   possible and the screenshot remains the visual record.
   `ended` says why a walk stopped
   (`cycle`, `left_document`, `max_stops`, `time_budget`, `opaque_frame`).

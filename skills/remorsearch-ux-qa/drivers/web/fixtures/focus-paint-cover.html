@@ -14,10 +14,17 @@
   #opened, #user-cover { top: 635px } #user-cover { top: 627px }
   #clipped, #clip-cover { top: 722px } #clip-cover { top: 714px; clip-path: inset(0 10%) }
   #user-cover.still-covered { background: linear-gradient(#c10051, #c10051) }
-  #normal { top: 840px }
+  #fragmented { top: 820px; height: 64px }
+  #fragment-wrap { position: fixed; left: 120px; top: 819px; z-index: 2; pointer-events: none; font: 10px/10px monospace }
+  #fragment-cover { position: sticky; top: 0; background: #c10051; color: transparent; white-space: nowrap }
+  .vendor-mask { -webkit-mask-box-image-source: linear-gradient(to bottom, black 0 40%, transparent 40% 58%, black 58% 100%); -webkit-mask-box-image-slice: 0 fill }
+  #vendor-masked, #vendor-cover { top: 895px; height: 30px }
+  #ancestor-masked, #vendor-parent, #vendor-child { top: 930px; height: 30px }
+  #vendor-parent { background: transparent }
+  #normal { top: 980px }
   #open-control { top: 10px }
-  #status { position: absolute; top: 925px }
-  #mutations { position: absolute; top: 950px }
+  #status { position: absolute; left: 340px; top: 925px }
+  #mutations { position: absolute; left: 340px; top: 950px }
 </style>
 <button id="opaque">Paint-hidden</button><div class="cover" id="block" aria-hidden="true"></div>
 <button id="transparent">Transparent control</button><div class="cover" id="glass" aria-hidden="true"></div>
@@ -28,8 +35,16 @@
 <button id="edge">Visible edges</button><div class="cover" id="center-cover" aria-hidden="true"></div>
 <button id="opened">User opened layer</button><div class="cover" id="user-cover" aria-hidden="true"></div>
 <button id="clipped">Clip path control</button><div class="cover" id="clip-cover" aria-hidden="true"></div>
+<button id="fragmented">Fragmented cover</button><div id="fragment-wrap" aria-hidden="true"><span id="fragment-cover"></span></div>
+<button id="vendor-masked">Masked cover</button><div class="cover vendor-mask" id="vendor-cover" aria-hidden="true"></div>
+<button id="ancestor-masked">Masked parent</button><div class="cover vendor-mask" id="vendor-parent" aria-hidden="true"><div class="cover" id="vendor-child"></div></div>
 <button id="normal">Regular control</button><p id="status">Not activated</p><p id="mutations">No cover style changes</p>
 <script>
+  // One sticky span, seven line boxes. The short third line exposes a strip
+  // between the recorder's sample rows while its bounding union still encloses.
+  const line = 'I'.repeat(30);
+  document.querySelector('#fragment-cover').innerHTML =
+    [line, line, 'I'.repeat(16), line, line, line, line].join('<br>');
   for (const button of document.querySelectorAll('button')) {
     button.addEventListener('click', () => document.querySelector('#status').textContent = button.id + ' activated');
   }

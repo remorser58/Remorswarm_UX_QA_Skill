@@ -701,7 +701,7 @@ function probeTarget(start) {
   return { boxes, prevBoxes, field, keepPrev, vw: one ? vvp.width : window.innerWidth, vh: one ? vvp.height : window.innerHeight, scroll: [window.scrollX, window.scrollY] };
 }
 
-function focusInfo() {
+function focusInfo({ includeScroll = false } = {}) {
   let el = document.activeElement;
   if (!el || el === document.body || el === document.documentElement) return null;
   let ox = 0;
@@ -857,6 +857,7 @@ function focusInfo() {
     wrap_boxes: wraps,
     in_viewport: inVp, obscured_fraction: inVp && doc === document ? Math.round((covered / 9) * 1000) / 1000 : null, obscured_by: coveredBy,
     obscured_user_opened: covered > 0 ? coveredUserOpened : null, vw, vh,
+    ...(includeScroll ? { paint_scroll: [Math.round(window.scrollX * 100) / 100, Math.round(window.scrollY * 100) / 100] } : {}),
   };
 }
 
@@ -1561,9 +1562,13 @@ export class WebSession {
       return ownedProbe;
     };
     const measureFocus = async () => {
-      const info = await page.evaluate(focusInfo);
-      if (info?.in_viewport && !info.frame && info.obscured_fraction < 1) {
-        const paint = await readFocusPaintCover(page, getCdp, { walk: true, domId: info.dom_id });
+      const measured = await page.evaluate(focusInfo, { includeScroll: true });
+      if (!measured) return null;
+      const { paint_scroll: scroll, ...info } = measured;
+      if (info.in_viewport && !info.frame && info.obscured_fraction < 1) {
+        const paint = await readFocusPaintCover(page, getCdp, {
+          walk: true, domId: info.dom_id, capture: { box: info.box, scroll },
+        });
         if (paint && paint.fraction > info.obscured_fraction) {
           info.obscured_fraction = paint.fraction;
           info.obscured_by = this.redactRecord(paint.selector, 'selector');
@@ -2456,7 +2461,9 @@ export class WebSession {
         if (this.scenario.surface_kind !== 'game' && ex.focus?.dom_id && ex.focus.dom_id !== this.lastSnapshotFocusId) {
           const focused = ex.elements.find((el) => el.dom_id === ex.focus.dom_id);
           if (focused?.in_viewport && focused.occluded_fraction !== 1) {
-            const paint = await readFocusPaintCover(this.page, async () => this.cdp, { domId: ex.focus.dom_id });
+            const paint = await readFocusPaintCover(this.page, async () => this.cdp, {
+              domId: ex.focus.dom_id, capture: { box: focused.box, scroll: [ex.scroll.x, ex.scroll.y] },
+            });
             if (paint) ex.focus.paint_cover = paint;
           }
         }
