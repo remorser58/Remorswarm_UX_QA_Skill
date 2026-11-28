@@ -841,6 +841,53 @@ async function toolingTest(base, tmp) {
   check('drive_client: a closed connection returns JSON and exit 4', r.code === 4 && typeof r.json?.error === 'string', r.out);
 }
 
+async function audienceBindingTest(base, tmp) {
+  const label = 'audience binding: generated AP-01 recording is verified by strict analyze';
+  const py = (...args) => spawnSync('python3', ['-I', '-B', path.join(REPO, 'scripts', 'ergo_qa.py'), ...args],
+    { cwd: REPO, encoding: 'utf8', timeout: 30000 });
+  const profiles = path.join(tmp, 'audience-binding-profiles.json');
+  const composed = py('personas', '--audience', path.join(REPO, 'examples', 'audience', 'transit-card.audience.json'),
+    '--budget', '12', '--out', profiles);
+  if (composed.status !== 0 || !fs.existsSync(profiles)) {
+    check(label, false, composed.stderr || composed.error?.message || 'missing generated profiles');
+    return;
+  }
+  const profile = JSON.parse(fs.readFileSync(profiles, 'utf8')).profiles?.find((p) => p.profile_id === 'AP-01');
+  if (profile?.origin !== 'audience_composed' || !profile.attributes?.device_id || !profile.audience_ref?.segment_id) {
+    check(label, false, 'missing AP-01 audience_composed profile');
+    return;
+  }
+  const selected = path.join(tmp, 'audience-binding-AP-01.json');
+  writeJson(selected, profile);
+  const rawSha = crypto.createHash('sha256').update(fs.readFileSync(selected)).digest('hex');
+  const scenarioPath = path.join(tmp, 'audience-binding-scenario.json');
+  writeJson(scenarioPath, { schema_version: 'ergo-scenario.v1', scenario_id: 'SC-audience-binding',
+    surface: { kind: 'web', url: '{BASE}/inspect.html' }, task_goal_ko: '합성 프로필 바인딩 확인',
+    device_ids: [profile.attributes.device_id], steps: [{ action: 'snapshot' }], success: { selector_visible: '#request' } });
+  const out = path.join(tmp, 'audience-binding-runs');
+  const id = 'R-audience-binding';
+  const recorded = await runDriver(['run', '--scenario', scenarioPath, '--profile', selected, '--bind-profile',
+    '--out', out, '--run-id', id, '--base', base, '--no-focus-walk', '--no-reflow']);
+  const runDir = path.join(out, id);
+  const runPath = path.join(runDir, 'run.json');
+  if (recorded.code !== 0 || !fs.existsSync(runPath)) {
+    check(label, false, recorded.err || recorded.out || 'missing bound run');
+    return;
+  }
+  const run = JSON.parse(fs.readFileSync(runPath, 'utf8'));
+  const binding = run.profile_binding;
+  const analysisPath = path.join(tmp, 'audience-binding-analysis.json');
+  const result = py('analyze', '--runs', runDir, '--profiles', profiles, '--scenario', scenarioPath, '--out', analysisPath);
+  const analysis = result.status === 0 && fs.existsSync(analysisPath)
+    ? JSON.parse(fs.readFileSync(analysisPath, 'utf8')).analyses?.[0] : null;
+  check(label, run.run_id === id && run.status === 'completed' && run.success === true
+    && run.profile_id === 'AP-01' && run.snapshots?.length > 0
+    && binding?.profile_file_sha256 === rawSha && binding?.device?.id === profile.attributes.device_id
+    && binding?.device?.orientation === profile.attributes.orientation
+    && analysis?.run_id === id && analysis?.profile_binding_status === 'matched'
+    && analysis?.verified_owner_profile_id === 'AP-01', result.stderr || result.error?.message || analysis);
+}
+
 async function serveTest(base, tmp) {
   const label = 'serve galaxy-s24';
   const outDir = path.join(tmp, 'runs');
@@ -3341,7 +3388,7 @@ async function typographyTest(base, tmp) {
 async function main() {
   const keep = process.argv.includes('--keep');
   // --only a,b: run just these groups (scripted, actions, layers, focus, focus2, feedback, native-feedback,
-  // read, reflow, reflow-copy, viewport, dialog, serve, task-walk, tooling, exit, connect, analyze) while iterating on one part.
+  // read, reflow, reflow-copy, viewport, dialog, serve, task-walk, tooling, audience-binding, exit, connect, analyze) while iterating on one part.
   const oi = process.argv.indexOf('--only');
   const only = oi > 0 && process.argv[oi + 1] ? new Set(process.argv[oi + 1].split(',')) : null;
   const want = (g) => !only || only.has(g);
@@ -3428,6 +3475,7 @@ async function main() {
     if (want('serve')) await serveTest(base, tmp);
     if (want('task-walk')) await taskWalkTest(base, tmp);
     if (want('tooling')) await toolingTest(base, tmp);
+    if (want('audience-binding')) await audienceBindingTest(base, tmp);
     if (want('exit')) await exitCodeTests(base, tmp);
   } finally {
     server.close();
