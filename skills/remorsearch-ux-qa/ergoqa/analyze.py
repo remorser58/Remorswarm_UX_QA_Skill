@@ -64,10 +64,40 @@ def _conspicuity_grid(image: png.Image, factor: int) -> list[list[float]]:
     return gaze.conspicuity_map(rows)
 
 
+def _verify_css_geometry(css: dict, device: dict, raw: bytes, original_path: Path) -> None:
+    header = png.read_header(raw)
+    size = (header.width, header.height)
+    for name, actual in zip(("width_px", "height_px"), size):
+        if name in css and (type(css[name]) is not int or css[name] != actual):
+            raise png.PNGError(f"CSS screenshot does not match its recorded {name}")
+
+    if "factor" in css:
+        # Match cssScaleCopy: JS Math.round for positive DPR, then floor each
+        # actual primary PNG dimension (not nominal viewport times DPR).
+        factor = css["factor"]
+        dpr = device.get("dpr")
+        if type(factor) is not int or factor < 1 or type(dpr) not in (int, float) or not 0 < dpr < float("inf"):
+            raise png.PNGError("invalid CSS screenshot scale")
+        whole = int(dpr)
+        if factor != max(1, whole + (dpr - whole >= 0.5)):
+            raise png.PNGError("CSS screenshot factor does not match the device DPR")
+        primary = png.read_header(original_path)
+        expected = (max(1, primary.width // factor), max(1, primary.height // factor))
+    else:
+        # Compatibility for factor-less snapshots: only a nominal CSS-size
+        # raster is interpretable without a recorded downsampling factor.
+        viewport = device.get("viewport_css")
+        if not isinstance(viewport, (list, tuple)) or not all(type(n) in (int, float) for n in viewport):
+            raise png.PNGError("missing or invalid CSS viewport dimensions")
+        expected = tuple(viewport)
+    if size != expected:
+        raise png.PNGError("CSS screenshot dimensions do not match the capture")
+
+
 def conspicuity_for_snapshot(
     snapshot: dict[str, Any], cell_css_px: int = 8, *, on_css_fallback: Callable[[], None] | None = None,
 ) -> list[list[float]] | None:
-    """Prefer a decodable CSS-scale copy, then use the original at device scale."""
+    """Prefer a decodable CSS-scale copy of the expected extent, else use the original."""
     shot = snapshot.get("screenshot", {})
     path = shot.get("resolved_path")
     if not path or not Path(path).is_file():
@@ -85,6 +115,8 @@ def conspicuity_for_snapshot(
             digest = hashlib.sha256(raw).hexdigest()
             if css.get("sha256") and digest != css["sha256"]:
                 raise png.PNGError("CSS screenshot does not match its recorded SHA-256")
+            # A cached grid certifies these CSS bytes decoded, not their relation to this snapshot.
+            _verify_css_geometry(css, snapshot.get("device", {}), raw, Path(path))
             factor = max(1, int(round(cell_css_px)))
             key = ("css", digest, factor)
             if key not in _CONSPICUITY_CACHE:
