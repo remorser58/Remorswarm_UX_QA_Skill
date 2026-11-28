@@ -209,20 +209,22 @@ def cmd_swarm(args: argparse.Namespace) -> int:
     analyses = _analyses(args, profiles, scenarios)
     findings = swarm.aggregate(analyses, profiles)
     audience_doc = load_json(args.audience) if getattr(args, "audience", None) else None
-    out = Path(args.out)
-    _write_json(out / "analyses.json", {"analyses": analyses})
     listed, summaries = swarm.present([f for f in findings if f.get("tier") != "hypothesis"], args.list_threshold)
     problem_units = swarm.units(listed)
-    _write_json(out / "findings.json", {"findings": findings, "units": problem_units, "severity_counts": swarm.severity_counts(findings),
-                                        "unit_severity_counts": swarm.severity_counts(problem_units),
-                                        "list_threshold": args.list_threshold, "listed_finding_ids": [f["id"] for f in listed],
-                                        "summaries": summaries})
     plan = None
     raw = load_json(args.profiles)
     if isinstance(raw, dict) and isinstance(raw.get("plan"), dict):
         plan = raw["plan"]
-    (out / "report.md").write_text(report.render(findings, profiles, analyses, title=args.title, audience=audience_doc, plan=plan,
-                                                 list_threshold=args.list_threshold), encoding="utf-8")
+    # A render-time audience error must not replace only the structured outputs.
+    report_text = report.render(findings, profiles, analyses, title=args.title, audience=audience_doc, plan=plan,
+                                list_threshold=args.list_threshold)
+    out = Path(args.out)
+    _write_json(out / "analyses.json", {"analyses": analyses})
+    _write_json(out / "findings.json", {"findings": findings, "units": problem_units, "severity_counts": swarm.severity_counts(findings),
+                                        "unit_severity_counts": swarm.severity_counts(problem_units),
+                                        "list_threshold": args.list_threshold, "listed_finding_ids": [f["id"] for f in listed],
+                                        "summaries": summaries})
+    (out / "report.md").write_text(report_text, encoding="utf-8")
     if args.bundle:
         bundle_doc = bundle.to_evidence_bundle(args.bundle_id or f"ergo-{out.name}", analyses, findings, profiles)
         _write_json(out / "bundle.json", bundle_doc)

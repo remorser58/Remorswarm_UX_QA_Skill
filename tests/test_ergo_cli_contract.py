@@ -325,6 +325,69 @@ class ScenarioBindingContract(unittest.TestCase):
                 self.assertNotEqual(sha256_file(out / "findings.json"), before["findings.json"])
                 self.assertEqual(sha256_file(out / "notes.txt"), before["notes.txt"])
 
+    def test_swarm_audience_report_error_preserves_outputs(self):
+        audience_path = _paths.SKILL / "examples" / "audience" / "transit-card.audience.json"
+        code, _, err = self.run_cli("personas", "--audience", str(audience_path), "--budget", "12",
+                                    "--out", str(self.profiles_path))
+        self.assertEqual(code, cli.EXIT_OK, err)
+        profile = next(p for p in json.loads(self.profiles_path.read_text())["profiles"]
+                       if p["attributes"]["device_id"] == "galaxy-s24" and p["attributes"]["orientation"] == "portrait")
+        self.assertEqual(profile["origin"], "audience_composed")
+        doc = json.loads(audience_path.read_text(encoding="utf-8"))
+        segment = next(s for s in doc["segments"] if s["segment_id"] == profile["audience_ref"]["segment_id"])
+        segment_name = segment.pop("name_ko")
+        malformed = self.root / "missing-segment-name.json"
+        malformed.write_text(json.dumps(doc, ensure_ascii=False), encoding="utf-8")
+
+        second_root = self.root / "second-run"
+        second_root.mkdir()
+        second_run = make_run(second_root)
+        for run in (self.run_dir, second_run):
+            path = run / "run.json"
+            run_doc = json.loads(path.read_text())
+            run_doc["profile_id"] = profile["profile_id"]
+            path.write_text(json.dumps(run_doc), encoding="utf-8")
+            bind_fixture_profile(run, profile)
+        for path in sorted(second_run.glob("S-*.json")):
+            snapshot = json.loads(path.read_text())
+            next(e for e in snapshot["elements"] if e["selector"] == "#hint")["selector"] = "#later-hint"
+            path.write_text(json.dumps(snapshot), encoding="utf-8")
+
+        def export(run, out, title, path):
+            return self.run_cli("swarm", "--runs", str(run), "--profiles", str(self.profiles_path), "--no-gaze",
+                                "--bundle", "--out", str(out), "--title", title, "--audience", str(path))
+
+        def hashes(out):
+            return {p.name: sha256_file(p) for p in out.iterdir()}
+
+        reused = self.root / "report"
+        empty = self.root / "empty"
+        fresh = self.root / "fresh"
+        empty.mkdir()
+        code, _, err = export(self.run_dir, reused, "First report", audience_path)
+        self.assertEqual(code, cli.EXIT_OK, err)
+        (reused / "notes.txt").write_text("unrelated user notes\n", encoding="utf-8")
+        before = hashes(reused)
+        self.assertEqual(set(before), {"analyses.json", "findings.json", "report.md", "bundle.json", "notes.txt"})
+        report_name = f"- {profile['profile_id']}: {segment_name} —"
+        self.assertIn(report_name, (reused / "report.md").read_text(encoding="utf-8"))
+        for out, expected in ((reused, before), (empty, {}), (fresh, None)):
+            with self.subTest(out=out.name):
+                code, stdout, err = export(second_run, out, "Next report", malformed)
+                self.assertEqual((code, stdout, err), (cli.EXIT_USAGE, "", "ERROR: 'name_ko'\n"))
+                self.assertEqual(hashes(out) if out.exists() else None, expected)
+
+        code, _, err = export(second_run, reused, "Next report", audience_path)
+        self.assertEqual(code, cli.EXIT_OK, err)
+        after = hashes(reused)
+        self.assertEqual(set(after), set(before))
+        for name in ("analyses.json", "findings.json", "report.md"):
+            self.assertNotEqual(after[name], before[name])
+        self.assertEqual(after["notes.txt"], before["notes.txt"])
+        report_text = (reused / "report.md").read_text(encoding="utf-8")
+        self.assertIn("# Next report\n", report_text)
+        self.assertIn(report_name, report_text)
+
     def test_matching_scenario_is_bound_and_reaches_run_health(self):
         code, _, err = self.analyze("--scenario", str(self.matching))
         self.assertEqual(code, cli.EXIT_OK, err)
