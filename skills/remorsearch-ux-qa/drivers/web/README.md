@@ -718,6 +718,11 @@ screenshot-only replies retain their channel limits. Analysis failure exits 4
 while the measured product `status` and `success` remain in `run.json` and the
 receipt. Commands without `--analyze` keep their existing behavior.
 
+If `swarm` exits `3` for degraded coverage, all three reports can still be
+present in `swarm/`. Check `analysis.status` rather than file presence: it is
+`failed`, `analysis.exit_code` is `3`, and the driver exits `4`. The recorded
+task's `status` and `success` are unchanged.
+
 `drive_client.mjs` accepts `health`, `act`, `note`, `finish`, `inspect`, and
 `observe` / `screenshot` / `snapshot` (three names for the existing snapshot
 endpoint). `act` and `note` require a JSON object; `finish` accepts one optionally;
