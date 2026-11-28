@@ -535,6 +535,80 @@ class ScenarioBindingContract(unittest.TestCase):
                                  (cli.EXIT_OK, "", "ok", []))
                 self.assertNotIn("실행 상태 경고", report)
 
+    def test_swarm_reports_only_unmeasured_web_reflow_pass_failure(self):
+        profile = json.loads(self.profiles_path.read_text())["profiles"][0]
+        bind_fixture_profile(self.run_dir, profile)
+        run_path = self.run_dir / "run.json"
+        original = json.loads(run_path.read_text())
+        web = {**original["driver"], "name": "playwright-web"}
+        private = "https://synthetic.invalid/<outer-failure-detail>"
+        warning = f"reflow pass failed: {private}"
+        prepass = "reflow pass skipped: finish browser budget exhausted"
+        note = "RF-01 복제 검사 미측정: 복제 검사 중단. 해당 화면을 다시 기록하세요."
+        out = self.root / "swarm-outer-reflow"
+
+        def swarm(dossier, *flags):
+            run_path.write_text(json.dumps({**original, "driver": web, **dossier}), encoding="utf-8")
+            code, stdout, stderr = self.run_cli("swarm", "--runs", str(self.run_dir), "--profiles",
+                                                 str(self.profiles_path), "--out", str(out), "--bundle", *flags)
+            products = {name: (out / name).read_text(encoding="utf-8") for name in
+                        ("analyses.json", "findings.json", "report.md", "bundle.json")}
+            analysis = json.loads(products["analyses.json"])["analyses"][0]
+            findings = json.loads(products["findings.json"])["findings"]
+            self.assertNotIn(private, stdout + stderr + "".join(products.values()))
+            self.assertEqual((analysis["profile_binding_status"], analysis["verified_owner_profile_id"]),
+                             ("matched", "EP-01"))
+            return code, stderr, analysis, findings, products
+
+        empty = {"reflow": []}
+        _, _, clean, clean_findings, clean_products = swarm(empty)
+        for flags, warnings, outcome in [
+            ((), [warning], cli.EXIT_DEGRADED),
+            (("--allow-degraded",), [warning], cli.EXIT_OK),
+            ((), [prepass, warning, warning], cli.EXIT_DEGRADED),
+        ]:
+            with self.subTest(flags=flags, warning_count=len(warnings)):
+                code, err, analysis, findings, products = swarm({**empty, "warnings": warnings}, *flags)
+                self.assertEqual((code, analysis["health"], analysis["limitations"]), (outcome, "degraded", [note]))
+                self.assertEqual((analysis["run_status"], analysis["run_success"]), ("completed", True))
+                self.assertIn("run health:", err)
+                self.assertIn(note, products["report.md"].split("## 2.", 1)[0])
+                self.assertEqual(json.loads(products["bundle.json"])["notes"]["limitations"], [note])
+                self.assertEqual((analysis["observations"], findings), (clean["observations"], clean_findings))
+        with self.subTest("already failed"):
+            code, err, analysis, _, _ = swarm({**empty, "warnings": [warning], "status": "failed", "success": False})
+            self.assertEqual((code, analysis["health"], analysis["run_success"]), (cli.EXIT_DEGRADED, "failed", False))
+            self.assertIn("run health:", err)
+            self.assertIn(note, analysis["limitations"])
+
+        for label, dossier in [
+            ("no reflow", {"warnings": [warning]}),
+            ("null reflow", {"reflow": None, "warnings": [warning]}),
+            ("non-web", {**empty, "driver": original["driver"], "warnings": [warning]}),
+            ("non-list warnings", {**empty, "warnings": warning}),
+            ("unrelated", {**empty, "warnings": ["unrelated"]}),
+            ("approximate prefix", {**empty, "warnings": [f"an unrelated message: {warning}", "reflow pass failed:reason"]}),
+            ("empty reason", {**empty, "warnings": ["reflow pass failed: ", "reflow pass failed: \t "]}),
+            ("not one line", {**empty, "warnings": [f"{warning}\n", f"{warning}\rmore"]}),
+        ]:
+            with self.subTest(label):
+                code, err, analysis, _, products = swarm(dossier)
+                self.assertEqual((code, err, analysis["health"], products), (cli.EXIT_OK, "", "ok", clean_products))
+        code, _, analysis, _, _ = swarm({**empty, "warnings": [prepass]})
+        self.assertEqual((code, analysis["health"]), (cli.EXIT_DEGRADED, "degraded"))
+        self.assertIn("종료 시간 한도", analysis["limitations"][0])
+        self.assertNotIn(note, analysis["limitations"])
+
+        measured = {"snapshot_id": "S-R-1-000", "width": 320, "client_width": 320, "scroll_width": 320,
+                    "viewport_overflow_x": "auto", "root_clips": False, "offenders": [],
+                    "lost": [{"dom_id": "pay", "tag": "button", "ancestor_ids": [], "visible_full": 1,
+                              "visible_320": 0, "box": {"x": 330, "y": 250, "w": 90, "h": 44}, "text": "결제하기"}]}
+        _, _, _, measured_findings, measured_products = swarm({"reflow": [measured]})
+        code, err, analysis, findings, products = swarm({"reflow": [measured], "warnings": [warning]})
+        self.assertEqual((code, err, analysis["health"]), (cli.EXIT_OK, "", "ok"))
+        self.assertEqual([f["severity"] for f in findings if f["check_id"] == "RF-01"], ["P2"])
+        self.assertEqual((findings, products), (measured_findings, measured_products))
+
     def test_matching_scenario_is_bound_and_reaches_run_health(self):
         code, _, err = self.analyze("--scenario", str(self.matching))
         self.assertEqual(code, cli.EXIT_OK, err)

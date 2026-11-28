@@ -2190,6 +2190,44 @@ async function adaptationTest(base, tmp) {
   } finally {
     if (session.browserTransport) await session.browserTransport.close([session.context]);
   }
+  const failureDir = path.join(tmp, 'runs', 'R-reflow-context-init-failure');
+  fs.mkdirSync(failureDir, { recursive: true });
+  const failure = new WebSession({ pw, pwInfo: info, scenario: { ...scenario, steps: [] },
+    runDir: failureDir, runId: 'R-reflow-context-init-failure', profileId: 'EP-S24',
+    deviceRequest: { id: 'galaxy-s24' }, mode: 'scripted', warnings: [],
+    options: { headed: false, settleMs: 0, feedbackTimeoutMs: 0, focusWalk: false, reflow: true,
+      visualFeedback: false, locale: 'ko-KR', timezoneId: 'Asia/Seoul' } });
+  const sentinel = 'owned reflow context initialization failure';
+  const privateDetail = 'OWNED-REFLOW-SECOND-LINE-52c188';
+  let initWitness = false;
+  try {
+    await failure.start();
+    const original = failure.browser;
+    const initial = failure.lastSnapshotId;
+    const copyReady = failure.reflowScreens.length > 0 && failure.reflow.length === 0;
+    let attempts = 0;
+    try {
+      failure.browser = { newContext: async () => {
+        attempts++;
+        throw new Error(`${sentinel}\n${privateDetail}`);
+      } };
+      await failure.reflowPass();
+    } finally { failure.browser = original; }
+    const fin = await failure.finish();
+    const raw = JSON.parse(fs.readFileSync(path.join(failureDir, 'run.json'), 'utf8'));
+    const safeArtifacts = fs.readdirSync(failureDir, { withFileTypes: true }).filter((file) => file.isFile()).every((file) => {
+      const data = fs.readFileSync(path.join(failureDir, file.name));
+      return !data.includes(privateDetail) && (file.name === 'run.json' || !data.includes(sentinel));
+    });
+    initWitness = copyReady && attempts === 1 && fin.exitCode === 0 && raw.status === 'completed'
+      && raw.success === true && raw.success_basis === 'measured' && raw.snapshots.some((snap) => snap.snapshot_id === initial)
+      && Array.isArray(raw.reflow) && raw.reflow.length === 0 && Array.isArray(raw.warnings)
+      && raw.warnings.filter((warning) => warning === `reflow pass failed: ${sentinel}`).length === 1
+      && JSON.stringify(raw) === JSON.stringify(fin.run) && safeArtifacts;
+  } catch { /* Keep injected error text and artifact contents out of the selftest log. */ }
+  finally { if (failure.browserTransport) await failure.browserTransport.close([failure.context]); }
+  check('RF01 outer context initialization: persisted unmeasured run keeps measured task success', initWitness);
+
   const cleanScenario = { schema_version: 'ergo-scenario.v1', scenario_id: 'SC-adaptation-clean',
     surface: { kind: 'web', url: `${base}/reflow_adaptation.html?clean` }, targets: {},
     steps: [{ action: 'type', target: '#private-note', text: 'TYPED-PRIVATE-SENTINEL-8fb2', redact: true }],
