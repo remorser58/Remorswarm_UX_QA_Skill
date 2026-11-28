@@ -190,6 +190,13 @@ def _note_unmeasured_reflow(run: dict[str, Any], analysis: dict[str, Any]) -> No
         reasons.append(f"재현 오류 {errors}건")
     if lost_styles:
         reasons.append(f"CSS 규칙 손실 {lost_styles}건")
+    # Legacy web dossiers store the pre-pass skip only as a fixed warning.
+    driver = run.get("driver")
+    warnings = run.get("warnings")
+    if (not records and isinstance(driver, dict) and driver.get("name") == "playwright-web"
+            and isinstance(warnings, list)
+            and "reflow pass skipped: finish browser budget exhausted" in warnings):
+        reasons.append("종료 시간 한도로 복제 검사 시작 전 생략")
     if reasons:
         if analysis["health"] == "ok":
             analysis["health"] = "degraded"
