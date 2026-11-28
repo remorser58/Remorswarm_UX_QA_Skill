@@ -2970,6 +2970,17 @@ async function analyzePrivacyBudgetTest(base, tmp) {
       fin.run.warnings.some((w) => /focus walk.*budget/.test(w))
       && fin.run.warnings.some((w) => /adaptation pass skipped.*budget/.test(w))
       && fin.run.warnings.some((w) => /reflow pass skipped.*budget/.test(w)));
+    const runPath = path.join(budget.runDir, 'run.json');
+    let persisted;
+    try {
+      persisted = JSON.parse(fs.readFileSync(runPath, 'utf8'));
+    } catch { /* A missing or unreadable artifact fails the fixed check below. */ }
+    check('analysis finish budget: persisted reflow skip has exact warning and no rows',
+      fin.runPath === runPath && persisted?.status === 'completed' && persisted.success === true
+      && persisted.success_basis === 'measured' && Array.isArray(persisted.warnings)
+      && persisted.warnings.includes('reflow pass skipped: finish browser budget exhausted')
+      && Array.isArray(persisted.reflow) && persisted.reflow.length === 0
+      && JSON.stringify(persisted) === JSON.stringify(fin.run));
   } finally { await budget.finish(); }
 }
 
