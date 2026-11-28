@@ -285,6 +285,46 @@ class ScenarioBindingContract(unittest.TestCase):
             path.write_text(json.dumps(snap))
         self.assertEqual(gaze_measurements(), baseline)
 
+    def test_swarm_invalid_audience_leaves_existing_outputs_untouched(self):
+        profile = json.loads(self.profiles_path.read_text())["profiles"][0]
+        bind_fixture_profile(self.run_dir, profile)
+        second_root = self.root / "second-run"
+        second_root.mkdir()
+        second_run = make_run(second_root)
+        bind_fixture_profile(second_run, profile)
+        for path in sorted(second_run.glob("S-*.json")):
+            snapshot = json.loads(path.read_text())
+            next(e for e in snapshot["elements"] if e["selector"] == "#hint")["selector"] = "#later-hint"
+            path.write_text(json.dumps(snapshot), encoding="utf-8")
+
+        def export(run, out, title, *extra):
+            return self.run_cli("swarm", "--runs", str(run), "--profiles", str(self.profiles_path), "--no-gaze",
+                                "--bundle", "--out", str(out), "--title", title, *extra)
+
+        missing = self.root / "missing-audience.json"
+        malformed = self.root / "malformed-audience.json"
+        malformed.write_text("{", encoding="utf-8")
+        for audience_path, diagnostic in ((missing, f"not a regular file: {missing}"), (malformed, "invalid JSON:")):
+            with self.subTest(audience=audience_path.name):
+                out = self.root / (audience_path.stem + "-output")
+                code, _, err = export(self.run_dir, out, "First report")
+                self.assertEqual(code, cli.EXIT_OK, err)
+                (out / "notes.txt").write_text("unrelated user notes\n", encoding="utf-8")
+                before = {p.name: sha256_file(p) for p in out.iterdir()}
+                self.assertEqual(set(before), {"analyses.json", "findings.json", "report.md", "bundle.json", "notes.txt"})
+
+                code, stdout, err = export(second_run, out, "Next report", "--audience", str(audience_path))
+                self.assertEqual(code, cli.EXIT_USAGE, err)
+                self.assertEqual(stdout, "")
+                self.assertIn(diagnostic, err)
+                self.assertEqual({p.name: sha256_file(p) for p in out.iterdir()}, before)
+
+                code, _, err = export(second_run, out, "Next report")
+                self.assertEqual(code, cli.EXIT_OK, err)
+                self.assertIn("# Next report\n", (out / "report.md").read_text(encoding="utf-8"))
+                self.assertNotEqual(sha256_file(out / "findings.json"), before["findings.json"])
+                self.assertEqual(sha256_file(out / "notes.txt"), before["notes.txt"])
+
     def test_matching_scenario_is_bound_and_reaches_run_health(self):
         code, _, err = self.analyze("--scenario", str(self.matching))
         self.assertEqual(code, cli.EXIT_OK, err)

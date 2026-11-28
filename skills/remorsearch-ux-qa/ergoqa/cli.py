@@ -208,6 +208,7 @@ def cmd_swarm(args: argparse.Namespace) -> int:
     scenarios = _load_scenarios(args.scenario or [])
     analyses = _analyses(args, profiles, scenarios)
     findings = swarm.aggregate(analyses, profiles)
+    audience_doc = load_json(args.audience) if getattr(args, "audience", None) else None
     out = Path(args.out)
     _write_json(out / "analyses.json", {"analyses": analyses})
     listed, summaries = swarm.present([f for f in findings if f.get("tier") != "hypothesis"], args.list_threshold)
@@ -216,7 +217,6 @@ def cmd_swarm(args: argparse.Namespace) -> int:
                                         "unit_severity_counts": swarm.severity_counts(problem_units),
                                         "list_threshold": args.list_threshold, "listed_finding_ids": [f["id"] for f in listed],
                                         "summaries": summaries})
-    audience_doc = load_json(args.audience) if getattr(args, "audience", None) else None
     plan = None
     raw = load_json(args.profiles)
     if isinstance(raw, dict) and isinstance(raw.get("plan"), dict):
