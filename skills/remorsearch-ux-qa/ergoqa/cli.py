@@ -203,7 +203,10 @@ def _note_unmeasured_reflow(run: dict[str, Any], analysis: dict[str, Any]) -> No
                     reasons.append("복제 검사 중단")
                     break
         else:
-            if "reflow pass skipped: finish browser budget exhausted" in warnings:
+            skipped = "reflow pass skipped: finish browser budget exhausted" in warnings
+            if "reflow pass stopped at its 40000 ms budget" in warnings:
+                reasons.append("복제 검사 중단" if skipped else "시간 한도로 복제 검사 중단")
+            elif skipped:
                 reasons.append("종료 시간 한도로 복제 검사 시작 전 생략")
     if reasons:
         if analysis["health"] == "ok":
