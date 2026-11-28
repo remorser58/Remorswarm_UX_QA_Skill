@@ -1,0 +1,30 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Scrolled focus paint cover fixture</title>
+<style>
+  html, body { margin: 0; min-width: 2440px; min-height: 1850px; background: white }
+  button { position: absolute; top: 250px; width: 120px; height: 44px; z-index: 3; background: #046db5; color: white; border: 0 }
+  button:focus-visible { outline: 3px solid #063; outline-offset: 1px }
+  #back-target { left: 230px }
+  #fixed-target { left: 560px }
+  #sticky-target { left: 880px }
+  .fixed { position: fixed; pointer-events: none; background: #c10051 }
+  #underlay { left: 0; top: 0; width: 350px; height: 310px; z-index: 2 }
+  #fixed-cover { left: 470px; top: 140px; width: 150px; height: 70px; z-index: 4 }
+  #sticky-wrap { position: absolute; left: 870px; top: 215px; height: 400px; width: 150px; z-index: 4; pointer-events: none }
+  #sticky-cover { position: sticky; top: 137px; height: 78px; background: #c10051 }
+  #status { position: absolute; left: 230px; top: 355px }
+</style>
+<button id="back-target">Uncovered front control</button>
+<button id="fixed-target">Behind a fixed layer</button>
+<button id="sticky-target">Behind a sticky layer</button>
+<div class="fixed" id="underlay" aria-hidden="true"></div>
+<div class="fixed" id="fixed-cover" aria-hidden="true"></div>
+<div id="sticky-wrap" aria-hidden="true"><div id="sticky-cover"></div></div>
+<p id="status">Not activated</p>
+<script>
+  document.addEventListener('focusin', (event) => {
+    if (event.target.matches('button')) window.scrollTo(80, 100);
+  });
+  document.querySelector('#sticky-target').onclick = () => document.querySelector('#status').textContent = 'Sticky activated';
+</script>

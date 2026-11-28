@@ -2677,6 +2677,13 @@ def check_focus_management(ctx: Context) -> list[Observation]:
     if not opened and moved_here and not focus.get("on_body") and focus.get("dom_id"):
         target = next((e for e in ctx.elements if e.get("dom_id") == focus["dom_id"]), None)
         covered = (target or {}).get("occluded_fraction")
+        covered_by = (target or {}).get("occluded_by")
+        paint = focus.get("paint_cover")
+        if (not (isinstance(covered, (int, float)) and covered >= 0.999)
+                and isinstance(paint, dict) and isinstance(paint.get("fraction"), (int, float))
+                and type(paint["fraction"]) is not bool and 0.999 <= paint["fraction"] <= 1
+                and paint.get("user_opened") is False and isinstance(paint.get("selector"), str)):
+            covered, covered_by = paint["fraction"], paint["selector"]
         under_layer = target is not None and any(
             isinstance(layer, dict) and _inside({**target["box"], "w": 1, "h": 1, "x": target["box"]["x"] + target["box"]["w"] / 2,
                                                   "y": target["box"]["y"] + target["box"]["h"] / 2}, layer.get("box") or {"x": 0, "y": 0, "w": 0, "h": 0})
@@ -2686,7 +2693,7 @@ def check_focus_management(ctx: Context) -> list[Observation]:
             out.append(Observation(
                 "SM-06", *base, [target["id"]], element_key(target),
                 {"name": "focus_obscured_fraction", "value": round(float(covered), 3), "unit": "fraction", "threshold": 1.0, "comparator": "<",
-                 "by": target.get("occluded_by"), "phase": "step", "criterion": "2.4.11", "user_opened": False},
+                 "by": covered_by, "phase": "step", "criterion": "2.4.11", "user_opened": False},
                 False, "P2",
                 f"이 단계 뒤 키보드 초점이 '{target.get('name') or target.get('selector')}'에 있지만 다른 요소가 그 칸을 완전히 가립니다(WCAG 2.4.11).",
             ))

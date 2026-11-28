@@ -20,7 +20,7 @@
     "profile_file_sha256": "043d7f8ad1311662abab9bd8f0dca3e8430bb8827d4dcdfd4cc26667912000f8",
     "profile_sha256": "00f7797b72cd4ad35d76608bd9ba9f481f73cf5b43df0b9139349ab4ea61fc12",
     "condition_sha256": "0b02c20c324248b1de8d91f400c6d59a9db1608668a145d214eadff9fc20f4ed",
-    "model_revision_sha256": "327aa69f209475d6ec6234fe0fdd01584801d7c246ceed3adf3f40671498c24f"
+    "model_revision_sha256": "a42d4d2ab5ba0c50fc44e25996ad5aab192d6f93020e86d2f1100db7b8680d6b"
   },
   "driver": {
     "name": "synthetic-example",
