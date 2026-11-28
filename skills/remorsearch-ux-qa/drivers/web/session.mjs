@@ -340,11 +340,52 @@ function reflowInfo(arg) {
   for (const t of document.querySelectorAll('[aria-controls]')) for (const id of t.getAttribute('aria-controls').split(/\s+/)) if (id) controlledIds.add(id);
   const CAROUSEL = /(^|[\s_-])(carousel|swiper|slick|splide|glide|flickity|slider)([\s_-]|$)/i;
   const carousel = (m) => /carousel|slide/i.test(m.getAttribute('aria-roledescription') || '') || CAROUSEL.test(typeof m.className === 'string' ? m.className : '');
-  // For an element that owns text, the share of its box left visible by clipping
-  // ancestors up to the first scroll container (content there is reachable), and by the
-  // viewport sideways when a fixed box holds it. Null when it owns no text, is not
-  // visible, sits in a collapsed disclosure or a carousel track (reachable through its
-  // controls), or in a fixed box wholly off screen (an off-canvas menu).
+  // The HTML body only supplies viewport overflow when it generates a box
+  // and the root's axes and containment allow it. A boxless body does neither
+  // that nor local clipping; a non-propagating body box may clip its content.
+  const root = document.documentElement;
+  const rootStyle = getComputedStyle(root);
+  const body = document.body;
+  const bodyStyle = body ? getComputedStyle(body) : null;
+  const contained = (style) => style.contain !== 'none' || (style.containerType || 'normal') !== 'normal'
+    || (style.contentVisibility || 'visible') !== 'visible';
+  const hasBodyBox = root.localName === 'html' && root.namespaceURI === 'http://www.w3.org/1999/xhtml'
+    && body?.localName === 'body' && body.parentElement === root && !['none', 'contents'].includes(bodyStyle.display);
+  const bodySuppliesViewport = hasBodyBox && rootStyle.display !== 'none'
+    && rootStyle.overflowX === 'visible' && rootStyle.overflowY === 'visible'
+    && !contained(rootStyle) && !contained(bodyStyle);
+  const localBodyBox = hasBodyBox && !bodySuppliesViewport && bodyStyle.display !== 'inline'
+    && (bodyStyle.overflowX === 'hidden'
+      || (bodyStyle.overflowX === 'clip' && (!bodyStyle.overflowClipMargin || bodyStyle.overflowClipMargin === '0px')))
+    && body.getClientRects().length === 1 ? body.getBoundingClientRect() : null;
+  // Computed style corroborates the browser's ancestor: offsetParent alone
+  // can also point to the body fallback or an effective-zoom boundary.
+  const anchorEffects = ['transform', 'translate', 'rotate', 'scale', 'perspective', 'filter', 'backdrop-filter'];
+  const establishesAbsoluteBlock = (style) => {
+    if (['none', 'contents'].includes(style.display)) return false;
+    if (style.position !== 'static') return true;
+    if (style.display === 'inline') return false; // non-replaced inline boxes are not transformable
+    return /(?:^| )(?:layout|paint|strict|content)(?: |$)/.test(style.contain) || style.contentVisibility === 'auto'
+      || anchorEffects.some((prop) => {
+        const value = style.getPropertyValue(prop);
+        return value && value !== 'none';
+      })
+      || style.willChange.split(',').some((prop) => anchorEffects.includes(prop.trim()));
+  };
+  const bodyEstablishesContainingBlock = localBodyBox && establishesAbsoluteBlock(bodyStyle);
+  const escapesBody = (n, style) => {
+    if (style.position !== 'absolute') return false;
+    const parent = n.offsetParent;
+    if (!parent || (parent !== body && !body.contains(parent))) return true;
+    for (let m = parent; !top(m); m = up(m)) {
+      if (establishesAbsoluteBlock(getComputedStyle(m))) return false;
+    }
+    return !bodyEstablishesContainingBlock;
+  };
+  const nativeControl = (n) => n.matches('button, input:not([type="hidden"]), select, textarea, a[href], summary');
+  // Visible box share for text, plus native controls and labeled images when
+  // testing a separate body-local clip. Keep the existing own-scroll, disclosure,
+  // carousel and fixed/off-canvas boundaries.
   const share = (n) => {
     let own = false;
     for (const c of n.childNodes) {
@@ -353,17 +394,22 @@ function reflowInfo(arg) {
         break;
       }
     }
-    if (!own) return null;
+    if (!own && !((arg.mode === 'scan' || localBodyBox) && (
+      nativeControl(n) || (n.localName === 'img' && n.getAttribute('alt')?.trim())))) return null;
     const r = n.getBoundingClientRect();
     if (r.width <= 1 || r.height <= 1 || !shown(n)) return null;
     let x0 = r.left;
     let y0 = r.top;
     let x1 = r.right;
     let y1 = r.bottom;
-    let fixed = getComputedStyle(n).position === 'fixed';
+    const style = getComputedStyle(n);
+    let fixed = style.position === 'fixed';
     let fixedBox = fixed ? r : null;
-    for (let m = up(n); !fixed && !top(m); m = up(m)) {
+    let bodyAffects = !!localBodyBox && !escapesBody(n, style);
+    let m = up(n);
+    for (; !fixed && !top(m); m = up(m)) {
       const cs = getComputedStyle(m);
+      if (bodyAffects && escapesBody(m, cs)) bodyAffects = false;
       if (['auto', 'scroll'].includes(cs.overflowX) || ['auto', 'scroll'].includes(cs.overflowY)) break;
       const clipX = ['hidden', 'clip'].includes(cs.overflowX);
       const clipY = ['hidden', 'clip'].includes(cs.overflowY);
@@ -386,31 +432,49 @@ function reflowInfo(arg) {
         fixedBox = m.getBoundingClientRect();
       }
     }
+    let bodyClipped = false;
+    if (bodyAffects && !fixed && m === body && localBodyBox.width > 1) {
+      const before = Math.max(0, x1 - x0);
+      // A border box is a conservative upper bound for the default clip edge.
+      x0 = Math.max(x0, localBodyBox.left);
+      x1 = Math.min(x1, localBodyBox.right);
+      bodyClipped = Math.max(0, x1 - x0) < before;
+    }
     if (fixed) {
       if (fixedBox.right <= 0 || fixedBox.left >= vw) return null; // off-canvas
       x0 = Math.max(x0, 0);
       x1 = Math.min(x1, vw);
     }
-    return Math.round(100 * Math.max(0, x1 - x0) * Math.max(0, y1 - y0) / (r.width * r.height)) / 100;
+    const fraction = (w) => Math.round(100 * Math.max(0, w) * Math.max(0, y1 - y0) / (r.width * r.height)) / 100;
+    return { own, bodyClipped, fraction: fraction(x1 - x0),
+      inView: fraction(Math.min(x1, vw) - Math.max(x0, 0)) };
   };
   if (arg.mode === 'scan' && !arg.probe) {
     const vis = [];
+    const inView = [];
     const off = [];
     for (const n of all) {
-      vis.push(share(n));
+      const seen = share(n);
+      vis.push(seen?.own ? seen.fraction : null);
+      inView.push(seen?.inView ?? null);
       const r = n.getBoundingClientRect();
       off.push(r.width > 1 && r.height > 1 && (r.right <= 0 || r.left >= vw) ? 1 : 0);
     }
-    return { vis, off, count: all.length, capped };
+    return { vis, inView, off, count: all.length, capped };
   }
   const limit = arg.limit;
   const full = arg.full || { vis: [], off: [] };
   const se = document.scrollingElement || document.documentElement;
   const cw = se.clientWidth;
   const sw = se.scrollWidth;
-  const clipX = (n) => ['hidden', 'clip'].includes(getComputedStyle(n).overflowX);
-  const rootClips = clipX(document.documentElement) || (document.body ? clipX(document.body) : false);
-  const out = { client_width: cw, scroll_width: sw, root_clips: rootClips, offenders: [], lost: [], exempt_right: null, scan_capped: capped || !!full.capped };
+  // At the viewport, 'clip' is used as 'hidden'; scrollWidth is still geometric.
+  const x = rootStyle.display === 'none' ? null : (bodySuppliesViewport ? bodyStyle : rootStyle).overflowX;
+  const viewportOverflowX = x === 'visible' || x === 'auto' ? 'auto'
+    : x === 'clip' || x === 'hidden' ? 'hidden'
+    : x === 'scroll' ? 'scroll' : 'unknown';
+  const rootClips = viewportOverflowX === 'hidden';
+  const out = { client_width: cw, scroll_width: sw, root_clips: rootClips, viewport_overflow_x: viewportOverflowX,
+    offenders: [], lost: [], exempt_right: null, scan_capped: capped || !!full.capped };
   const ids = (n) => {
     const list = [];
     for (let m = up(n); m && list.length < 6; m = up(m)) if (idOf(m)) list.push(idOf(m));
@@ -563,16 +627,26 @@ function reflowInfo(arg) {
     }
     return { states, lost, count: all.length, evaluated: states.length, scan_capped: capped, applied: arg.apply ? plans.length > 0 && !gaps.has('override_unverified') : false, gaps: [...gaps] };
   }
-  // Text visible at the device width but cut away by clipping containers here.
+  // Content visible at the device width but cut away by clipping containers here.
   if (full.vis.length) {
+    const clippedBodyControls = new Set();
     for (let i = 0; i < all.length && out.lost.length < limit; i++) {
-      if (full.vis[i] == null || full.vis[i] < 0.9) continue;
-      const now = share(all[i]);
-      if (now == null || now >= 0.5) continue;
+      if (!(full.vis[i] >= 0.9) && !(localBodyBox && full.inView?.[i] >= 0.9)) continue;
       const n = all[i];
-      if (twoD(n) || hidden(n)) continue;
-      out.lost.push({ dom_id: idOf(n) || null, ancestor_ids: ids(n), tag: n.localName, visible_full: full.vis[i], visible_320: now,
-        box: box(n.getBoundingClientRect()), text: (n.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 60) });
+      const now = share(n);
+      if (!now || now.fraction >= 0.5 || twoD(n) || hidden(n)) continue;
+      const before = now.bodyClipped ? full.inView?.[i] : (now.own ? full.vis[i] : null);
+      if (!(before >= 0.9)) continue;
+      if (now.bodyClipped) {
+        // A lost native control and its clipped label are the same finding.
+        let owner = up(n);
+        while (owner && !top(owner) && !clippedBodyControls.has(owner)) owner = up(owner);
+        if (!top(owner)) continue;
+        if (nativeControl(n)) clippedBodyControls.add(n);
+      }
+      out.lost.push({ dom_id: idOf(n) || null, ancestor_ids: ids(n), tag: n.localName, visible_full: before, visible_320: now.fraction,
+        box: box(n.getBoundingClientRect()), text: (n.innerText || (now.bodyClipped ? n.getAttribute('aria-label') || n.getAttribute('alt') : '') || '')
+          .replace(/\s+/g, ' ').trim().slice(0, 60) });
     }
   }
   const pageOverflow = sw > cw + 4 || rootClips;
@@ -1335,7 +1409,7 @@ export class WebSession {
           const full = await page.evaluate(reflowInfo, { mode: 'scan' });
           await page.setViewportSize({ width: REFLOW_WIDTH, height: this.vh });
           await sleep(50);
-          const narrow = await page.evaluate(reflowInfo, { limit: 20, full: { vis: full.vis, off: [], capped: full.capped } });
+          const narrow = await page.evaluate(reflowInfo, { limit: 20, full: { vis: full.vis, inView: full.inView, off: [], capped: full.capped } });
           await page.setViewportSize({ width: REFLOW_WIDTH, height: touch ? 568 : 256 });
           await sleep(50);
           const info = await page.evaluate(reflowInfo, { limit: 20, full: { vis: [], off: full.off, capped: full.capped } });

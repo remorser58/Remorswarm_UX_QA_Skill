@@ -2715,6 +2715,23 @@ def _right_edge(offender: dict[str, Any]) -> float:
     return float(box.get("x") or 0) + float(box.get("w") or 0)
 
 
+def reflow_scroll_state(rec: dict[str, Any]) -> str:
+    """Separate geometric overflow from the effective viewport scrolling policy."""
+    policy = rec.get("viewport_overflow_x")
+    extent = (rec.get("scroll_width") or 0) > (rec.get("client_width") or 0) + REFLOW_TOLERANCE_PX
+    if policy == "hidden":
+        return "clipped"
+    if policy in ("auto", "scroll"):
+        return "scrollable" if extent else "none"
+    if "viewport_overflow_x" in rec:
+        return "unknown" if extent else "none"
+    # Older recordings conflate body-local clipping with propagated root
+    # clipping. Retain their measured extents, not a guess about user scrolling.
+    if rec.get("root_clips"):
+        return "unknown" if extent else "clipped"
+    return "scrollable" if extent else "none"
+
+
 def check_reflow(run: dict[str, Any], profile: dict[str, Any], snapshots: dict[str, dict[str, Any]] | None = None) -> list[Observation]:
     """RF-01 (WCAG 1.4.10): at 320 CSS px wide, content that sticks out to the right.
 
@@ -2733,7 +2750,12 @@ def check_reflow(run: dict[str, Any], profile: dict[str, Any], snapshots: dict[s
         if not isinstance(rec, dict) or rec.get("error") or rec.get("styles_lost"):
             continue
         width = rec.get("client_width") or 0
-        scrolls = (rec.get("scroll_width") or 0) > width + REFLOW_TOLERANCE_PX
+        policy = reflow_scroll_state(rec)
+        scrolls = policy == "scrollable"
+        clipped = policy == "clipped"
+        how_page = ("가로 스크롤이 생깁니다" if scrolls else
+                    "가로 스크롤과 잘림을 구분하려면 다시 기록해야 합니다" if policy == "unknown"
+                    else "화면 밖으로 잘려 정적 화면에 표시되지 않습니다")
         snap = (snapshots or {}).get(rec.get("snapshot_id"))
         for lost in rec.get("lost") or []:
             # Visible at the device width, cut away by a clipping container at 320 px.
@@ -2754,7 +2776,7 @@ def check_reflow(run: dict[str, Any], profile: dict[str, Any], snapshots: dict[s
                 f"'{(lost.get('text') or anchor)[:30]}'이(가) 원래 폭에서는 보이지만 320 CSS px 폭의 정적 검사에서는 상자에 잘려 {100 * (lost.get('visible_320') or 0):.0f}%만 보입니다(WCAG 1.4.10).",
                 extra={"anchor_selectors": [anchor], "context_selectors": [f"#{a}" for a in lost.get("ancestor_ids") or [] if a]},
             ))
-        page_overflow = scrolls or bool(rec.get("root_clips"))
+        page_overflow = policy != "none"
         eligible = [off for off in rec.get("offenders") or [] if isinstance(off, dict)
                     and _right_edge(off) > width + REFLOW_TOLERANCE_PX and (page_overflow or off.get("fixed"))]
         listed = bool(eligible)
@@ -2768,11 +2790,11 @@ def check_reflow(run: dict[str, Any], profile: dict[str, Any], snapshots: dict[s
             seen.add(page_key)
             rights = [_right_edge(o) for o in eligible]
             names = [f"'{(o.get('text') or o.get('selector') or '')[:16]}'" for o in eligible[:3]]
-            how = "가로 스크롤이 생기거나 화면 밖으로 잘립니다" if scrolls else "화면 밖으로 잘려 볼 수 없습니다"
+            how = how_page
             out.append(Observation(
                 "RF-01", run["run_id"], profile["profile_id"], rec.get("snapshot_id"), None, [], page_key,
                 {"name": "right_edge_css_px", "value": max(rights), "unit": "css_px", "threshold": width, "comparator": "<=",
-                 "viewport_css_px": rec.get("width"), "page_scroll_width": rec.get("scroll_width"), "root_clips": bool(rec.get("root_clips")),
+                 "viewport_css_px": rec.get("width"), "page_scroll_width": rec.get("scroll_width"), "root_clips": clipped if policy != "unknown" else rec.get("root_clips"),
                  "offender_count": len(eligible), "in_fixed_bar": any(o.get("fixed") for o in eligible)},
                 False, "P2",
                 f"320 CSS px 폭의 정적 검사에서 이 화면이 재배치되지 않습니다: 요소 {len(eligible)}개({', '.join(names)} 등)가 오른쪽으로 넘쳐 "
@@ -2792,12 +2814,12 @@ def check_reflow(run: dict[str, Any], profile: dict[str, Any], snapshots: dict[s
             box = off.get("box") or {}
             right = (box.get("x") or 0) + (box.get("w") or 0)
             how = ("고정 막대 안에서 화면 밖으로 밀려 스크롤로도 볼 수 없습니다" if off.get("fixed")
-                   else "가로 스크롤이 생깁니다" if scrolls else "화면 밖으로 잘려 볼 수 없습니다")
+                   else how_page)
             out.append(Observation(
                 "RF-01", run["run_id"], profile["profile_id"], rec.get("snapshot_id"), None,
                 [element["id"]] if element else [], key,
                 {"name": "right_edge_css_px", "value": right, "unit": "css_px", "threshold": rec.get("client_width"), "comparator": "<=",
-                 "viewport_css_px": rec.get("width"), "page_scroll_width": rec.get("scroll_width"), "root_clips": bool(rec.get("root_clips")),
+                 "viewport_css_px": rec.get("width"), "page_scroll_width": rec.get("scroll_width"), "root_clips": clipped if policy != "unknown" else rec.get("root_clips"),
                  "in_fixed_bar": bool(off.get("fixed"))},
                 False, "P2",
                 f"320 CSS px 폭의 정적 검사에서 '{(off.get('text') or off.get('selector') or '')[:30]}'의 오른쪽 끝이 {right:.0f}px라 {how}(WCAG 1.4.10).",

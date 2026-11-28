@@ -1,0 +1,73 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Viewport overflow policy fixture</title>
+<style>
+  html, body { margin: 0; background: #fff; color: #151515; font: 16px/1.5 Arial, sans-serif; }
+  * { letter-spacing: 0px; word-spacing: 0px; line-height: 24px; }
+  h1 { font-size: 18px; margin: 8px; }
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(174px, 1fr)); gap: 12px; }
+  .grid section { padding: 6px; min-width: 0; background: #e9f5fb; }
+  .grid h2 { font-size: 16px; }
+  .html-clip { overflow-x: clip; }
+  .body-clip body, .local-body-clip body, .contained-body-clip body { overflow-x: clip; }
+  .local-body-clip { overflow-y: auto; }
+  .local-body-clip body, .contained-body-clip body { min-width: 360px; }
+  .contained-body-clip body { contain: layout; }
+  .html-clip .grid, .body-clip .grid, .hidden-content .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #ornament { position: absolute; left: 360px; top: 180px; width: 14px; height: 10px; background: #a31971; }
+  .hidden-content { overflow-x: hidden; }
+  #timer { position: absolute; left: 338px; top: 110px; width: 100px; }
+  #wide-table { width: 425px; }
+  .local-loss, .local-decor, .escaping-control, .sticky-loss { overflow-y: auto; }
+  .local-loss body, .contained-loss body, .local-decor body, .escaping-control body, .sticky-loss body { overflow-x: clip; }
+  .contained-loss body { contain: layout; }
+  .local-loss main, .contained-loss main, .local-decor main, .sticky-loss main { padding-inline-start: 332px; }
+  #pay { display: block; width: 124px; height: 42px; border: 0; color: white; background: #b6003b; }
+  #local-art { width: 124px; height: 42px; background: #b6003b; }
+  .escaping-control #pay { position: absolute; left: 332px; top: 80px; }
+  .boxless-local, .absolute-relative, .absolute-transform, .absolute-filter,
+  .absolute-nested, .absolute-nested-escape { overflow-y: auto; }
+  .boxless-body body, .boxless-local body { display: contents; overflow-x: clip; }
+  .boxless-body #pay, .boxless-local #pay { margin-inline-start: 332px; }
+  .absolute-relative body, .absolute-transform body, .absolute-filter body,
+  .absolute-nested body, .absolute-nested-escape body { overflow-x: clip; }
+  .absolute-relative body { position: relative; }
+  .absolute-transform body, .absolute-nested main { transform: translateZ(0); }
+  .absolute-filter body { filter: blur(0); }
+  .absolute-nested-escape main { position: absolute; top: 0; left: 0; width: 100%; }
+  .absolute-relative #pay, .absolute-transform #pay, .absolute-filter #pay,
+  .absolute-nested #pay, .absolute-nested-escape #pay { position: absolute; left: 332px; top: 80px; }
+  .sticky-loss #pay { position: sticky; top: 0; }
+  .fixed-control #pay { position: fixed; left: 265px; top: 80px; }
+  .nested-control main { overflow-x: auto; }
+  .nested-control #pay { margin-inline-start: 332px; }
+  @media (max-width: 340px) {
+    .icon-loss { overflow-y: auto; }
+    .icon-loss body { overflow-x: clip; }
+    .icon-loss main { padding-inline-start: 332px; }
+  }
+</style>
+<h1>Review delivery</h1>
+<main class="grid">
+  <section><h2>Delivery</h2><p>Awaiting review</p></section>
+  <section id="right"><h2>Payment</h2><p>Amount due today</p><button id="continue">Continue</button></section>
+</main>
+<span id="ornament" hidden></span><p id="timer" hidden>Timer 09:41</p>
+<table id="wide-table" hidden><tbody><tr><td>Column one</td><td>Column two</td></tr></tbody></table>
+<script>
+  const mode = new URLSearchParams(location.search).get('case');
+  document.documentElement.className = mode;
+  if (['html-clip', 'body-clip'].includes(mode)) document.querySelector('#ornament').hidden = false;
+  if (mode === 'hidden-content') document.querySelector('#timer').hidden = false;
+  if (mode === 'table') { document.querySelector('main').remove(); document.querySelector('#wide-table').hidden = false; }
+  if (['local-loss', 'contained-loss', 'local-decor', 'escaping-control', 'fixed-control', 'nested-control', 'icon-loss',
+       'sticky-loss', 'boxless-body', 'boxless-local', 'absolute-relative', 'absolute-transform', 'absolute-filter',
+       'absolute-nested', 'absolute-nested-escape'].includes(mode)) {
+    const main = document.querySelector('main');
+    main.className = '';
+    main.innerHTML = mode === 'local-decor' ? '<div id="local-art" aria-hidden="true"></div>'
+      : mode === 'icon-loss' ? '<button id="pay" aria-label="Confirm payment"></button>'
+      : mode === 'sticky-loss' ? '<button id="pay"><span>Confirm payment</span></button>'
+      : '<button id="pay">Confirm payment</button>';
+  }
+</script>
