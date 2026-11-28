@@ -354,13 +354,22 @@ function reflowInfo(arg) {
   const bodySuppliesViewport = hasBodyBox && rootStyle.display !== 'none'
     && rootStyle.overflowX === 'visible' && rootStyle.overflowY === 'visible'
     && !contained(rootStyle) && !contained(bodyStyle);
+  const anchorEffects = ['transform', 'translate', 'rotate', 'scale', 'perspective', 'filter', 'backdrop-filter'];
+  const clipMargin = bodyStyle?.overflowClipMargin;
+  const plainClipBox = (style) => style.display === 'block' && !contained(style)
+    && (style.zoom === '1' || style.zoom === 'normal')
+    && [...anchorEffects, 'offset-path'].every((prop) => style.getPropertyValue(prop) === 'none');
+  // Chromium uses the unexpanded edge for a single-axis clip. Keep other
+  // nondefault edges uncertain, including cases where containment can clip both axes.
+  const xOnlyClipMargin = bodyStyle?.overflowX === 'clip' && bodyStyle.overflowY === 'visible'
+    && /^\d+(?:\.\d+)?px$/.test(clipMargin) && Number.parseFloat(clipMargin) > 0
+    && plainClipBox(rootStyle) && plainClipBox(bodyStyle);
   const localBodyBox = hasBodyBox && !bodySuppliesViewport && bodyStyle.display !== 'inline'
     && (bodyStyle.overflowX === 'hidden'
-      || (bodyStyle.overflowX === 'clip' && (!bodyStyle.overflowClipMargin || bodyStyle.overflowClipMargin === '0px')))
+      || (bodyStyle.overflowX === 'clip' && (!clipMargin || clipMargin === '0px' || xOnlyClipMargin)))
     && body.getClientRects().length === 1 ? body.getBoundingClientRect() : null;
   // Computed style corroborates the browser's ancestor: offsetParent alone
   // can also point to the body fallback or an effective-zoom boundary.
-  const anchorEffects = ['transform', 'translate', 'rotate', 'scale', 'perspective', 'filter', 'backdrop-filter'];
   const establishesAbsoluteBlock = (style) => {
     if (['none', 'contents'].includes(style.display)) return false;
     if (style.position !== 'static') return true;
