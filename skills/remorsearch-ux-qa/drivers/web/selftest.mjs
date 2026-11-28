@@ -1834,11 +1834,26 @@ async function reflowViewportPolicyTest(base, tmp) {
     ['contained-body-clip', 'auto', false, 'main'],
     ['hidden-content', 'hidden', true, '#timer'],
     ['table', 'auto', false, null],
+    ['local-loss', 'auto', false, '#pay', 'lost'],
+    ['contained-loss', 'auto', false, '#pay', 'lost'],
+    ['local-decor', 'auto', false, null, 'inside'],
+    ['escaping-control', 'auto', false, '#pay'],
+    ['fixed-control', 'auto', false, '#pay', 'fixed'],
+    ['nested-control', 'auto', false, null, 'inside'],
+    ['icon-loss', 'auto', false, '#pay', 'lost'],
+    ['sticky-loss', 'auto', false, '#pay', 'lost'],
+    ['boxless-body', 'auto', false, '#pay'],
+    ['boxless-local', 'auto', false, '#pay'],
+    ['absolute-relative', 'auto', false, '#pay', 'lost'],
+    ['absolute-transform', 'auto', false, '#pay', 'lost'],
+    ['absolute-filter', 'auto', false, '#pay', 'lost'],
+    ['absolute-nested', 'auto', false, '#pay', 'lost'],
+    ['absolute-nested-escape', 'auto', false, '#pay'],
   ];
   const profile = path.join(tmp, 'p-desk.json');
   const profiles = path.join(tmp, 'reflow-viewport-profiles.json');
   writeJson(profiles, [JSON.parse(fs.readFileSync(profile, 'utf8'))]);
-  for (const [mode, expectedPolicy, expectedClip, expected] of cases) {
+  for (const [mode, expectedPolicy, expectedClip, expected, kind = 'page'] of cases) {
     const runId = 'R-reflow-' + mode, outDir = path.join(tmp, 'runs'), runDir = path.join(outDir, runId);
     const scenario = path.join(tmp, runId + '.json');
     writeJson(scenario, {
@@ -1853,8 +1868,13 @@ async function reflowViewportPolicyTest(base, tmp) {
     const run = JSON.parse(fs.readFileSync(path.join(runDir, 'run.json'), 'utf8'));
     const rec = run.reflow?.[0];
     check('reflow viewport: layout extent and effective viewport policy (' + mode + ')',
-      rec?.width === 320 && rec.client_width === 320 && rec.scroll_width > 324
+      rec?.width === 320 && rec.client_width === 320 && (kind === 'page' ? rec.scroll_width > 324 : rec.scroll_width === 320)
       && rec.viewport_overflow_x === expectedPolicy && rec.root_clips === expectedClip, rec);
+    if (kind === 'lost') {
+      check('reflow viewport: measured local body clipping, not page overflow (' + mode + ')',
+        rec?.offenders.length === 0 && rec.lost.length === 1 && rec.lost[0].dom_id === 'pay'
+        && rec.lost[0].visible_full === 1 && rec.lost[0].visible_320 === 0, rec);
+    }
     const result = path.join(tmp, runId + '-swarm');
     const py = spawnSync(process.env.ERGOQA_PYTHON || 'python3', [path.join(REPO, 'scripts/ergo_qa.py'),
       'swarm', '--runs', runDir, '--profiles', profiles, '--out', result, '--no-gaze'], { encoding: 'utf8' });
@@ -1862,8 +1882,10 @@ async function reflowViewportPolicyTest(base, tmp) {
     const a = JSON.parse(fs.readFileSync(path.join(result, 'analyses.json'), 'utf8')).analyses[0];
     const rf = a.observations.filter((o) => o.check_id === 'RF-01');
     check('reflow viewport: meaningful and correctly worded findings only (' + mode + ')',
-      expected ? rf.some((o) => o.selectors.includes(expected)
-        && (expectedClip ? o.message_ko.includes('잘려') : o.message_ko.includes('가로 스크롤이 생깁니다')))
+      expected ? rf.some((o) => o.severity === 'P2' && o.selectors.includes(expected)
+        && (kind === 'fixed' ? /고정 막대 안|상자에 잘려/.test(o.message_ko)
+          : expectedClip || kind === 'lost' ? o.message_ko.includes('잘려') : o.message_ko.includes('가로 스크롤이 생깁니다')))
+        && (kind !== 'lost' || rf.length === 1)
         : rf.length === 0, rf);
   }
 }

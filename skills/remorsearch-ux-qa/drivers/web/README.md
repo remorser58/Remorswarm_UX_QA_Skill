@@ -1047,11 +1047,17 @@ they belong to (0 = initial load), so a step can own two snapshots.
   and `viewport_overflow_x` (effective horizontal viewport policy: `auto`,
   `scroll`, `hidden`, or `unknown`). The DOM's `scroll_width` can exceed the
   viewport even when the root stops direct user scrolling. The HTML body's
-  overflow affects the viewport only when CSS overflow propagation applies.
+  overflow affects the viewport only when CSS overflow propagation applies;
+  a boxless body (`display: contents`) does not supply it. A body-local
+  horizontal clip can still cut away text, native controls, and labeled
+  images that were visible at the device width, even without page overflow.
+  For absolute children, the browser's layout anchor and its computed style
+  must support body-local clipping; the body fallback alone is not evidence.
+  Uncertain clip edges are not used for this test.
   Older ambiguous records ask for a new capture instead of inferring possible
   scrolling from geometric width alone. The record also contains
   `offenders[]` (outermost elements past the right edge, `fixed` when a fixed box
-  holds them), `exempt_right` (how far exempt content reaches), `lost[]` (text ≥ 90 %
+  holds them), `exempt_right` (how far exempt content reaches), `lost[]` (content ≥ 90 %
   visible at the device width, < 50 % at 320 px),
   `lost_height`, `scan_capped` (more than 20,000 elements), or `styles_lost` (the
   copy kept < 90 % of the live CSS rules; not measured) or `error`.
