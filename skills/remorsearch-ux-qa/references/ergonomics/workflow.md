@@ -5,6 +5,8 @@ Default to a stratified detector run on the real surface: one recorded flow per 
 
 For a first offline run, [score the synthetic icon toggle](../../examples/ergonomics/README.md) from the release ZIP. It produces a report and score without capturing a real product.
 
+If someone asks for a visual explanation **after** reading the QA report, use the optional [illustration-only storyboard recipe](../../examples/ergonomics/README.md#optional-explain-the-report-with-a-storyboard). Keep it out of evidence bundles and verdicts.
+
 ## Phase 0 recap
 
 Use `SKILL.md` Phase 0: scope/build/tasks, devices/orientations, input, supplied data, grants and tools. Choose detector coverage or requested persona-agent behavior. Missing audience research takes the stratified path; explain it. Korean product QA reads `references/persona-qa/kwcag-card.md`; Korean research users/channels open `references/research/korea/overview.md` only when research runs. Before an external page, including a later lead, carry `references/shared/access-card.md` and use research's evidence card. Ask at most one grouped question for necessary missing inputs.

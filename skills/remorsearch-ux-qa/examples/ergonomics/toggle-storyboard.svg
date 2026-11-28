@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="390" height="674" viewBox="0 0 390 674" role="img" aria-labelledby="title description">
+  <title id="title">Synthetic icon toggle — illustration only</title>
+  <desc id="description">Three explanation panels, not screenshots or QA evidence. First, the toggle shows plus. A fixture click changes plus to minus. The synthetic report still lists SM-01 for a missing accessible name and UI-01 for missing visual help on the same control.</desc>
+  <rect width="390" height="674" fill="#edf2f5"/>
+  <g font-family="system-ui, sans-serif" fill="#152d38">
+    <text x="20" y="39" font-size="27" font-weight="700">A toggle changes.</text>
+    <text x="20" y="65" font-size="21" font-weight="600">What did the check find?</text>
+
+    <g id="before">
+      <rect x="20" y="85" width="350" height="157" rx="14" fill="#ffffff"/>
+      <rect x="37" y="99" width="198" height="26" rx="6" fill="#e1edf0"/>
+      <text x="46" y="118" font-size="16" font-weight="700" fill="#174453">ILLUSTRATION ONLY</text>
+      <text x="37" y="152" font-size="23" font-weight="700">01 / Before the click</text>
+      <rect x="37" y="169" width="316" height="55" rx="9" fill="#f2f6f7" stroke="#bfced3"/>
+      <rect x="49" y="181" width="30" height="30" rx="6" fill="#195365"/>
+      <path d="M57 196h14m-7-7v14" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"/>
+      <text x="91" y="202" font-size="18">The button shows plus.</text>
+    </g>
+
+    <g id="after">
+      <rect x="20" y="254" width="350" height="157" rx="14" fill="#ffffff"/>
+      <rect x="37" y="268" width="198" height="26" rx="6" fill="#e1edf0"/>
+      <text x="46" y="287" font-size="16" font-weight="700" fill="#174453">ILLUSTRATION ONLY</text>
+      <text x="37" y="321" font-size="23" font-weight="700">02 / After the click</text>
+      <rect x="37" y="338" width="316" height="55" rx="9" fill="#f2f6f7" stroke="#bfced3"/>
+      <rect x="49" y="350" width="30" height="30" rx="6" fill="#195365"/>
+      <path d="M57 365h14" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"/>
+      <text x="91" y="371" font-size="18">It changes to minus.</text>
+    </g>
+
+    <g id="report">
+      <rect x="20" y="423" width="350" height="211" rx="14" fill="#153541"/>
+      <rect x="37" y="437" width="198" height="26" rx="6" fill="#d6eeee"/>
+      <text x="46" y="456" font-size="16" font-weight="700" fill="#174453">ILLUSTRATION ONLY</text>
+      <text x="37" y="490" font-size="23" font-weight="700" fill="#ffffff">03 / Read the report</text>
+      <g font-size="16" fill="#ffffff">
+        <text x="39" y="532" font-weight="700" fill="#a6e8da">SM-01</text>
+        <text x="111" y="532">No accessible name</text>
+        <path d="M39 545h311" stroke="#54707c"/>
+        <text x="39" y="574" font-weight="700" fill="#a6e8da">UI-01</text>
+        <text x="111" y="574">No visual explanation</text>
+      </g>
+      <text x="39" y="610" font-size="16" fill="#d6eeee">Same control in both findings: #toggle</text>
+    </g>
+    <text x="20" y="657" font-size="16" fill="#385565">Synthetic example • Not QA evidence</text>
+  </g>
+</svg>
