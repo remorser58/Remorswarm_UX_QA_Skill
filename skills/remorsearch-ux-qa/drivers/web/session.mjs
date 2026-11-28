@@ -391,6 +391,40 @@ function reflowInfo(arg) {
     }
     return !bodyEstablishesContainingBlock;
   };
+  // A normal Chromium box with both axes clipped expands its padding edge.
+  // Keep prior bounds if the CSS pixels cannot be mapped to this viewport rect.
+  const expandedAncestorClips = new WeakMap();
+  const px = (value) => /^\d+(?:\.\d+)?px$/.test(value) ? Number.parseFloat(value) : NaN;
+  const regularFlow = (style) => style.position === 'static' || style.position === 'relative';
+  const expandedAncestorClip = (m, cs, a) => {
+    if (cs.overflowX !== 'clip' || cs.overflowY !== 'clip') return a;
+    const margin = px(cs.overflowClipMargin);
+    if (!Number.isFinite(margin) || margin <= 0) return a;
+    if (!expandedAncestorClips.has(m)) {
+      const expand = () => {
+        if (!/^(div|main|section|article|aside|nav|header|footer)$/.test(m.localName)
+          || m.namespaceURI !== root.namespaceURI || m.getClientRects().length !== 1
+          || [cs.borderTopLeftRadius, cs.borderTopRightRadius, cs.borderBottomRightRadius, cs.borderBottomLeftRadius]
+            .some((value) => value !== '0px')) return a;
+        for (let p = m; p; p = up(p)) {
+          const style = p === m ? cs : getComputedStyle(p);
+          if (!(p instanceof HTMLElement) || p.currentCSSZoom !== 1 || !plainClipBox(style) || !regularFlow(style)
+            || style.clipPath !== 'none' || style.maskImage !== 'none'
+            || ['-webkit-mask-box-image-source', 'border-shape'].some((prop) => {
+              const value = style.getPropertyValue(prop);
+              return value && value !== 'none';
+            })) return a;
+        }
+        const [left, top, right, bottom] = [cs.borderLeftWidth, cs.borderTopWidth, cs.borderRightWidth, cs.borderBottomWidth].map(px);
+        if (![left, top, right, bottom, a.left, a.top, a.right, a.bottom, a.width, a.height].every(Number.isFinite)
+          || a.width <= left + right || a.height <= top + bottom) return a;
+        return { left: a.left + left - margin, top: a.top + top - margin,
+          right: a.right - right + margin, bottom: a.bottom - bottom + margin };
+      };
+      expandedAncestorClips.set(m, expand());
+    }
+    return expandedAncestorClips.get(m);
+  };
   const nativeControl = (n) => n.matches('button, input:not([type="hidden"]), select, textarea, a[href], summary');
   // Visible box share for text, plus native controls and labeled images when
   // testing a separate body-local clip. Keep the existing own-scroll, disclosure,
@@ -415,10 +449,12 @@ function reflowInfo(arg) {
     let fixed = style.position === 'fixed';
     let fixedBox = fixed ? r : null;
     let bodyAffects = !!localBodyBox && !escapesBody(n, style);
+    let inFlow = regularFlow(style);
     let m = up(n);
     for (; !fixed && !top(m); m = up(m)) {
       const cs = getComputedStyle(m);
       if (bodyAffects && escapesBody(m, cs)) bodyAffects = false;
+      inFlow = inFlow && regularFlow(cs);
       if (['auto', 'scroll'].includes(cs.overflowX) || ['auto', 'scroll'].includes(cs.overflowY)) break;
       const clipX = ['hidden', 'clip'].includes(cs.overflowX);
       const clipY = ['hidden', 'clip'].includes(cs.overflowY);
@@ -426,13 +462,14 @@ function reflowInfo(arg) {
         if (controlledIds.has(idOf(m)) || carousel(m)) return null;
         const a = m.getBoundingClientRect();
         if ((clipX && a.width <= 1) || (clipY && (a.height <= 1 || cs.maxHeight === '0px'))) return null; // collapsed
+        const edge = inFlow ? expandedAncestorClip(m, cs, a) : a;
         if (clipX) {
-          x0 = Math.max(x0, a.left);
-          x1 = Math.min(x1, a.right);
+          x0 = Math.max(x0, edge.left);
+          x1 = Math.min(x1, edge.right);
         }
         if (clipY) {
-          y0 = Math.max(y0, a.top);
-          y1 = Math.min(y1, a.bottom);
+          y0 = Math.max(y0, edge.top);
+          y1 = Math.min(y1, edge.bottom);
         }
       }
       // Boxes above a fixed one do not clip it (it is placed against the viewport).
