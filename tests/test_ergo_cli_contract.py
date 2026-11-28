@@ -11,7 +11,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import _paths  # noqa: F401  (puts the skill folder on sys.path)
-from test_ergo_pipeline import make_run  # the owned synthetic recorded run fixture
+from test_ergo_pipeline import bind_fixture_profile, make_run  # the owned synthetic recorded run fixture
 
 from ergoqa import checks, cli, png
 from ergoqa.profiles import sample_profiles
@@ -97,11 +97,12 @@ class GazeHeatmapCSSContract(unittest.TestCase):
         png.write_png(self.original, png.make_image(128, 96, 3, pixels))
         self.css = self.root / "css.png"
         self.shot = dict(path=self.original.name, sha256=sha256_file(self.original))
+        self.device = {"id": "iphone-15", "viewport_css": [64, 48], "dpr": 2}
 
     def render(self):
         snap = self.root / "snapshot.json"
         snap.write_text(json.dumps({
-            "device": {"id": "iphone-15", "viewport_css": [64, 48], "dpr": 2},
+            "device": self.device,
             "screenshot": self.shot,
         }))
         out = self.root / "heat.png"
@@ -130,6 +131,63 @@ class GazeHeatmapCSSContract(unittest.TestCase):
         using_css, err = self.render()
         self.assertFalse(using_css == original, "valid CSS capture should still take precedence")
         self.assertEqual(err, "")
+
+    def test_valid_digest_crop_and_device_size_are_not_css_viewport_copies(self):
+        baseline, _ = self.render()
+        for width, height in ((32, 48), (64, 24), (128, 96)):
+            with self.subTest(width=width, height=height):
+                png.write_png(self.css, png.new_image(width, height, 3, (255, 255, 255)))
+                self.bind_css()
+                output, warning = self.render()
+                self.assertTrue(output == baseline, "wrong extent must not reposition gaze contrast")
+                self.assertIn("using the original screenshot", warning)
+
+    def test_geometry_is_checked_even_after_a_companion_cache_hit(self):
+        baseline, _ = self.render()
+        png.write_png(self.css, png.new_image(64, 48, 3, (255, 255, 255)))
+        self.bind_css()
+        valid = dict(self.shot["css"], width_px=64, height_px=48, factor=2)
+        self.shot["css"] = valid
+        css_output, warning = self.render()
+        self.assertTrue(css_output != baseline)
+        self.assertEqual(warning, "")
+        for key, value in (("factor", 1), ("factor", 2.0), ("factor", None),
+                           ("factor", True), ("factor", 0), ("width_px", 63),
+                           ("height_px", 48.0), ("width_px", True), ("height_px", None)):
+            with self.subTest(key=key, value=value):
+                self.shot["css"] = {**valid, key: value}
+                output, warning = self.render()
+                self.assertTrue(output == baseline)
+                self.assertIn("using the original screenshot", warning)
+        # The same bytes are valid for the old primary, not for this taller one.
+        initial = png.read_png(self.original)
+        png.write_png(self.original, png.make_image(128, 98, 3, initial.data + initial.row(0) * 2))
+        self.shot = dict(path=self.original.name, sha256=sha256_file(self.original))
+        taller, _ = self.render()
+        self.shot["css"] = valid
+        output, warning = self.render()
+        self.assertTrue(output == taller)
+        self.assertIn("using the original screenshot", warning)
+
+    def test_recorder_fractional_dpr_uses_actual_primary_floor_not_nominal_viewport(self):
+        # Odd 127x95 primary. A distinguishing white companion tests selection,
+        # not authenticity of the pixels. Official recorder uses JS Math.round.
+        original = png.read_png(self.original)
+        data = b"".join(original.row(y)[:127 * 3] for y in range(95))
+        png.write_png(self.original, png.make_image(127, 95, 3, data))
+        self.shot["sha256"] = sha256_file(self.original)
+        for dpr, factor in ((2.5, 3), (2.625, 3), (2.4999999999999996, 2)):
+            with self.subTest(dpr=dpr):
+                self.device.update(viewport_css=[51, 38], dpr=dpr)
+                self.shot.pop("css", None)
+                baseline, _ = self.render()
+                width, height = 127 // factor, 95 // factor
+                png.write_png(self.css, png.new_image(width, height, 3, (255, 255, 255)))
+                self.bind_css()
+                self.shot["css"].update(factor=factor, width_px=width, height_px=height)
+                result, warning = self.render()
+                self.assertTrue(result != baseline)
+                self.assertEqual(warning, "")
 
     def test_css_must_be_a_regular_file_before_opening(self):
         original, _ = self.render()
@@ -199,6 +257,33 @@ class ScenarioBindingContract(unittest.TestCase):
 
     def analyses(self):
         return json.loads((self.root / "analyses.json").read_text(encoding="utf-8"))["analyses"]
+
+    def test_swarm_uses_original_gaze_measurements_for_valid_digest_crop(self):
+        profile = json.loads(self.profiles_path.read_text())["profiles"][0]
+        bind_fixture_profile(self.run_dir, profile)
+        out = self.root / "swarm-out"
+
+        def gaze_measurements():
+            code, _, err = self.run_cli("swarm", "--runs", str(self.run_dir), "--profiles",
+                                        str(self.profiles_path), "--out", str(out))
+            self.assertEqual(code, cli.EXIT_OK, err)
+            obs = json.loads((out / "analyses.json").read_text())["analyses"][0]["observations"]
+            return [o["measurement"] for o in obs if o["check_id"] in ("GZ-01", "GZ-04")]
+
+        baseline = gaze_measurements()
+        self.assertTrue(baseline)
+        for path in sorted(self.run_dir.glob("S-*.json")):
+            snap = json.loads(path.read_text())
+            source = png.downsample(png.read_png(self.run_dir / snap["screenshot"]["path"]), 3)
+            width = source.width // 2
+            crop = png.make_image(width, source.height, 3,
+                                  b"".join(source.row(y)[:width * 3] for y in range(source.height)))
+            css = path.with_suffix(".css.png")
+            png.write_png(css, crop)
+            snap["screenshot"]["css"] = dict(path=css.name, sha256=sha256_file(css),
+                                               width_px=width, height_px=source.height, factor=3)
+            path.write_text(json.dumps(snap))
+        self.assertEqual(gaze_measurements(), baseline)
 
     def test_matching_scenario_is_bound_and_reaches_run_health(self):
         code, _, err = self.analyze("--scenario", str(self.matching))
