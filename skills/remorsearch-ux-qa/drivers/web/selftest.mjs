@@ -18,10 +18,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { CATALOG } from './devices.mjs';
+import { CATALOG, resolveDevice } from './devices.mjs';
 import { openBrowser, validateBrowserWs } from './browser_transport.mjs';
 import { loadPlaywright } from './playwright_loader.mjs';
 import { capturePage } from './read_capture.mjs';
+import { prepareProfileBinding } from './profile_binding.mjs';
 import { STATE_KEY, armBinaryControl, pageInit, extractSnapshot } from './page_scripts.mjs';
 import { WebSession } from './session.mjs';
 import { decodePng } from './png.mjs';
@@ -2962,11 +2963,11 @@ async function analyzePrivacyBudgetTest(base, tmp) {
   const sc = { schema_version: 'ergo-scenario.v1', scenario_id: 'SC-analysis-safety',
     surface: { kind: 'web', url: `${base}/task-integrity.html` }, task_goal_ko: 'Check owned recorded evidence.',
     device_ids: ['galaxy-s24'], targets: {}, steps: [], success: { selector_visible: '#memo' } };
-  const make = (runId, source, options = {}) => {
+  const make = (runId, source, options = {}, profileBinding) => {
     const runDir = path.join(tmp, 'analysis-safety', runId);
     fs.mkdirSync(runDir, { recursive: true });
     return new WebSession({ pw, pwInfo: info, scenario: normalizeScenario(source, { requireSteps: false }).scenario,
-      profile: p, profileId: p.profile_id, runId, runDir, deviceRequest: { id: 'galaxy-s24' }, mode: 'interactive', warnings: [],
+      profile: p, profileId: p.profile_id, profileBinding, runId, runDir, deviceRequest: { id: 'galaxy-s24' }, mode: 'interactive', warnings: [],
       options: { analyze: { python, script }, headed: false, settleMs: 0, feedbackTimeoutMs: 0, focusWalk: false, reflow: false,
         visualFeedback: false, locale: 'ko-KR', timezoneId: 'Asia/Seoul', ...options } });
   };
@@ -3011,6 +3012,54 @@ async function analyzePrivacyBudgetTest(base, tmp) {
     check('analysis locator privacy: short private values never rewrite structural IDs',
       ids.run_id === 'a' && ids.scenario_id === 'a' && ids.profile_id === 'a' && ids.snapshot_id === 'a' && ids.id === 'a' && ids.selector !== '#a');
   } finally { await session.finish(); }
+
+  let wrapperWitness = false;
+  let stopped;
+  try {
+    const device = resolveDevice({ id: p.attributes.device_id, orientation: p.attributes.orientation }).snapshotDevice;
+    const binding = prepareProfileBinding(Buffer.from(JSON.stringify(p)), p, device);
+    stopped = make('R-real-degraded-child', sc, { reflow: true }, binding);
+    await stopped.start();
+    const copyReady = stopped.reflowScreens.length > 0 && stopped.reflow.length === 0;
+    const initial = stopped.lastSnapshotId;
+    const hadDeadline = Object.hasOwn(stopped, 'finishBrowserDeadline');
+    const originalDeadline = stopped.finishBrowserDeadline;
+    try {
+      stopped.finishBrowserDeadline = 0;
+      await stopped.reflowPass();
+    } finally {
+      if (hadDeadline) stopped.finishBrowserDeadline = originalDeadline;
+      else delete stopped.finishBrowserDeadline;
+    }
+    const fin = await stopped.finish();
+    const runFile = path.join(stopped.runDir, 'run.json');
+    const raw = JSON.parse(fs.readFileSync(runFile, 'utf8'));
+    const receipt = fin.analysis;
+    const out = path.join(stopped.runDir, 'swarm');
+    const files = Object.fromEntries(Object.entries({ analyses: 'analyses.json', findings: 'findings.json', report: 'report.md' })
+      .map(([key, name]) => [key, path.join(out, name)]));
+    const analyses = JSON.parse(fs.readFileSync(files.analyses, 'utf8')).analyses;
+    const findings = JSON.parse(fs.readFileSync(files.findings, 'utf8')).findings;
+    const report = fs.readFileSync(files.report, 'utf8').split('## 2.', 1)[0];
+    const a = analyses[0];
+    const note = 'RF-01 복제 검사 미측정: 시간 한도로 복제 검사 중단. 해당 화면을 다시 기록하세요.';
+    wrapperWitness = copyReady && fin.runPath === runFile && JSON.stringify(raw) === JSON.stringify(fin.run)
+      && raw.status === 'completed' && raw.success === true && raw.success_basis === 'measured'
+      && raw.snapshots.some((snap) => snap.snapshot_id === initial)
+      && raw.driver.name === 'playwright-web' && Array.isArray(raw.reflow) && raw.reflow.length === 0
+      && raw.warnings.filter((warning) => /^reflow(?: |:)/.test(warning)).join() === 'reflow pass stopped at its 40000 ms budget'
+      && JSON.stringify(raw.profile_binding) === JSON.stringify(binding)
+      && fin.exitCode === 4 && receipt?.requested === true && receipt.exit_code === 3 && receipt.status === 'failed'
+      && receipt.timeout_ms > 0 && receipt.timed_out === false && receipt.signal === null && receipt.screening_counts === null
+      && receipt.report_dir === out && Object.keys(files).every((key) => receipt.reports[key] === files[key])
+      && analyses.length === 1 && a.run_id === raw.run_id && a.scenario_id === raw.scenario_id
+      && a.profile_binding_status === 'matched' && a.verified_owner_profile_id === raw.profile_id && a.health === 'degraded'
+      && a.run_status === 'completed' && a.run_success === true
+      && a.limitations.filter((value) => value.startsWith('RF-01 ')).join() === note && report.includes(note)
+      && !a.observations.some((obs) => obs.check_id === 'RF-01') && !findings.some((finding) => finding.check_id === 'RF-01');
+  } catch { /* Do not display any of the run or subprocess diagnostics. */ }
+  finally { if (stopped?.browserTransport) await stopped.browserTransport.close([stopped.context]); }
+  check('analysis wrapper: real degraded child exits 3 while measured run stays successful and wrapper exits 4', wrapperWitness);
 
   const marker = path.join(tmp, 'spent-budget-analyzer-started');
   const fake = path.join(tmp, 'spent-budget-python');
